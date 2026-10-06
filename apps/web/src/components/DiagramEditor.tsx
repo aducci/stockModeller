@@ -198,7 +198,16 @@ export function DiagramEditor({ id }: { id: Id }) {
     const a = state.objectOccurrences.get(from);
     const b = state.objectOccurrences.get(to);
     if (!a || !b) return;
-    const choices = connectChoices(state, metamodel, diagram, a.objectId, b.objectId);
+    // An existing relationship already drawn between exactly these two symbols would only get a second line.
+    const drawn = new Set(
+      state.relationshipOccurrences
+        .find("bySource", a.id)
+        .filter((l) => l.targetOccurrenceId === b.id)
+        .map((l) => l.relationshipId),
+    );
+    const choices = connectChoices(state, metamodel, diagram, a.objectId, b.objectId).filter(
+      (c) => !c.existingId || !drawn.has(c.existingId),
+    );
     if (choices.length === 0) {
       return notify(`No relationship type connects ${nameOf(a.objectId)} to ${nameOf(b.objectId)}`, "error");
     }
@@ -482,9 +491,10 @@ function NameBox(props: {
   const { at, label, initial, onCommit, onDone } = props;
   const [name, setName] = useState(initial);
   const done = useRef(false);
-  const finish = (commit: boolean) => {
+  /** A refused name keeps the box open after Enter (to correct it), but not after leaving it. */
+  const finish = (commit: boolean, keepIfRefused = false) => {
     if (done.current) return;
-    if (commit && !onCommit(name.trim())) return;
+    if (commit && !onCommit(name.trim()) && keepIfRefused) return;
     done.current = true;
     onDone();
   };
@@ -500,7 +510,7 @@ function NameBox(props: {
       onPointerDown={(e) => e.stopPropagation()}
       onKeyDown={(e) => {
         e.stopPropagation();
-        if (e.key === "Enter") finish(true);
+        if (e.key === "Enter") finish(true, true);
         else if (e.key === "Escape") finish(false);
       }}
       onBlur={() => finish(true)}
