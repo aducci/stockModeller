@@ -13,10 +13,11 @@ How we turn this design pack into running software. It follows the spec's own ro
 | 0.5 `server` | ✅ Done: Fastify app (`apps/server`): `POST …/changes` (idempotent, preview), `GET …/changes?since=`, undo, scenario-aware reads of folders, objects (with a `type:`/`folder:` query subset and paging), relationships, diagrams, occurrences and history; repositories and scenarios; problem+json errors; development sign-in; per-repository resolution cache checked against the sequence; responses checked against `openapi.yaml` |
 | 0.6 Live updates | ✅ Done: WebSocket `/api/v1/live` with catch-up from `?since=` (or `resync`), commits fanned out between instances by `LISTEN/NOTIFY` (one read per instance and repository, in sequence order, filtered to the scenario and its ancestors), submit and rejections over the socket, presence shared between instances and expiring, short-lived tickets for browsers. Exit test: a commit reaches the other client in < 300 ms, also across two instances |
 | 0.7a Client store | ✅ Done: `GET …/snapshot` (engine rows + metamodel, B16); `packages/client` (no UI): `ModelStore` applies edits at once with the shared engine, keeps them pending, replays every committed change in sequence order and rebases pending changes on top (reverting the rows they touched); a change it cannot reproduce makes it reload (B17). `LiveSession`: snapshot, ticket, live connection, resend after reconnect, pause after 2 minutes offline, presence. Tested against the concurrency table, random three-user interleavings (every store ends with exactly the server's rows) and a real server |
-| 0.7b Web app shell | Next: `apps/web` on top of `@connectome/client` |
-| 0.8–0.9 | Not started |
+| 0.7b Web app shell | ✅ Done: `apps/web` (React, Vite, Zustand) on `@connectome/client`: development sign-in, repository list, top bar (scenario picker, presence, "All changes saved" / "Reconnecting…"), explorer (Folders tab with filter, new folder and object), centre tabs (object page, read-only diagram view, change dot), properties panel (typed editors per property type, tags, relationships, "occurs on"), a toast with Undo for every edit. Playwright: edits show at once and survive a reload, two users see each other, undo, a refused edit explained |
+| 0.8 Diagram editor | Next |
+| 0.9 | Not started |
 
-Decisions taken on the way: [decision-log.md](decision-log.md#found-while-building-m0) (B1–B17) and [storage.md §7](03-platform/storage.md#7-additions-made-while-building).
+Decisions taken on the way: [decision-log.md](decision-log.md#found-while-building-m0) (B1–B18) and [storage.md §7](03-platform/storage.md#7-additions-made-while-building).
 
 The original 3D demo in this repository was removed; the repository now holds only Connectome.
 

@@ -11,3 +11,5 @@
 
 - `npm run check`: format check, lint, typecheck and tests. Run it before committing.
 - Database tests need `DATABASE_URL` (a PostgreSQL 16 server where tests may create databases); without it they are skipped. In a cloud session: `pg_ctlcluster 16 main start`, and the URL is `postgres://postgres:postgres@localhost:5432/postgres` once the postgres password is set.
+- `npm run e2e`: Playwright against the built web app, a fresh database and the server (needs `DATABASE_URL`). In a cloud session, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/opt/pw-browsers/chromium` instead of installing browsers.
+- `apps/web` has its own `tsconfig.json` (DOM and JSX); the root `npm run typecheck` runs both.

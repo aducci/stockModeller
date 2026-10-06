@@ -6,7 +6,7 @@ The product and technical design lives in [`design/`](design/README.md) and is t
 
 ## Status
 
-Milestone **M0 (Skeleton)**, slices 0.1–0.6 and 0.7a are done: the model types, the change engine, the database layer, the REST API, live updates over WebSocket, and the browser's store (optimistic edits and rebase). The web app's screens come next.
+Milestone **M0 (Skeleton)**, slices 0.1–0.7 are done: the model types, the change engine, the database layer, the REST API, live updates over WebSocket, the browser's store (optimistic edits and rebase) and the workbench shell. The diagram editor comes next.
 
 ## Layout
 
@@ -17,9 +17,10 @@ Milestone **M0 (Skeleton)**, slices 0.1–0.6 and 0.7a are done: the model types
 | [`packages/content`](packages/content) | Ready-made metamodel packages; Essentials ships first                                                                                                                                                                      |
 | [`packages/engine`](packages/engine)   | The change engine: applies a change atomically, enforces the model's rules and per-property conflicts, and records an inverse for every edit. Pure TypeScript with no I/O, so the server and the browser run the same code |
 | [`packages/db`](packages/db)           | PostgreSQL: migrations, row-level security per workspace, scenario-aware reads, and the commit path (change log + rows + sequence in one transaction)                                                                      |
+| [`apps/web`](apps/web)                 | The web app (React, Vite, Zustand): workbench with explorer, tabs and properties panel                                                                                                                                     |
 | [`packages/client`](packages/client)   | The web app's store and live session: edits show at once (same engine as the server), stay pending until confirmed, and are rebased over other people's changes. No UI                                                     |
 
-Module boundaries are enforced by ESLint (`eslint.config.js`): `model` imports nothing, `engine` only `model`, `db` and `client` only `model` and `engine`; the server may use them all.
+Module boundaries are enforced by ESLint (`eslint.config.js`): `model` imports nothing, `engine` only `model`, `db` and `client` only `model` and `engine`, `web` only those and `client`; the server may use all but `client` and `web`.
 
 ## Development
 
@@ -38,12 +39,16 @@ export DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres
 npm test
 ```
 
-| Script                            | Does                                                                     |
-| --------------------------------- | ------------------------------------------------------------------------ |
-| `npm test`                        | Vitest, all packages (database tests are skipped without `DATABASE_URL`) |
-| `npm run typecheck`               | `tsc` in strict mode over every package                                  |
-| `npm run lint` / `npm run format` | ESLint / Prettier                                                        |
-| `npm run db:migrate`              | Applies pending migrations to `$DATABASE_URL`                            |
+To try the workbench: `npm run db:migrate && npm run seed`, then `CONNECTOME_DEV_AUTH=1 npm run dev` and, in another terminal, `npm run web`. Sign in with the workspace and email `npm run seed` prints.
+
+| Script                            | Does                                                                                                                |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `npm test`                        | Vitest, all packages (database tests are skipped without `DATABASE_URL`)                                            |
+| `npm run web`                     | The web app at http://localhost:5173 (Vite), proxying the API to `CONNECTOME_API` (default `http://127.0.0.1:3000`) |
+| `npm run e2e`                     | Playwright: builds the web app and runs it against a fresh database and server (needs `DATABASE_URL`)               |
+| `npm run typecheck`               | `tsc` in strict mode over every package                                                                             |
+| `npm run lint` / `npm run format` | ESLint / Prettier                                                                                                   |
+| `npm run db:migrate`              | Applies pending migrations to `$DATABASE_URL`                                                                       |
 
 ## License
 

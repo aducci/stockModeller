@@ -55,6 +55,11 @@ export class Metamodel {
     return this.objectTypes.get(key);
   }
 
+  /** Every object type, in the package's order (abstract ones included). */
+  allObjectTypes(): ResolvedObjectType[] {
+    return [...this.objectTypes.values()];
+  }
+
   relationshipType(key: TypeKey): RelationshipType | undefined {
     return this.relationshipTypes.get(key);
   }
