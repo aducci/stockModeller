@@ -2,7 +2,7 @@
 
 How an object looks, and how a model owner sets the rules behind the tool. Builds on the [metamodel](metamodel.md), [diagrams](diagrams-and-catalogues.md) and the [semantic layer](semantics.md) ([ADR-010](../06-decisions/ADR-010-semantic-base-types.md)).
 
-Status: **proposed**; slice N-1 (the default glyph set and lines from kinds) is **built**. Open questions N1–N12 are in the [decision log](../decision-log.md#notation-decisions-proposed). Example package section: [example-notation.json](../05-structures/example-notation.json). Rendered icon set and admin mockups: [Notation Studio](https://claude.ai/artifact/VGwsxvR79zbkJbuDGsKcfS).
+Status: **accepted** (decisions N1–N20 in the [decision log](../decision-log.md#notation-decisions), 2026-10-06). Built so far: slice N-1 (the default glyph set and lines from kinds). Example package section: [example-notation.json](../05-structures/example-notation.json). Rendered icon set and admin mockups: [Notation Studio](https://claude.ai/artifact/VGwsxvR79zbkJbuDGsKcfS).
 
 ## 1. The idea in one table
 

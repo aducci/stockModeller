@@ -49,11 +49,11 @@ From the [connection framework](01-product/connection_framework.md), designed in
 | S15 | Explorer groups (decision B22 in the explorer slice): which kind is `groups`? | **Aggregation**: members stay where they are and may be in several groups | Containment (members would move into the group's folder) |
 | S16 | Relationship types without a kind | Treated as `association` | Refused when the metamodel is published |
 
-## Notation decisions (proposed)
+## Notation decisions
 
-From [notation and metamodel administration](02-model/notation-and-metamodel-admin.md). Defaults proposed on 2026-10-06; none is accepted yet. N13–N19 follow the product owner's comments on PR #11 (connection points, stretching, labels, property rendering and UML-style compartments).
+From [notation and metamodel administration](02-model/notation-and-metamodel-admin.md). The product owner accepted every default on 2026-10-06 ("continue" after N1–N20 were posted). N13–N19 follow the product owner's comments on PR #11 (connection points, stretching, labels, property rendering and UML-style compartments).
 
-| # | Question | Proposed default | Alternative |
+| # | Question | Decision | Alternative not taken |
 |---|---|---|---|
 | N1 | Icon format | One stroke-only SVG path on a 16×16 grid, at most 256 bytes; uploaded SVG is converted to it | Store sanitised SVG documents (richer, but a sanitiser to maintain and much larger) |
 | N2 | Colours in packages | Named hues from a 12-hue palette with light and dark values; hex allowed with a contrast warning | Hex only (today's `fill`) |
