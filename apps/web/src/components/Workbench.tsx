@@ -9,6 +9,8 @@ import { Centre } from "./Centre";
 import { Properties } from "./Properties";
 import { Toasts } from "./Toasts";
 import { DeleteObjectDialog } from "./DeleteObjectDialog";
+import { MenuBar } from "./Menu";
+import { fileMenu } from "./commands";
 
 export function Workbench({ repositoryId, scenarioId }: { repositoryId: string; scenarioId: string | null }) {
   const signIn = useAuth((s) => s.signIn)!;
@@ -98,6 +100,7 @@ function TopBar() {
       >
         ◧ {repository.name}
       </button>
+      <MenuBar menus={[{ label: "File", entries: () => fileMenu(session.store.state) }]} />
       <label className="scenario">
         Scenario
         <select

@@ -79,7 +79,12 @@ export type ModelEdit =
   | { edit: "createFolder"; id: Id; parentId: Id | null; name: string }
   | { edit: "renameFolder"; id: Id; name: string }
   | { edit: "moveFolder"; id: Id; parentId: Id | null }
-  | { edit: "deleteFolder"; id: Id; contents: "refuseIfNotEmpty" | "deleteContents" };
+  | { edit: "deleteFolder"; id: Id; contents: "refuseIfNotEmpty" | "deleteContents" }
+  /**
+   * build: place an item among its siblings in the explorer (its folder, or its container for a contained object).
+   * `rank` is a fractional-index key; `null` drops it (unranked items follow ranked ones, by name). Last writer wins.
+   */
+  | { edit: "setRank"; item: "folder" | "object" | "diagram"; id: Id; rank: string | null };
 
 // ================================================================ diagram edits (layout: last writer wins)
 export type DiagramEdit =

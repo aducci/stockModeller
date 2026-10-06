@@ -18,7 +18,7 @@ export interface Repository {
 export type ScenarioState = "baseline" | "draft" | "proposed" | "approved" | "merged" | "archived";
 export interface Scenario { id: Id; parentId: Id | null; name: string; state: ScenarioState }
 
-export interface Folder { id: Id; parentId: Id | null; name: string }
+export interface Folder { id: Id; parentId: Id | null; name: string; rank?: string } // build: rank orders the explorer
 
 // ================================================================ metamodel
 export type DataType =
@@ -107,6 +107,7 @@ interface ModelItem {
 /** An object. Named ModelObject in code because "Object" is reserved in TypeScript. */
 export interface ModelObject extends ModelItem {
   name: string; key: string | null; folderId: Id; description: string;
+  rank?: string;                                // build: place among its siblings in the explorer
 }
 
 export interface Relationship extends ModelItem {
@@ -122,6 +123,7 @@ export interface Rect { x: number; y: number; w: number; h: number }
 
 export interface Diagram {
   id: Id; name: string; description: string; diagramType: TypeKey; folderId: Id; version: number;
+  rank?: string;                                // build: place among its siblings in the explorer
   generatedBy: { rule: string; focusObjectId: Id } | null;
   objectOccurrences: ObjectOccurrence[];
   relationshipOccurrences: RelationshipOccurrence[];

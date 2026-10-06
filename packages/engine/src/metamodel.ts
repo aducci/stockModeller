@@ -122,6 +122,11 @@ export class Metamodel {
     return this.diagramTypes.get(key);
   }
 
+  /** Every diagram type, in the package's order (offered by "New diagram"). */
+  allDiagramTypes(): ResolvedDiagramType[] {
+    return [...this.diagramTypes.values()];
+  }
+
   /** True when `type` is `ancestor` or inherits from it. `"*"` matches every type. */
   isA(type: TypeKey, ancestor: TypeKey | "*"): boolean {
     if (ancestor === "*") return true;

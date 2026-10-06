@@ -25,7 +25,8 @@ function problems(pkg: Partial<MetamodelPackage>): string {
 describe("semantic metamodel", () => {
   it("classifies every Essentials type", () => {
     for (const rt of essentials.metamodel.relationshipTypes) expect(rt.semantic, rt.key).toBeDefined();
-    for (const ot of metamodel.allObjectTypes().filter((t) => !t.definition.extends))
+    // A group (decision B22) only gathers other objects, so it is the one type with no category of its own.
+    for (const ot of metamodel.allObjectTypes().filter((t) => !t.definition.extends && t.definition.key !== "group"))
       expect(ot.category, ot.definition.key).not.toBe("other");
     expect(metamodel.relationshipType("contains")).toMatchObject({ semantic: "containment", nesting: true });
     expect(metamodel.relationshipType("hostedOn")).toMatchObject({

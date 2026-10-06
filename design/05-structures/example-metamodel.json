@@ -1,6 +1,6 @@
 {
   "name": "Essentials",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "layers": [
     {
       "key": "strategy",
@@ -436,6 +436,18 @@
         "fill": "#eef6ee",
         "icon": "pin"
       }
+    },
+    {
+      "key": "group",
+      "name": "Group",
+      "plural": "Groups",
+      "category": "other",
+      "symbol": {
+        "shape": "rect",
+        "fill": "#f3f4f6",
+        "stroke": "#8a96a3",
+        "icon": "group"
+      }
     }
   ],
   "relationshipTypes": [
@@ -596,6 +608,18 @@
         "style": "dashed",
         "endArrow": "arrow",
         "color": "#8a9bb0"
+      }
+    },
+    {
+      "key": "groups",
+      "name": "Groups",
+      "verb": "groups",
+      "inverseVerb": "is grouped in",
+      "semantic": "aggregation",
+      "line": {
+        "style": "dashed",
+        "startArrow": "diamond",
+        "color": "#8a96a3"
       }
     }
   ],
@@ -780,6 +804,11 @@
       "relationshipType": "specialises",
       "sourceType": "dataObject",
       "targetType": "dataObject"
+    },
+    {
+      "relationshipType": "groups",
+      "sourceType": "group",
+      "targetType": "*"
     }
   ],
   "validationRules": [

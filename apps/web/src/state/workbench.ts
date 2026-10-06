@@ -5,11 +5,16 @@ import { LiveSession, type PresenceUser, type SessionStatus } from "@connectome/
 import { ulid, type Edit, type Id } from "@connectome/model";
 import { describeRejection } from "../text";
 
-export type ItemKind = "object" | "folder" | "diagram" | "relationship";
+export type ItemKind = "object" | "folder" | "diagram";
 export interface Selection {
   kind: ItemKind;
   id: Id;
 }
+/** What the properties panel shows: an explorer item, or a relationship (picked on a diagram or in the panel). */
+export type Focus = Selection | { kind: "relationship"; id: Id };
+/** The selection when it is an explorer item (a folder, object or diagram), else null. */
+export const itemSelected = (focus: Focus | null): Selection | null =>
+  focus && focus.kind !== "relationship" ? focus : null;
 export interface Tab {
   kind: "object" | "diagram";
   id: Id;
@@ -25,6 +30,11 @@ export interface Toast {
   /** A further step offered next to Undo (e.g. "Delete object" after removing it from a diagram). */
   action?: { label: string; run(): void };
 }
+
+/** What the explorer is asked to show inline: a form for a new item, or a rename box on a row. Menus set it. */
+export type ExplorerTask =
+  | { kind: "create"; what: "folder" | "object" | "diagram" | "group"; folderId: Id | null; members?: Id[] }
+  | { kind: "rename"; item: Selection };
 
 interface OpenOptions {
   authorization: string;
@@ -42,7 +52,7 @@ interface WorkbenchState {
   status: SessionStatus;
   pending: number;
   presence: PresenceUser[];
-  selection: Selection | null;
+  selection: Focus | null;
   tabs: Tab[];
   activeTab: Id | null;
   /** Tabs whose item someone else changed since the tab was last looked at. */
@@ -52,18 +62,25 @@ interface WorkbenchState {
   confirmDelete: Id | null;
   /** The trace shown in the properties panel and highlighted on diagrams (semantics.md §9.3). */
   trace: { startId: Id; label: string; objectIds: ReadonlySet<Id> } | null;
+  explorerTask: ExplorerTask | null;
+  /** Rows Ctrl/⌘-clicked in the explorer: they are dragged, grouped or moved together. */
+  marked: Selection[];
 
   open(options: OpenOptions): Promise<void>;
   close(): void;
-  select(selection: Selection | null): void;
+  select(selection: Focus | null): void;
   openTab(tab: Tab): void;
   closeTab(id: Id): void;
+  closeAllTabs(): void;
   activateTab(id: Id): void;
   /** Applies a change at once and sends it. Returns false (and shows why) when it is refused. */
   edit(label: string, edits: Edit[], action?: Toast["action"]): boolean;
   undo(changeId: Id): Promise<void>;
   dismiss(toastId: string): void;
   askDeleteObject(id: Id | null): void;
+  setExplorerTask(task: ExplorerTask | null): void;
+  /** Adds an explorer row to the marked set, or takes it out; null clears the set. */
+  toggleMark(item: Selection | null): void;
   /** A toast that reports no change (e.g. why a gesture did nothing). */
   notify(text: string, tone?: Toast["tone"]): void;
   showTrace(trace: WorkbenchState["trace"]): void;
@@ -100,6 +117,8 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
     toasts: [],
     confirmDelete: null,
     trace: null,
+    explorerTask: null,
+    marked: [],
 
     async open(options) {
       get().close();
@@ -159,6 +178,8 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
           activeTab: null,
           changedTabs: new Set(),
           confirmDelete: null,
+          explorerTask: null,
+          marked: [],
         });
       } catch (error) {
         if (mine !== generation) return;
@@ -201,6 +222,10 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
       });
     },
 
+    closeAllTabs() {
+      set({ tabs: [], activeTab: null, changedTabs: new Set() });
+    },
+
     activateTab(id) {
       set((s) => ({ activeTab: id, changedTabs: without(s.changedTabs, id) }));
     },
@@ -236,6 +261,17 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
 
     askDeleteObject(id) {
       set({ confirmDelete: id });
+    },
+
+    setExplorerTask(task) {
+      set({ explorerTask: task });
+    },
+
+    toggleMark(item) {
+      if (!item) return set({ marked: [] });
+      set((s) => ({
+        marked: s.marked.some((m) => m.id === item.id) ? s.marked.filter((m) => m.id !== item.id) : [...s.marked, item],
+      }));
     },
 
     notify(text, tone = "info") {

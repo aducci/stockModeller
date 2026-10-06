@@ -314,6 +314,29 @@ describeDb("API", () => {
     expect(created.body).toMatchObject({ seq: 1 });
   });
 
+  it("stores explorer ranks and returns them with folders, objects and diagrams", async () => {
+    const res = await api.post(`/repositories/${REPO}/changes`, {
+      id: "C-RANK",
+      label: "Reorder",
+      edits: [
+        { edit: "setRank", item: "folder", id: "F06", rank: "a0" },
+        { edit: "setRank", item: "object", id: "O-APP-2", rank: "a1" },
+        { edit: "setRank", item: "diagram", id: "D-01", rank: "a2" },
+      ],
+    });
+    expect(res.status).toBe(201);
+    const folders = (await api.get(`/repositories/${REPO}/folders`)).body as { id: string; rank?: string }[];
+    expect(folders.find((f) => f.id === "F06")).toMatchObject({ rank: "a0" });
+    expect(folders.find((f) => f.id === "F04")).not.toHaveProperty("rank");
+    for (const f of folders) expectContract(f, schema("Folder"));
+    const crm = await api.get(`/repositories/${REPO}/objects/O-APP-2`);
+    expect(crm.body).toMatchObject({ rank: "a1" });
+    expectContract(crm.body, schema("ModelObject"));
+    const diagram = await api.get(`/repositories/${REPO}/diagrams/D-01`);
+    expect(diagram.body).toMatchObject({ rank: "a2" });
+    expectContract(diagram.body, schema("Diagram"));
+  });
+
   it("returns problem+json for unknown repositories, scenarios and routes", async () => {
     expect((await api.get("/repositories/NOPE/folders")).status).toBe(404);
     expect((await api.get(`/repositories/${REPO}/folders?scenario=NOPE`)).status).toBe(404);

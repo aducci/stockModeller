@@ -49,6 +49,7 @@ export interface FolderTable extends Tenant {
   parent_id: string | null;
   name: string;
   deleted: Generated<boolean>;
+  rank: string | null;
 }
 
 interface MetamodelRow extends Tenant {
@@ -100,6 +101,7 @@ export interface ObjectTable extends ScenarioRow {
   type_key: string;
   folder_id: string;
   name: string;
+  rank: string | null;
   key: string | null;
   description: string;
   properties: Json<Record<string, unknown>>;
@@ -135,6 +137,7 @@ export interface DiagramTable extends ScenarioRow {
   diagram_type_key: string;
   folder_id: string;
   name: string;
+  rank: string | null;
   description: string;
   generated_by: Json<{ rule: string; focusObjectId: string } | null> | null;
   version: number;

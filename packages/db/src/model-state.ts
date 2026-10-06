@@ -66,7 +66,13 @@ export async function loadState(
   const folders = await tx.selectFrom("folder").selectAll().where("repository_id", "=", repositoryId).execute();
   state.load(
     "folders",
-    folders.map((r): FolderRow => ({ id: r.id, parentId: r.parent_id, name: r.name, deleted: r.deleted })),
+    folders.map((r): FolderRow => ({
+      id: r.id,
+      parentId: r.parent_id,
+      name: r.name,
+      ...rank(r.rank),
+      deleted: r.deleted,
+    })),
   );
 
   const [objects, relationships, diagrams, occurrences, lines, annotations] = await Promise.all([
@@ -89,6 +95,11 @@ export async function loadState(
 
 // ------------------------------------------------------------------ database row → engine row
 
+/** An unranked row has no `rank` at all, exactly as the engine leaves it. */
+function rank(value: string | null): { rank?: string } {
+  return value === null ? {} : { rank: value };
+}
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 function fromObject(r: any): ObjectRow {
   return {
@@ -98,6 +109,7 @@ function fromObject(r: any): ObjectRow {
     key: r.key,
     folderId: r.folder_id,
     description: r.description,
+    ...rank(r.rank),
     properties: r.properties as Record<string, PropertyValue>,
     tags: r.tags,
     externalIds: r.external_ids,
@@ -142,6 +154,7 @@ function fromDiagram(r: any): DiagramRow {
     description: r.description,
     diagramType: r.diagram_type_key,
     folderId: r.folder_id,
+    ...rank(r.rank),
     generatedBy: r.generated_by,
     version: r.version,
     fieldVersions: r.field_versions,
@@ -233,6 +246,7 @@ function toDatabase(touched: TouchedRow, ctx: WriteContext): Record<string, unkn
         id: r.id,
         parent_id: r.parentId,
         name: r.name,
+        rank: r.rank ?? null,
         deleted: r.deleted,
       };
     }
@@ -244,6 +258,7 @@ function toDatabase(touched: TouchedRow, ctx: WriteContext): Record<string, unkn
         type_key: r.type,
         folder_id: r.folderId,
         name: r.name,
+        rank: r.rank ?? null,
         key: r.key,
         description: r.description,
         properties: json(r.properties),
@@ -289,6 +304,7 @@ function toDatabase(touched: TouchedRow, ctx: WriteContext): Record<string, unkn
         diagram_type_key: r.diagramType,
         folder_id: r.folderId,
         name: r.name,
+        rank: r.rank ?? null,
         description: r.description,
         generated_by: r.generatedBy === null ? null : json(r.generatedBy),
         version: r.version,

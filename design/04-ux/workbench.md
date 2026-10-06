@@ -71,7 +71,7 @@ From the [connection framework](../01-product/connection_framework.md) §15 and 
 | The pair is allowed by one containment type | New containment relationship; the object (and its contents) moves into the container's folder |
 | Several containment types allow the pair | The one the object already uses, if allowed; otherwise the first in package order. **Alt+drop** opens a menu to choose |
 | The object already has a container | The **same** relationship is reconnected to the new container (id, properties and history kept); its type changes with `changeRelationshipType` only if the old type does not allow the new pair |
-| No containment rule allows the pair, the drop would create a loop, or a name clashes in the target folder | Refused: "not allowed" cursor, and a toast with the reason (naming the rule) |
+| No containment rule allows the pair, the drop would create a loop, or a name clashes in the target folder | Refused: "not allowed" cursor, and the reason (naming the rule) in a hint under the tree while the pointer is there |
 | Alt+drop menu | *Contain as ▸ (containment types)*, plus *Add as part ▸ (composition and aggregation types)*, which link without moving |
 
 The object's context menu adds **Change container type ▸** (switches the containment relationship to another allowed containment type), **Take out of *container*** (detaches; it stays in the folder) and **Trace ▸** (§9 of semantics).
@@ -92,6 +92,37 @@ The **Hierarchies** tab picks any hierarchy (containment, a composition or aggre
 | ⌘K | Search objects, diagrams, catalogues and commands ("New application", "Switch scenario", "Run automation…") |
 | Breadcrumb | Folder path of the selection; hierarchy path when the selection is nested |
 | ⌘[ / ⌘] | Back and forward through visited diagrams and selections |
+
+## Menus
+
+One menu component serves the top bar's menu bar and the explorer's right-click menu, so an item reads and behaves the same in both. Arrows move, → opens a submenu and ← closes it, Enter runs, Esc closes. An item that cannot run now stays visible, greyed out, and its tooltip says why ("Not empty: holds 3 items").
+
+| Menu | Items |
+|---|---|
+| **File** (top bar) | New folder, New object, New diagram · Rename (F2) · Delete · Close tab, Close all tabs · Switch repository…, Sign out. New items go into the selected folder or the selected item's folder |
+| Explorer: folder | New ▸ (folder, object, diagram, group) · Rename · Delete folder (only when empty) |
+| Explorer: object | Open · New ▸ · Rename · Add to group ▸ (the groups, then New group…) · Delete object… (the dialog listing what goes with it) |
+| Explorer: group | As an object, plus Ungroup (deletes the group; its members stay) |
+| Explorer: group member (↗) | Open · Remove from group |
+| Explorer: diagram | Open · New ▸ · Rename · Delete diagram |
+| Explorer: several marked rows | Group *n* items… · Add to group ▸ · Clear marks |
+| Explorer: empty space | New folder at the top level |
+
+In the explorer, F2 renames the focused row in place, Delete deletes it (on a member row: removes it from the group), Shift+F10 or the context-menu key opens its menu, and Ctrl/⌘-click marks rows to drag or group together (Esc clears the marks). Edit and View menus follow in later slices.
+
+## Drag and drop in the explorer
+
+Folders, diagrams and objects are dragged to reorder or move them. Where the pointer is on a row decides the drop: its top quarter places the item **before** the row, its bottom quarter **after** it (a line shows where), and its middle drops it **into** a folder, a container or a group (the row is outlined). A diagram row has no middle. The empty space below the tree takes folders, to the end of the top level.
+
+| Drag | Onto | Result (one change, one Undo) |
+|---|---|---|
+| Any item | Before or after a row | Placed there among that row's siblings, moving to the row's folder or container if it is elsewhere |
+| Folder, diagram or object | The middle of a folder | Moved into it, at the end. A contained object leaves its container |
+| Object | The middle of an object | Contained in it (table above); Alt+drop chooses the type |
+| Object(s) | The middle of a group | Added to the group; nothing moves |
+| Member row (↗) | Another group | Moves the membership. Elsewhere it only copies (e.g. onto a diagram) |
+
+The order is stored (`rank`, decision B21) and is the same for everyone. Unranked items follow ranked ones: folders, diagrams, then objects, each by name. A drop is refused with its reason (a folder into itself, a name already used in the target folder, a non-folder at the top level, a folder or diagram into an object, an object already in the group). A closed folder or container opens after the pointer rests on it for 600 ms. Esc cancels a drag.
 
 ## States
 

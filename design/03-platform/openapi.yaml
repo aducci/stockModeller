@@ -337,7 +337,7 @@ components:
     Folder:
       type: object
       required: [id, name]
-      properties: { id: { type: string }, parentId: { type: [string, 'null'] }, name: { type: string } }
+      properties: { id: { type: string }, parentId: { type: [string, 'null'] }, name: { type: string }, rank: { type: string, description: 'Explorer order (edit setRank); absent when unranked' } }
     Properties:
       type: object
       additionalProperties: true
@@ -352,6 +352,7 @@ components:
         key: { type: [string, 'null'] }
         folderId: { type: string }
         description: { type: string }
+        rank: { type: string, description: 'Explorer order among its siblings (edit setRank); absent when unranked' }
         properties: { $ref: '#/components/schemas/Properties' }
         tags: { type: array, items: { type: string } }
         externalIds: { type: object, additionalProperties: { type: string } }
@@ -446,6 +447,7 @@ components:
         name: { type: string }
         diagramType: { type: string }
         folderId: { type: string }
+        rank: { type: string, description: 'Explorer order among its siblings (edit setRank); absent when unranked' }
         objectOccurrences:
           type: array
           items:

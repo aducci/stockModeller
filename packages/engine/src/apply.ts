@@ -219,6 +219,8 @@ class Transaction {
         return this.moveFolder(edit);
       case "deleteFolder":
         return this.deleteFolderEdit(edit);
+      case "setRank":
+        return this.setRank(edit);
       case "createDiagram":
         return this.createDiagram(edit);
       case "updateDiagram":
@@ -430,18 +432,21 @@ class Transaction {
     const current = this.state.objects.get(obj.id)!;
     this.write("objects", { ...current, deleted: true });
     this.markChanged("objects", obj.id, ["*"]);
-    this.step({
-      edit: "createObject",
-      id: current.id,
-      type: current.type,
-      name: current.name,
-      folderId: current.folderId,
-      ...(current.key !== null ? { key: current.key } : {}),
-      description: current.description,
-      properties: this.storedProperties(current),
-      tags: current.tags,
-      externalIds: current.externalIds,
-    });
+    this.step(
+      {
+        edit: "createObject",
+        id: current.id,
+        type: current.type,
+        name: current.name,
+        folderId: current.folderId,
+        ...(current.key !== null ? { key: current.key } : {}),
+        description: current.description,
+        properties: this.storedProperties(current),
+        tags: current.tags,
+        externalIds: current.externalIds,
+      },
+      ...this.restoreRank("object", current),
+    );
   }
 
   // ------------------------------------------------------------------ relationships
@@ -866,6 +871,22 @@ class Transaction {
     return folder.id;
   }
 
+  /** Explorer order (build: storage.md §7): last writer wins, so no base version; the inverse restores the old rank. */
+  private setRank(e: Extract<ModelEdit, { edit: "setRank" }>): Id {
+    if (e.rank !== null && (e.rank.length === 0 || e.rank.length > 200))
+      this.invalid("rank", "A rank is 1 to 200 characters");
+    const withRank = <T extends { rank?: string }>(row: T): T => {
+      const { rank: _old, ...rest } = row;
+      return (e.rank === null ? rest : { ...rest, rank: e.rank }) as T;
+    };
+    const collection = ({ folder: "folders", object: "objects", diagram: "diagrams" } as const)[e.item];
+    const row = this.requireLive(collection, e.id);
+    this.write(collection, withRank(row) as never);
+    if (collection !== "folders") this.markChanged(collection, row.id, ["rank"]);
+    this.step({ edit: "setRank", item: e.item, id: row.id, rank: row.rank ?? null });
+    return row.id;
+  }
+
   private deleteFolderEdit(e: Extract<ModelEdit, { edit: "deleteFolder" }>): Id {
     const folder = this.requireLive("folders", e.id);
     if (!this.ctx.scenario.isBaseline) {
@@ -892,7 +913,10 @@ class Transaction {
       if (obj) this.deleteObject(obj, "deleteContents");
     }
     this.write("folders", { ...folder, deleted: true });
-    this.step({ edit: "createFolder", id: folder.id, parentId: folder.parentId, name: folder.name });
+    this.step(
+      { edit: "createFolder", id: folder.id, parentId: folder.parentId, name: folder.name },
+      ...this.restoreRank("folder", folder),
+    );
   }
 
   private checkFolderName(name: string, parentId: Id | null, selfId: Id): void {
@@ -972,14 +996,17 @@ class Transaction {
     }
     this.write("diagrams", { ...diagram, deleted: true });
     this.markChanged("diagrams", diagram.id, ["*"]);
-    this.step({
-      edit: "createDiagram",
-      id: diagram.id,
-      name: diagram.name,
-      diagramType: diagram.diagramType,
-      folderId: diagram.folderId,
-      description: diagram.description,
-    });
+    this.step(
+      {
+        edit: "createDiagram",
+        id: diagram.id,
+        name: diagram.name,
+        diagramType: diagram.diagramType,
+        folderId: diagram.folderId,
+        description: diagram.description,
+      },
+      ...this.restoreRank("diagram", diagram),
+    );
   }
 
   private diagramTypeOf(key: TypeKey, property: string): ResolvedDiagramType {
@@ -1559,6 +1586,11 @@ class Transaction {
   }
 
   // ------------------------------------------------------------------ results
+
+  /** The edit that puts a deleted item's explorer rank back after its inverse re-creates it. */
+  private restoreRank(item: "folder" | "object" | "diagram", row: { id: Id; rank?: string }): Edit[] {
+    return row.rank === undefined ? [] : [{ edit: "setRank", item, id: row.id, rank: row.rank }];
+  }
 
   private step(...edits: Edit[]): void {
     this.steps.push(edits);
