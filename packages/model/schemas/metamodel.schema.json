@@ -1,0 +1,460 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://connectome.app/schemas/metamodel.schema.json",
+  "title": "Connectome metamodel package",
+  "description": "Object types, relationship types, property types, value lists and rules. Diagram types use diagram-type.schema.json. See 02-model/metamodel.md.",
+  "type": "object",
+  "required": ["name", "version", "objectTypes", "relationshipTypes"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "prefix": {
+      "type": "string",
+      "pattern": "^[a-z][a-zA-Z0-9]*$",
+      "description": "Key prefix when installed as a package, e.g. 'archimate'"
+    },
+    "layers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/layer"
+      }
+    },
+    "valueLists": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/valueList"
+      }
+    },
+    "propertyTypes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/propertyType"
+      }
+    },
+    "objectTypes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/objectType"
+      }
+    },
+    "relationshipTypes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/relationshipType"
+      }
+    },
+    "relationshipRules": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/relationshipRule"
+      }
+    },
+    "validationRules": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/validationRule"
+      }
+    },
+    "derivationRules": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/derivationRule"
+      }
+    },
+    "exchangeMappings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/exchangeMapping"
+      },
+      "description": "How standard file formats map onto this package's types (used by import/export adapters)"
+    }
+  },
+  "$defs": {
+    "key": {
+      "type": "string",
+      "pattern": "^[a-z][a-zA-Z0-9]*(\\.[a-z][a-zA-Z0-9]*)?$"
+    },
+    "typeRef": {
+      "type": "string",
+      "pattern": "^(\\*|[a-z][a-zA-Z0-9]*)$"
+    },
+    "color": {
+      "type": "string",
+      "pattern": "^#[0-9a-fA-F]{6}$"
+    },
+    "layer": {
+      "type": "object",
+      "required": ["key", "name"],
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/key"
+        },
+        "name": {
+          "type": "string"
+        },
+        "order": {
+          "type": "integer"
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        }
+      }
+    },
+    "valueList": {
+      "type": "object",
+      "required": ["key", "values"],
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/key"
+        },
+        "values": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["key", "label"],
+            "additionalProperties": false,
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "color": {
+                "$ref": "#/$defs/color"
+              },
+              "order": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      }
+    },
+    "propertyType": {
+      "type": "object",
+      "required": ["key", "name", "group", "dataType"],
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/key",
+          "description": "'<group>.<name>', e.g. 'lifecycle.status'"
+        },
+        "name": {
+          "type": "string"
+        },
+        "group": {
+          "$ref": "#/$defs/key"
+        },
+        "dataType": {
+          "enum": [
+            "text",
+            "richText",
+            "number",
+            "money",
+            "date",
+            "boolean",
+            "list",
+            "multiList",
+            "objectRef",
+            "person",
+            "url",
+            "calculated"
+          ]
+        },
+        "unit": {
+          "type": "string"
+        },
+        "valueList": {
+          "$ref": "#/$defs/key"
+        },
+        "objectTypes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/typeRef"
+          }
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "default": {},
+        "help": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        },
+        "master": {
+          "type": "string"
+        },
+        "validation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "min": {
+              "type": "number"
+            },
+            "max": {
+              "type": "number"
+            },
+            "pattern": {
+              "type": "string"
+            },
+            "maxLength": {
+              "type": "integer"
+            },
+            "decimals": {
+              "type": "integer"
+            }
+          }
+        },
+        "formula": {
+          "type": "object",
+          "required": ["expression", "resultType"],
+          "additionalProperties": false,
+          "properties": {
+            "expression": {
+              "type": "string"
+            },
+            "resultType": {
+              "enum": ["text", "number", "money", "date", "boolean", "list"]
+            }
+          }
+        }
+      }
+    },
+    "symbol": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "shape": {
+          "enum": ["rect", "roundRect", "ellipse", "hexagon", "cylinder", "person", "icon"]
+        },
+        "fill": {
+          "$ref": "#/$defs/color"
+        },
+        "stroke": {
+          "$ref": "#/$defs/color"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "width": {
+          "type": "integer"
+        },
+        "height": {
+          "type": "integer"
+        },
+        "label": {
+          "type": "string"
+        }
+      }
+    },
+    "line": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "style": {
+          "enum": ["solid", "dashed", "dotted"]
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "startArrow": {
+          "enum": ["none", "arrow", "diamond", "circle"]
+        },
+        "endArrow": {
+          "enum": ["none", "arrow", "diamond", "circle"]
+        }
+      }
+    },
+    "objectType": {
+      "type": "object",
+      "required": ["key", "name"],
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/key"
+        },
+        "name": {
+          "type": "string"
+        },
+        "plural": {
+          "type": "string"
+        },
+        "extends": {
+          "$ref": "#/$defs/key"
+        },
+        "abstract": {
+          "type": "boolean"
+        },
+        "layer": {
+          "$ref": "#/$defs/key"
+        },
+        "description": {
+          "type": "string"
+        },
+        "properties": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/key"
+          }
+        },
+        "symbol": {
+          "$ref": "#/$defs/symbol"
+        },
+        "uniqueName": {
+          "enum": ["repository", "folder", "none"]
+        },
+        "keyPattern": {
+          "type": "string"
+        },
+        "defaultFolder": {
+          "type": "string"
+        }
+      }
+    },
+    "relationshipType": {
+      "type": "object",
+      "required": ["key", "name", "verb", "inverseVerb"],
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/key"
+        },
+        "name": {
+          "type": "string"
+        },
+        "verb": {
+          "type": "string"
+        },
+        "inverseVerb": {
+          "type": "string"
+        },
+        "nesting": {
+          "type": "boolean",
+          "description": "Forms hierarchies; can be shown by placing a symbol inside another"
+        },
+        "singleParent": {
+          "type": "boolean"
+        },
+        "properties": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/key"
+          }
+        },
+        "line": {
+          "$ref": "#/$defs/line"
+        }
+      }
+    },
+    "relationshipRule": {
+      "type": "object",
+      "required": ["relationshipType", "sourceType", "targetType"],
+      "additionalProperties": false,
+      "properties": {
+        "relationshipType": {
+          "$ref": "#/$defs/key"
+        },
+        "sourceType": {
+          "$ref": "#/$defs/typeRef"
+        },
+        "targetType": {
+          "$ref": "#/$defs/typeRef"
+        },
+        "cardinality": {
+          "enum": ["0..1", "0..*", "1..1", "1..*"]
+        },
+        "enforcement": {
+          "enum": ["block", "warn"],
+          "default": "block"
+        }
+      }
+    },
+    "validationRule": {
+      "type": "object",
+      "required": ["key", "when", "check", "message"],
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/key"
+        },
+        "when": {
+          "type": "string"
+        },
+        "check": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "severity": {
+          "enum": ["info", "warning", "error"],
+          "default": "warning"
+        }
+      }
+    },
+    "derivationRule": {
+      "type": "object",
+      "required": ["key", "derive", "from"],
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/key"
+        },
+        "derive": {
+          "type": "string"
+        },
+        "from": {
+          "type": "string"
+        },
+        "store": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "exchangeMapping": {
+      "type": "object",
+      "required": ["format"],
+      "additionalProperties": false,
+      "properties": {
+        "format": {
+          "type": "string",
+          "description": "Adapter id, e.g. 'archimateExchange', 'bpmn', 'mermaid'"
+        },
+        "objectTypes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Format element name → object type key"
+        },
+        "relationshipTypes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Format relationship name → relationship type key"
+        },
+        "properties": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Format property name → property type key"
+        }
+      }
+    }
+  }
+}

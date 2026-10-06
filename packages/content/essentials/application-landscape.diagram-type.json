@@ -1,0 +1,43 @@
+{
+  "key": "applicationLandscape",
+  "name": "Application landscape",
+  "description": "Capabilities as nested boxes with the applications that realise them, coloured by technical fit.",
+  "objectTypes": ["capability", "application", "saasApplication"],
+  "relationshipTypes": ["contains", "realizes", "flowsTo"],
+  "nesting": "nested",
+  "showExistingRelationships": true,
+  "symbols": {
+    "capability": { "shape": "roundRect", "fill": "#f6efe2" },
+    "application": { "width": 130, "height": 48 },
+    "saasApplication": { "width": 130, "height": 48 }
+  },
+  "colourRules": [
+    { "name": "Technical fit", "when": "type:applicationBase", "apply": { "colourBy": "assessment.technicalFit" } },
+    {
+      "name": "No owner",
+      "when": "type:applicationBase AND NOT exists(ownership.businessOwner)",
+      "apply": { "badge": { "icon": "warning", "tooltip": "No business owner" } }
+    },
+    { "name": "Retired", "when": "lifecycle.status = retired", "apply": { "fade": true } }
+  ],
+  "labels": {
+    "capability": "{name} ({cost.applicationCount})",
+    "application": "{name}",
+    "saasApplication": "{name} ☁"
+  },
+  "layout": { "algorithm": "nested", "spacing": 16 },
+  "legend": { "show": true, "position": "bottomRight" },
+  "inactiveObjects": "fade",
+  "generate": [
+    {
+      "key": "perTopCapability",
+      "forEach": "type:capability AND NOT exists(<-contains-)",
+      "include": [{ "path": "-contains->", "depth": 2 }, { "path": "<-realizes-" }],
+      "layout": "nested",
+      "name": "{name} – application landscape",
+      "folder": "Diagrams/Generated/Landscapes",
+      "orphans": "archive",
+      "trigger": "nightly"
+    }
+  ]
+}

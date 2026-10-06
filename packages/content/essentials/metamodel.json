@@ -1,0 +1,585 @@
+{
+  "name": "Essentials",
+  "version": "1.0.0",
+  "layers": [
+    {
+      "key": "strategy",
+      "name": "Strategy",
+      "order": 1,
+      "color": "#f3e3c7"
+    },
+    {
+      "key": "business",
+      "name": "Business",
+      "order": 2,
+      "color": "#fbf2c4"
+    },
+    {
+      "key": "application",
+      "name": "Application",
+      "order": 3,
+      "color": "#d7e8f8"
+    },
+    {
+      "key": "data",
+      "name": "Data",
+      "order": 4,
+      "color": "#e3dcf4"
+    },
+    {
+      "key": "technology",
+      "name": "Technology",
+      "order": 5,
+      "color": "#dcefdc"
+    }
+  ],
+  "valueLists": [
+    {
+      "key": "lifecycleStatus",
+      "values": [
+        {
+          "key": "planned",
+          "label": "Planned",
+          "color": "#9ec5fe",
+          "order": 1
+        },
+        {
+          "key": "active",
+          "label": "Active",
+          "color": "#7fd1a2",
+          "order": 2
+        },
+        {
+          "key": "phaseOut",
+          "label": "Phase out",
+          "color": "#f4c06a",
+          "order": 3
+        },
+        {
+          "key": "retired",
+          "label": "Retired",
+          "color": "#c7c7c7",
+          "order": 4
+        }
+      ]
+    },
+    {
+      "key": "fit",
+      "values": [
+        {
+          "key": "1",
+          "label": "1 – poor",
+          "color": "#e57373"
+        },
+        {
+          "key": "2",
+          "label": "2",
+          "color": "#f4a261"
+        },
+        {
+          "key": "3",
+          "label": "3",
+          "color": "#e9d06b"
+        },
+        {
+          "key": "4",
+          "label": "4",
+          "color": "#a3d39c"
+        },
+        {
+          "key": "5",
+          "label": "5 – excellent",
+          "color": "#5cb85c"
+        }
+      ]
+    },
+    {
+      "key": "criticality",
+      "values": [
+        {
+          "key": "low",
+          "label": "Low",
+          "color": "#a3d39c"
+        },
+        {
+          "key": "medium",
+          "label": "Medium",
+          "color": "#e9d06b"
+        },
+        {
+          "key": "high",
+          "label": "High",
+          "color": "#f4a261"
+        },
+        {
+          "key": "missionCritical",
+          "label": "Mission critical",
+          "color": "#e57373"
+        }
+      ]
+    }
+  ],
+  "propertyTypes": [
+    {
+      "key": "lifecycle.status",
+      "name": "Status",
+      "group": "lifecycle",
+      "dataType": "list",
+      "valueList": "lifecycleStatus",
+      "role": "lifecycle.status"
+    },
+    {
+      "key": "lifecycle.activeFrom",
+      "name": "Active from",
+      "group": "lifecycle",
+      "dataType": "date",
+      "role": "lifecycle.activeFrom"
+    },
+    {
+      "key": "lifecycle.retiredFrom",
+      "name": "Retired from",
+      "group": "lifecycle",
+      "dataType": "date",
+      "role": "lifecycle.retiredFrom"
+    },
+    {
+      "key": "ownership.businessOwner",
+      "name": "Business owner",
+      "group": "ownership",
+      "dataType": "person",
+      "role": "owner"
+    },
+    {
+      "key": "ownership.technicalOwner",
+      "name": "Technical owner",
+      "group": "ownership",
+      "dataType": "person"
+    },
+    {
+      "key": "assessment.businessFit",
+      "name": "Business fit",
+      "group": "assessment",
+      "dataType": "list",
+      "valueList": "fit"
+    },
+    {
+      "key": "assessment.technicalFit",
+      "name": "Technical fit",
+      "group": "assessment",
+      "dataType": "list",
+      "valueList": "fit"
+    },
+    {
+      "key": "assessment.criticality",
+      "name": "Criticality",
+      "group": "assessment",
+      "dataType": "list",
+      "valueList": "criticality"
+    },
+    {
+      "key": "cost.runCost",
+      "name": "Run cost",
+      "group": "cost",
+      "dataType": "money",
+      "unit": "per year"
+    },
+    {
+      "key": "cost.totalCost",
+      "name": "Total cost",
+      "group": "cost",
+      "dataType": "calculated",
+      "formula": {
+        "expression": "coalesce(cost.runCost, 0) + sum(-contains->.cost.totalCost)",
+        "resultType": "money"
+      }
+    },
+    {
+      "key": "cost.applicationCount",
+      "name": "Applications",
+      "group": "cost",
+      "dataType": "calculated",
+      "formula": {
+        "expression": "count(<-realizes- type:application OR type:saasApplication)",
+        "resultType": "number"
+      }
+    },
+    {
+      "key": "technical.users",
+      "name": "Number of users",
+      "group": "technical",
+      "dataType": "number",
+      "validation": {
+        "min": 0,
+        "decimals": 0
+      }
+    },
+    {
+      "key": "technical.hosting",
+      "name": "Hosting",
+      "group": "technical",
+      "dataType": "text"
+    },
+    {
+      "key": "flow.frequency",
+      "name": "Frequency",
+      "group": "flow",
+      "dataType": "number",
+      "unit": "per day"
+    },
+    {
+      "key": "flow.protocol",
+      "name": "Protocol",
+      "group": "flow",
+      "dataType": "text"
+    }
+  ],
+  "objectTypes": [
+    {
+      "key": "capability",
+      "name": "Capability",
+      "plural": "Capabilities",
+      "layer": "strategy",
+      "uniqueName": "folder",
+      "defaultFolder": "Business/Capabilities",
+      "properties": ["assessment.criticality", "cost.totalCost", "cost.applicationCount"],
+      "symbol": {
+        "shape": "roundRect",
+        "fill": "#f3e3c7",
+        "width": 160,
+        "height": 60
+      }
+    },
+    {
+      "key": "process",
+      "name": "Process",
+      "plural": "Processes",
+      "layer": "business",
+      "defaultFolder": "Business/Processes",
+      "properties": ["ownership.businessOwner", "lifecycle.status"],
+      "symbol": {
+        "shape": "roundRect",
+        "fill": "#fbf2c4",
+        "width": 140,
+        "height": 60
+      }
+    },
+    {
+      "key": "processStep",
+      "name": "Process step",
+      "layer": "business",
+      "defaultFolder": "Business/Processes",
+      "symbol": {
+        "shape": "roundRect",
+        "fill": "#fff8dc",
+        "width": 120,
+        "height": 50
+      }
+    },
+    {
+      "key": "organisationUnit",
+      "name": "Organisation unit",
+      "layer": "business",
+      "defaultFolder": "Business/Organisation",
+      "properties": ["ownership.businessOwner"],
+      "symbol": {
+        "shape": "rect",
+        "fill": "#fbf2c4",
+        "icon": "people"
+      }
+    },
+    {
+      "key": "applicationBase",
+      "name": "Application (any)",
+      "abstract": true,
+      "layer": "application",
+      "properties": [
+        "lifecycle.status",
+        "lifecycle.activeFrom",
+        "lifecycle.retiredFrom",
+        "ownership.businessOwner",
+        "ownership.technicalOwner",
+        "assessment.businessFit",
+        "assessment.technicalFit",
+        "assessment.criticality",
+        "cost.runCost",
+        "cost.totalCost",
+        "technical.users"
+      ],
+      "symbol": {
+        "shape": "rect",
+        "fill": "#d7e8f8",
+        "icon": "app",
+        "width": 140,
+        "height": 60
+      }
+    },
+    {
+      "key": "application",
+      "name": "Application",
+      "plural": "Applications",
+      "extends": "applicationBase",
+      "uniqueName": "repository",
+      "keyPattern": "APP-{0000}",
+      "defaultFolder": "Applications",
+      "properties": ["technical.hosting"]
+    },
+    {
+      "key": "saasApplication",
+      "name": "SaaS application",
+      "extends": "applicationBase",
+      "uniqueName": "repository",
+      "defaultFolder": "Applications",
+      "symbol": {
+        "shape": "rect",
+        "fill": "#d7e8f8",
+        "icon": "cloud"
+      }
+    },
+    {
+      "key": "dataObject",
+      "name": "Data object",
+      "layer": "data",
+      "defaultFolder": "Data",
+      "symbol": {
+        "shape": "rect",
+        "fill": "#e3dcf4",
+        "icon": "data"
+      }
+    },
+    {
+      "key": "server",
+      "name": "Server",
+      "layer": "technology",
+      "defaultFolder": "Technology/Servers",
+      "properties": ["lifecycle.status", "cost.runCost"],
+      "symbol": {
+        "shape": "rect",
+        "fill": "#dcefdc",
+        "icon": "server"
+      }
+    },
+    {
+      "key": "location",
+      "name": "Location",
+      "layer": "technology",
+      "defaultFolder": "Technology/Locations",
+      "symbol": {
+        "shape": "rect",
+        "fill": "#eef6ee",
+        "icon": "pin"
+      }
+    }
+  ],
+  "relationshipTypes": [
+    {
+      "key": "contains",
+      "name": "Contains",
+      "verb": "contains",
+      "inverseVerb": "is part of",
+      "nesting": true,
+      "singleParent": true,
+      "line": {
+        "style": "solid",
+        "startArrow": "diamond"
+      }
+    },
+    {
+      "key": "realizes",
+      "name": "Realizes",
+      "verb": "realizes",
+      "inverseVerb": "is realized by",
+      "line": {
+        "style": "dashed",
+        "endArrow": "arrow"
+      }
+    },
+    {
+      "key": "serves",
+      "name": "Serves",
+      "verb": "serves",
+      "inverseVerb": "is served by",
+      "line": {
+        "style": "solid",
+        "endArrow": "arrow"
+      }
+    },
+    {
+      "key": "flowsTo",
+      "name": "Flows to",
+      "verb": "flows to",
+      "inverseVerb": "receives from",
+      "properties": ["flow.frequency", "flow.protocol"],
+      "line": {
+        "style": "solid",
+        "endArrow": "arrow",
+        "color": "#2c5d98"
+      }
+    },
+    {
+      "key": "accesses",
+      "name": "Accesses",
+      "verb": "accesses",
+      "inverseVerb": "is accessed by",
+      "line": {
+        "style": "dotted",
+        "endArrow": "arrow"
+      }
+    },
+    {
+      "key": "hostedOn",
+      "name": "Hosted on",
+      "verb": "is hosted on",
+      "inverseVerb": "hosts",
+      "line": {
+        "style": "solid",
+        "endArrow": "arrow"
+      }
+    },
+    {
+      "key": "owns",
+      "name": "Owns",
+      "verb": "owns",
+      "inverseVerb": "is owned by",
+      "line": {
+        "style": "solid",
+        "startArrow": "circle"
+      }
+    },
+    {
+      "key": "supports",
+      "name": "Supports (derived)",
+      "verb": "supports",
+      "inverseVerb": "is supported by",
+      "line": {
+        "style": "dashed",
+        "endArrow": "arrow",
+        "color": "#8a9bb0"
+      }
+    }
+  ],
+  "relationshipRules": [
+    {
+      "relationshipType": "contains",
+      "sourceType": "capability",
+      "targetType": "capability"
+    },
+    {
+      "relationshipType": "contains",
+      "sourceType": "process",
+      "targetType": "process"
+    },
+    {
+      "relationshipType": "contains",
+      "sourceType": "process",
+      "targetType": "processStep"
+    },
+    {
+      "relationshipType": "contains",
+      "sourceType": "organisationUnit",
+      "targetType": "organisationUnit"
+    },
+    {
+      "relationshipType": "contains",
+      "sourceType": "location",
+      "targetType": "server"
+    },
+    {
+      "relationshipType": "contains",
+      "sourceType": "applicationBase",
+      "targetType": "applicationBase",
+      "enforcement": "warn"
+    },
+    {
+      "relationshipType": "realizes",
+      "sourceType": "applicationBase",
+      "targetType": "capability"
+    },
+    {
+      "relationshipType": "serves",
+      "sourceType": "applicationBase",
+      "targetType": "process"
+    },
+    {
+      "relationshipType": "flowsTo",
+      "sourceType": "applicationBase",
+      "targetType": "applicationBase"
+    },
+    {
+      "relationshipType": "flowsTo",
+      "sourceType": "processStep",
+      "targetType": "processStep"
+    },
+    {
+      "relationshipType": "accesses",
+      "sourceType": "applicationBase",
+      "targetType": "dataObject"
+    },
+    {
+      "relationshipType": "hostedOn",
+      "sourceType": "application",
+      "targetType": "server"
+    },
+    {
+      "relationshipType": "owns",
+      "sourceType": "organisationUnit",
+      "targetType": "*"
+    }
+  ],
+  "validationRules": [
+    {
+      "key": "appNeedsOwner",
+      "when": "type:applicationBase AND lifecycle.status in (active, phaseOut)",
+      "check": "exists(ownership.businessOwner)",
+      "message": "{name} has no business owner.",
+      "severity": "warning"
+    },
+    {
+      "key": "retiredAppsNotServing",
+      "when": "type:applicationBase AND lifecycle.status = retired",
+      "check": "count(-serves->) = 0",
+      "message": "Retired application {name} still serves {count(-serves->)} process(es).",
+      "severity": "error"
+    },
+    {
+      "key": "retireAfterActive",
+      "when": "exists(lifecycle.retiredFrom) AND exists(lifecycle.activeFrom)",
+      "check": "lifecycle.retiredFrom > lifecycle.activeFrom",
+      "message": "{name}: retired date is before active date.",
+      "severity": "error"
+    }
+  ],
+  "derivationRules": [
+    {
+      "key": "appSupportsCapability",
+      "derive": "applicationBase -supports-> capability",
+      "from": "applicationBase -serves-> process <-realizes- capability",
+      "store": false
+    }
+  ],
+  "exchangeMappings": [
+    {
+      "format": "archimateExchange",
+      "objectTypes": {
+        "Capability": "capability",
+        "BusinessProcess": "process",
+        "BusinessActor": "organisationUnit",
+        "ApplicationComponent": "application",
+        "DataObject": "dataObject",
+        "Node": "server",
+        "Location": "location"
+      },
+      "relationshipTypes": {
+        "Composition": "contains",
+        "Realization": "realizes",
+        "Serving": "serves",
+        "Flow": "flowsTo",
+        "Access": "accesses",
+        "Assignment": "hostedOn"
+      },
+      "properties": {
+        "Lifecycle status": "lifecycle.status",
+        "Business owner": "ownership.businessOwner"
+      }
+    }
+  ]
+}

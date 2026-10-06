@@ -1,0 +1,15 @@
+{
+  "name": "@connectome/engine",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@connectome/model": "0.0.0"
+  },
+  "devDependencies": {
+    "@connectome/content": "0.0.0"
+  }
+}

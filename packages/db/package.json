@@ -1,0 +1,23 @@
+{
+  "name": "@connectome/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "kysely": "^0.29.6",
+    "pg": "^8.23.1",
+    "@connectome/model": "0.0.0",
+    "@connectome/engine": "0.0.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.23.1",
+    "tsx": "^4.23.15",
+    "@connectome/content": "0.0.0"
+  },
+  "scripts": {
+    "migrate": "tsx src/cli/migrate.ts"
+  }
+}
