@@ -62,6 +62,8 @@ All property groups, relationships (with inline add), hierarchy position, "Occur
 | Packages | Installed packages and versions; upgrade with migration preview |
 | Publish | Pending metamodel edits; "Publish 1.4.0" shows the migration plan |
 
+Proposed additions (the metamodel map, the connection matrix, sentences, try-it and the notation studio): [notation and metamodel administration §8](../02-model/notation-and-metamodel-admin.md#8-administering-the-metamodel).
+
 ## 7. Scenario compare and change request review
 
 ```

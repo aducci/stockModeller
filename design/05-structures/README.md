@@ -17,6 +17,7 @@ The machine-checkable version of [02-model](../02-model/overview.md). Everything
 | [example-metamodel.json](example-metamodel.json) | "Essentials" package 1.1.0: 12 object types (one abstract), 13 relationship types, each mapped to a semantic kind (*contains* is the containment), property types, value lists, rules, and an ArchiMate exchange mapping |
 | [diagram-type.schema.json](diagram-type.schema.json) | Schema for diagram types |
 | [example-diagram-type.json](example-diagram-type.json) | "Application landscape", including a generation rule |
+| [example-notation.json](example-notation.json) | *Proposed, not validated yet:* the `notation` section of a package: 27 glyphs, category and kind defaults, renditions, style rules, markers, lenses, stencils, a pattern and a zone ([notation](../02-model/notation-and-metamodel-admin.md)) |
 | [example-repository.json](example-repository.json) | A small repository: folders, objects, relationships, a Target 2027 scenario, one diagram (Claims Manager occurs twice on it), one catalogue |
 
 **Naming in code:** an object is `ModelObject`, because `Object` is reserved in TypeScript.

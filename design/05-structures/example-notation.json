@@ -1,0 +1,133 @@
+{
+  "$comment": "Proposed notation section of a metamodel package (02-model/notation-and-metamodel-admin.md). Not yet in metamodel.schema.json. Glyph paths are on a 16x16 grid, stroke-only, drawn with stroke=currentColor, stroke-width 1.5, round caps and joins, no fill.",
+  "glyphs": {
+    "actor": "M8 2.5a2.5 2.5 0 1 1 0 5a2.5 2.5 0 1 1 0-5M3 14c0-3 2.2-5 5-5s5 2 5 5",
+    "capability": "M2 13h12V3h-4v3.5H6V10H2z",
+    "behaviour": "M2 5h8l4 3-4 3H2l2-3z",
+    "event": "M2 4h9l3 4-3 4H2l3-4z",
+    "service": "M5 4h6a4 4 0 0 1 0 8H5a4 4 0 0 1 0-8",
+    "interface": "M2 8h6M11 5a3 3 0 1 1 0 6a3 3 0 1 1 0-6",
+    "api": "M6 3c-2 0-2 1-2 2.5S3.5 8 2.5 8c1 0 1.5 1 1.5 2.5S4 13 6 13M10 3c2 0 2 1 2 2.5s.5 2.5 1.5 2.5c-1 0-1.5 1-1.5 2.5S12 13 10 13",
+    "component": "M5.5 2.5h8v11h-8zM3 5h4.5v2H3zM3 9h4.5v2H3z",
+    "information": "M3 3h10v10H3zM3 6.5h10",
+    "database": "M3 4c0-1.1 2.2-2 5-2s5 .9 5 2-2.2 2-5 2-5-.9-5-2v8c0 1.1 2.2 2 5 2s5-.9 5-2V4",
+    "technology": "M2 5.5l3-3h9v8l-3 3H2zM2 5.5h9v8M11 5.5l3-3",
+    "server": "M3 2.5h10v4.5H3zM3 9h10v4.5H3zM5.5 4.8h.01M5.5 11.2h.01",
+    "cloud": "M4.5 12.5h7a3 3 0 0 0 .3-6A4 4 0 0 0 4.3 7.2a2.7 2.7 0 0 0 .2 5.3z",
+    "location": "M8 14s-4.5-4.4-4.5-8a4.5 4.5 0 0 1 9 0c0 3.6-4.5 8-4.5 8zM8 6h.01",
+    "motivation": "M8 2a6 6 0 1 1 0 12A6 6 0 1 1 8 2M8 5.5a2.5 2.5 0 1 1 0 5a2.5 2.5 0 1 1 0-5",
+    "requirement": "M4.5 3.5H14l-2.5 9H2z",
+    "group": "M2 4h4.5l1.5 1.5h6V13H2z",
+    "other": "M3 3h10v10H3z",
+    "warning": "M8 2l6.5 11.5h-13zM8 6.5v3M8 11.5h.01",
+    "info": "M8 2a6 6 0 1 1 0 12A6 6 0 1 1 8 2M8 7.5v3.5M8 5h.01",
+    "check": "M3 8.5l3 3 7-7",
+    "clock": "M8 2a6 6 0 1 1 0 12A6 6 0 1 1 8 2M8 5v3.2l2.2 1.6",
+    "lock": "M3.5 7.5h9v6h-9zM5.5 7.5V5a2.5 2.5 0 0 1 5 0v2.5",
+    "noOwner": "M8 3a2 2 0 1 1 0 4a2 2 0 1 1 0-4M4 13c0-2.5 1.8-4 4-4s4 1.5 4 4M2.5 2.5l11 11",
+    "star": "M8 2l1.8 3.8 4.2.5-3.1 2.9.8 4.1L8 11.2l-3.7 2.1.8-4.1L2 6.3l4.2-.5z",
+    "drill": "M9 2.5h4.5V7M13.5 2.5L7.5 8.5M11.5 9.5v4h-9v-9h4",
+    "interaction": "M2 6h11l-2.5-2.5M14 10H3l2.5 2.5"
+  },
+  "categoryDefaults": {
+    "actor": { "glyph": "actor", "hue": "amber" },
+    "capability": { "glyph": "capability", "hue": "sand" },
+    "behaviour": { "glyph": "behaviour", "hue": "amber" },
+    "service": { "glyph": "service", "hue": "sky" },
+    "interface": { "glyph": "interface", "hue": "sky" },
+    "component": { "glyph": "component", "hue": "sky" },
+    "information": { "glyph": "information", "hue": "teal" },
+    "technology": { "glyph": "technology", "hue": "green" },
+    "location": { "glyph": "location", "hue": "rose" },
+    "motivation": { "glyph": "motivation", "hue": "violet" },
+    "other": { "glyph": "other", "hue": "slate" }
+  },
+  "kindDefaults": {
+    "containment": { "shownAs": "nesting", "style": "solid", "start": "dot", "end": "none" },
+    "composition": { "style": "solid", "start": "diamond", "end": "none" },
+    "aggregation": { "style": "solid", "start": "diamondOpen", "end": "none" },
+    "association": { "style": "solid", "start": "none", "end": "none" },
+    "realisation": { "style": "dashed", "start": "none", "end": "triangleOpen" },
+    "representation": { "style": "dotted", "start": "none", "end": "triangleOpen" },
+    "serving": { "style": "solid", "start": "none", "end": "arrowOpen" },
+    "access": { "style": "dotted", "start": "none", "end": "arrowSmall" },
+    "flow": { "style": "dashed", "start": "none", "end": "arrow", "label": "{name} · {payload}" },
+    "trigger": { "style": "solid", "start": "none", "end": "arrow" },
+    "assignment": { "style": "solid", "start": "dot", "end": "arrow" },
+    "influence": { "style": "dashed", "start": "none", "end": "arrowOpen", "label": "{influence.effect}" },
+    "specialisation": { "style": "solid", "start": "none", "end": "triangleOpen" },
+    "interaction": { "style": "solid", "width": 3, "start": "none", "end": "none", "mid": "interaction", "label": "{interaction.operation}" }
+  },
+  "renditions": {
+    "application": [
+      { "key": "box", "name": "Box", "form": "box", "shape": "roundRect", "size": [130, 48], "label": "{name}" },
+      { "key": "card", "name": "Card", "form": "card", "size": [180, 96], "label": "{name}", "fields": ["lifecycle.status", "ownership.businessOwner", "cost.runCost"] },
+      { "key": "icon", "name": "Icon", "form": "glyph", "size": [32, 32], "label": "{name}" },
+      { "key": "chip", "name": "Chip", "form": "chip", "size": [96, 20], "label": "{key}" },
+      { "key": "container", "name": "Container", "form": "container", "size": [260, 160], "label": "{name}" }
+    ]
+  },
+  "styleRules": [
+    { "name": "SaaS looks like a cloud", "when": "type:saasApplication", "apply": { "glyph": "cloud" } },
+    { "name": "Retired", "when": "lifecycle.status = retired", "apply": { "opacity": 0.45, "strokeStyle": "dashed" } },
+    { "name": "Mission critical", "when": "assessment.criticality = missionCritical", "apply": { "strokeWidth": 2.5 } },
+    { "name": "Asynchronous calls", "when": "kind:interaction AND interaction.pattern = asynchronous", "apply": { "strokeStyle": "dashed" } }
+  ],
+  "markers": [
+    { "key": "noOwner", "name": "No business owner", "when": "type:applicationBase AND NOT exists(ownership.businessOwner)", "glyph": "noOwner", "slot": "topRight", "tone": "warning", "tooltip": "No business owner" },
+    { "key": "retiring", "name": "Retiring soon", "when": "lifecycle.retiredFrom < today + 180d", "glyph": "clock", "slot": "topRight", "tone": "warning", "text": "{lifecycle.retiredFrom:MMM yy}" },
+    { "key": "findings", "name": "Rule findings", "when": "exists(findings)", "glyph": "warning", "slot": "bottomRight", "tone": "error", "text": "{count(findings)}" },
+    { "key": "crown", "name": "Crown jewel", "when": "assessment.criticality = missionCritical", "glyph": "star", "slot": "topLeft", "tone": "accent" },
+    { "key": "level", "name": "Semantic level", "when": "exists(semantic.level)", "pips": "semantic.level", "slot": "bottomLeft", "tone": "muted" }
+  ],
+  "lenses": [
+    {
+      "key": "lifecycle",
+      "name": "Lifecycle",
+      "styleRules": [ { "when": "*", "apply": { "colourBy": "lifecycle.status" } } ],
+      "markers": ["retiring"],
+      "legend": true
+    },
+    {
+      "key": "runCost",
+      "name": "Run cost heat",
+      "styleRules": [ { "when": "exists(cost.runCost)", "apply": { "gradient": { "property": "cost.runCost", "min": 0, "max": 500000, "from": "sky", "to": "rose" } } } ],
+      "legend": true
+    }
+  ],
+  "stencils": [
+    {
+      "key": "applications",
+      "name": "Applications",
+      "items": [
+        { "objectType": "application", "rendition": "box" },
+        { "objectType": "saasApplication", "rendition": "box" },
+        { "objectType": "interface", "rendition": "icon" },
+        { "pattern": "serviceWithApi" }
+      ]
+    }
+  ],
+  "patterns": [
+    {
+      "key": "serviceWithApi",
+      "name": "Service with API and store",
+      "nodes": [
+        { "id": "svc", "objectType": "application", "name": "{prompt}", "rendition": "container", "at": [0, 0] },
+        { "id": "api", "objectType": "interface", "name": "{svc.name} API", "parent": "svc", "at": [16, 32] },
+        { "id": "db", "objectType": "dataObject", "name": "{svc.name} data", "parent": "svc", "at": [140, 32], "bind": "pickOrNew" }
+      ],
+      "edges": [ { "type": "accesses", "from": "svc", "to": "db" } ]
+    }
+  ],
+  "zones": [
+    {
+      "key": "lifecycleLanes",
+      "name": "Lifecycle lanes",
+      "lanes": [
+        { "label": "Planned", "accepts": "type:applicationBase", "sets": { "lifecycle.status": "planned" } },
+        { "label": "Active", "accepts": "type:applicationBase", "sets": { "lifecycle.status": "active" } },
+        { "label": "Phase out", "accepts": "type:applicationBase", "sets": { "lifecycle.status": "phaseOut" } }
+      ]
+    }
+  ]
+}
