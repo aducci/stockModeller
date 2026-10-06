@@ -29,69 +29,486 @@
     "drill": "M9 2.5h4.5V7M13.5 2.5L7.5 8.5M11.5 9.5v4h-9v-9h4",
     "interaction": "M2 6h11l-2.5-2.5M14 10H3l2.5 2.5"
   },
+  "valueListGlyphs": {
+    "lifecycleStatus": {
+      "planned": "clock",
+      "active": "check",
+      "phaseOut": "warning",
+      "retired": "lock"
+    },
+    "technicalHosting": {
+      "onPremise": "server",
+      "cloud": "cloud",
+      "hybrid": "technology"
+    }
+  },
+  "propertyScales": {
+    "cost.runCost": {
+      "min": 0,
+      "max": 500000,
+      "unit": "EUR",
+      "bands": [
+        {
+          "below": 100000,
+          "tone": "ok"
+        },
+        {
+          "below": 300000,
+          "tone": "warning"
+        },
+        {
+          "tone": "error"
+        }
+      ]
+    },
+    "data.completeness": {
+      "min": 0,
+      "max": 100,
+      "unit": "%",
+      "bands": [
+        {
+          "below": 50,
+          "tone": "error"
+        },
+        {
+          "below": 80,
+          "tone": "warning"
+        },
+        {
+          "tone": "ok"
+        }
+      ]
+    }
+  },
   "categoryDefaults": {
-    "actor": { "glyph": "actor", "hue": "amber" },
-    "capability": { "glyph": "capability", "hue": "sand" },
-    "behaviour": { "glyph": "behaviour", "hue": "amber" },
-    "service": { "glyph": "service", "hue": "sky" },
-    "interface": { "glyph": "interface", "hue": "sky" },
-    "component": { "glyph": "component", "hue": "sky" },
-    "information": { "glyph": "information", "hue": "teal" },
-    "technology": { "glyph": "technology", "hue": "green" },
-    "location": { "glyph": "location", "hue": "rose" },
-    "motivation": { "glyph": "motivation", "hue": "violet" },
-    "other": { "glyph": "other", "hue": "slate" }
+    "actor": {
+      "glyph": "actor",
+      "hue": "amber"
+    },
+    "capability": {
+      "glyph": "capability",
+      "hue": "sand"
+    },
+    "behaviour": {
+      "glyph": "behaviour",
+      "hue": "amber"
+    },
+    "service": {
+      "glyph": "service",
+      "hue": "sky"
+    },
+    "interface": {
+      "glyph": "interface",
+      "hue": "sky"
+    },
+    "component": {
+      "glyph": "component",
+      "hue": "sky"
+    },
+    "information": {
+      "glyph": "information",
+      "hue": "teal"
+    },
+    "technology": {
+      "glyph": "technology",
+      "hue": "green"
+    },
+    "location": {
+      "glyph": "location",
+      "hue": "rose"
+    },
+    "motivation": {
+      "glyph": "motivation",
+      "hue": "violet"
+    },
+    "other": {
+      "glyph": "other",
+      "hue": "slate"
+    }
   },
   "kindDefaults": {
-    "containment": { "shownAs": "nesting", "style": "solid", "start": "dot", "end": "none" },
-    "composition": { "style": "solid", "start": "diamond", "end": "none" },
-    "aggregation": { "style": "solid", "start": "diamondOpen", "end": "none" },
-    "association": { "style": "solid", "start": "none", "end": "none" },
-    "realisation": { "style": "dashed", "start": "none", "end": "triangleOpen" },
-    "representation": { "style": "dotted", "start": "none", "end": "triangleOpen" },
-    "serving": { "style": "solid", "start": "none", "end": "arrowOpen" },
-    "access": { "style": "dotted", "start": "none", "end": "arrowSmall" },
-    "flow": { "style": "dashed", "start": "none", "end": "arrow", "label": "{name} · {payload}" },
-    "trigger": { "style": "solid", "start": "none", "end": "arrow" },
-    "assignment": { "style": "solid", "start": "dot", "end": "arrow" },
-    "influence": { "style": "dashed", "start": "none", "end": "arrowOpen", "label": "{influence.effect}" },
-    "specialisation": { "style": "solid", "start": "none", "end": "triangleOpen" },
-    "interaction": { "style": "solid", "width": 3, "start": "none", "end": "none", "mid": "interaction", "label": "{interaction.operation}" }
+    "containment": {
+      "shownAs": "nesting",
+      "style": "solid",
+      "start": "dot",
+      "end": "none"
+    },
+    "composition": {
+      "style": "solid",
+      "start": "diamond",
+      "end": "none"
+    },
+    "aggregation": {
+      "style": "solid",
+      "start": "diamondOpen",
+      "end": "none"
+    },
+    "association": {
+      "style": "solid",
+      "start": "none",
+      "end": "none"
+    },
+    "realisation": {
+      "style": "dashed",
+      "start": "none",
+      "end": "triangleOpen"
+    },
+    "representation": {
+      "style": "dotted",
+      "start": "none",
+      "end": "triangleOpen"
+    },
+    "serving": {
+      "style": "solid",
+      "start": "none",
+      "end": "arrowOpen"
+    },
+    "access": {
+      "style": "dotted",
+      "start": "none",
+      "end": "arrowSmall"
+    },
+    "flow": {
+      "style": "dashed",
+      "start": "none",
+      "end": "arrow",
+      "label": "{name} · {payload}"
+    },
+    "trigger": {
+      "style": "solid",
+      "start": "none",
+      "end": "arrow"
+    },
+    "assignment": {
+      "style": "solid",
+      "start": "dot",
+      "end": "arrow"
+    },
+    "influence": {
+      "style": "dashed",
+      "start": "none",
+      "end": "arrowOpen",
+      "label": "{influence.effect}"
+    },
+    "specialisation": {
+      "style": "solid",
+      "start": "none",
+      "end": "triangleOpen"
+    },
+    "interaction": {
+      "style": "solid",
+      "width": 3,
+      "start": "none",
+      "end": "none",
+      "mid": "interaction",
+      "label": "{interaction.operation}"
+    }
   },
   "renditions": {
     "application": [
-      { "key": "box", "name": "Box", "form": "box", "shape": "roundRect", "size": [130, 48], "label": "{name}" },
-      { "key": "card", "name": "Card", "form": "card", "size": [180, 96], "label": "{name}", "fields": ["lifecycle.status", "ownership.businessOwner", "cost.runCost"] },
-      { "key": "icon", "name": "Icon", "form": "glyph", "size": [32, 32], "label": "{name}" },
-      { "key": "chip", "name": "Chip", "form": "chip", "size": [96, 20], "label": "{key}" },
-      { "key": "container", "name": "Container", "form": "container", "size": [260, 160], "label": "{name}" }
+      {
+        "key": "box",
+        "name": "Box",
+        "form": "box",
+        "shape": "roundRect",
+        "size": [
+          130,
+          48
+        ],
+        "minSize": [
+          90,
+          36
+        ],
+        "grow": "free",
+        "anchors": "sides",
+        "anchorPolicy": "distribute",
+        "label": {
+          "template": "{name}",
+          "zone": "centre",
+          "wrap": "shrink",
+          "maxLines": 2
+        }
+      },
+      {
+        "key": "card",
+        "name": "Card",
+        "form": "card",
+        "size": [
+          180,
+          96
+        ],
+        "grow": "width",
+        "anchors": "sides:2",
+        "label": {
+          "template": "{name}",
+          "zone": "header"
+        },
+        "fields": [
+          "lifecycle.status",
+          "ownership.businessOwner",
+          "cost.runCost"
+        ],
+        "decorations": [
+          {
+            "property": "lifecycle.status",
+            "as": "swatch",
+            "slot": "leftEdge"
+          },
+          {
+            "property": "assessment.technicalFit",
+            "as": "pips",
+            "of": 5,
+            "slot": "bottomLeft"
+          },
+          {
+            "property": "cost.runCost",
+            "as": "gauge",
+            "slot": "bottom",
+            "scale": "cost.runCost",
+            "label": "{value:€0k}"
+          }
+        ]
+      },
+      {
+        "key": "icon",
+        "name": "Icon",
+        "form": "glyph",
+        "size": [
+          32,
+          32
+        ],
+        "grow": "locked",
+        "anchors": "ring:8",
+        "label": {
+          "template": "{name}",
+          "zone": "below"
+        }
+      },
+      {
+        "key": "chip",
+        "name": "Chip",
+        "form": "chip",
+        "size": [
+          96,
+          20
+        ],
+        "grow": "width",
+        "anchors": "sides",
+        "label": {
+          "template": "{key}",
+          "zone": "inlineGlyph",
+          "wrap": "ellipsis"
+        },
+        "decorations": [
+          {
+            "property": "lifecycle.status",
+            "as": "dot",
+            "slot": "right"
+          }
+        ]
+      },
+      {
+        "key": "container",
+        "name": "Container",
+        "form": "container",
+        "size": [
+          260,
+          160
+        ],
+        "minSize": [
+          180,
+          120
+        ],
+        "grow": "free",
+        "anchors": "corners",
+        "label": {
+          "template": "{name}",
+          "zone": "header"
+        }
+      },
+      {
+        "key": "ported",
+        "name": "With ports",
+        "form": "box",
+        "size": [
+          200,
+          110
+        ],
+        "grow": "fit",
+        "anchors": "named",
+        "ports": {
+          "path": "-composedOf-> type:interface",
+          "side": "auto",
+          "size": 10,
+          "label": "{name}",
+          "labelAt": "outside"
+        },
+        "label": {
+          "template": "{name}",
+          "zone": "header"
+        }
+      },
+      {
+        "key": "class",
+        "name": "Compartments",
+        "form": "compartments",
+        "grow": "fit",
+        "size": [
+          210,
+          0
+        ],
+        "anchors": "sides:2",
+        "label": {
+          "template": "{name}",
+          "zone": "header"
+        },
+        "compartments": [
+          {
+            "name": "Interfaces",
+            "source": "related",
+            "path": "-composedOf-> type:interface",
+            "row": "{name}",
+            "sort": "rank",
+            "max": 8,
+            "empty": "hide",
+            "editable": true,
+            "decorations": [
+              {
+                "property": "lifecycle.status",
+                "as": "dot",
+                "slot": "inline"
+              }
+            ]
+          },
+          {
+            "name": "Data",
+            "source": "related",
+            "path": "-accesses-> type:dataObject",
+            "row": "{name} ({access.mode})",
+            "max": 6,
+            "empty": "hide"
+          },
+          {
+            "name": "Lifecycle",
+            "source": "properties",
+            "group": "lifecycle",
+            "row": "{label}: {value}",
+            "empty": "placeholder"
+          }
+        ]
+      }
     ]
   },
   "styleRules": [
-    { "name": "SaaS looks like a cloud", "when": "type:saasApplication", "apply": { "glyph": "cloud" } },
-    { "name": "Retired", "when": "lifecycle.status = retired", "apply": { "opacity": 0.45, "strokeStyle": "dashed" } },
-    { "name": "Mission critical", "when": "assessment.criticality = missionCritical", "apply": { "strokeWidth": 2.5 } },
-    { "name": "Asynchronous calls", "when": "kind:interaction AND interaction.pattern = asynchronous", "apply": { "strokeStyle": "dashed" } }
+    {
+      "name": "SaaS looks like a cloud",
+      "when": "type:saasApplication",
+      "apply": {
+        "glyph": "cloud"
+      }
+    },
+    {
+      "name": "Retired",
+      "when": "lifecycle.status = retired",
+      "apply": {
+        "opacity": 0.45,
+        "strokeStyle": "dashed"
+      }
+    },
+    {
+      "name": "Mission critical",
+      "when": "assessment.criticality = missionCritical",
+      "apply": {
+        "strokeWidth": 2.5
+      }
+    },
+    {
+      "name": "Asynchronous calls",
+      "when": "kind:interaction AND interaction.pattern = asynchronous",
+      "apply": {
+        "strokeStyle": "dashed"
+      }
+    }
   ],
   "markers": [
-    { "key": "noOwner", "name": "No business owner", "when": "type:applicationBase AND NOT exists(ownership.businessOwner)", "glyph": "noOwner", "slot": "topRight", "tone": "warning", "tooltip": "No business owner" },
-    { "key": "retiring", "name": "Retiring soon", "when": "lifecycle.retiredFrom < today + 180d", "glyph": "clock", "slot": "topRight", "tone": "warning", "text": "{lifecycle.retiredFrom:MMM yy}" },
-    { "key": "findings", "name": "Rule findings", "when": "exists(findings)", "glyph": "warning", "slot": "bottomRight", "tone": "error", "text": "{count(findings)}" },
-    { "key": "crown", "name": "Crown jewel", "when": "assessment.criticality = missionCritical", "glyph": "star", "slot": "topLeft", "tone": "accent" },
-    { "key": "level", "name": "Semantic level", "when": "exists(semantic.level)", "pips": "semantic.level", "slot": "bottomLeft", "tone": "muted" }
+    {
+      "key": "noOwner",
+      "name": "No business owner",
+      "when": "type:applicationBase AND NOT exists(ownership.businessOwner)",
+      "glyph": "noOwner",
+      "slot": "topRight",
+      "tone": "warning",
+      "tooltip": "No business owner"
+    },
+    {
+      "key": "retiring",
+      "name": "Retiring soon",
+      "when": "lifecycle.retiredFrom < today + 180d",
+      "glyph": "clock",
+      "slot": "topRight",
+      "tone": "warning",
+      "text": "{lifecycle.retiredFrom:MMM yy}"
+    },
+    {
+      "key": "findings",
+      "name": "Rule findings",
+      "when": "exists(findings)",
+      "glyph": "warning",
+      "slot": "bottomRight",
+      "tone": "error",
+      "text": "{count(findings)}"
+    },
+    {
+      "key": "crown",
+      "name": "Crown jewel",
+      "when": "assessment.criticality = missionCritical",
+      "glyph": "star",
+      "slot": "topLeft",
+      "tone": "accent"
+    },
+    {
+      "key": "level",
+      "name": "Semantic level",
+      "when": "exists(semantic.level)",
+      "pips": "semantic.level",
+      "slot": "bottomLeft",
+      "tone": "muted"
+    }
   ],
   "lenses": [
     {
       "key": "lifecycle",
       "name": "Lifecycle",
-      "styleRules": [ { "when": "*", "apply": { "colourBy": "lifecycle.status" } } ],
-      "markers": ["retiring"],
+      "styleRules": [
+        {
+          "when": "*",
+          "apply": {
+            "colourBy": "lifecycle.status"
+          }
+        }
+      ],
+      "markers": [
+        "retiring"
+      ],
       "legend": true
     },
     {
       "key": "runCost",
       "name": "Run cost heat",
-      "styleRules": [ { "when": "exists(cost.runCost)", "apply": { "gradient": { "property": "cost.runCost", "min": 0, "max": 500000, "from": "sky", "to": "rose" } } } ],
+      "styleRules": [
+        {
+          "when": "exists(cost.runCost)",
+          "apply": {
+            "gradient": {
+              "property": "cost.runCost",
+              "min": 0,
+              "max": 500000,
+              "from": "sky",
+              "to": "rose"
+            }
+          }
+        }
+      ],
       "legend": true
     }
   ],
@@ -100,10 +517,21 @@
       "key": "applications",
       "name": "Applications",
       "items": [
-        { "objectType": "application", "rendition": "box" },
-        { "objectType": "saasApplication", "rendition": "box" },
-        { "objectType": "interface", "rendition": "icon" },
-        { "pattern": "serviceWithApi" }
+        {
+          "objectType": "application",
+          "rendition": "box"
+        },
+        {
+          "objectType": "saasApplication",
+          "rendition": "box"
+        },
+        {
+          "objectType": "interface",
+          "rendition": "icon"
+        },
+        {
+          "pattern": "serviceWithApi"
+        }
       ]
     }
   ],
@@ -112,11 +540,45 @@
       "key": "serviceWithApi",
       "name": "Service with API and store",
       "nodes": [
-        { "id": "svc", "objectType": "application", "name": "{prompt}", "rendition": "container", "at": [0, 0] },
-        { "id": "api", "objectType": "interface", "name": "{svc.name} API", "parent": "svc", "at": [16, 32] },
-        { "id": "db", "objectType": "dataObject", "name": "{svc.name} data", "parent": "svc", "at": [140, 32], "bind": "pickOrNew" }
+        {
+          "id": "svc",
+          "objectType": "application",
+          "name": "{prompt}",
+          "rendition": "container",
+          "at": [
+            0,
+            0
+          ]
+        },
+        {
+          "id": "api",
+          "objectType": "interface",
+          "name": "{svc.name} API",
+          "parent": "svc",
+          "at": [
+            16,
+            32
+          ]
+        },
+        {
+          "id": "db",
+          "objectType": "dataObject",
+          "name": "{svc.name} data",
+          "parent": "svc",
+          "at": [
+            140,
+            32
+          ],
+          "bind": "pickOrNew"
+        }
       ],
-      "edges": [ { "type": "accesses", "from": "svc", "to": "db" } ]
+      "edges": [
+        {
+          "type": "accesses",
+          "from": "svc",
+          "to": "db"
+        }
+      ]
     }
   ],
   "zones": [
@@ -124,9 +586,27 @@
       "key": "lifecycleLanes",
       "name": "Lifecycle lanes",
       "lanes": [
-        { "label": "Planned", "accepts": "type:applicationBase", "sets": { "lifecycle.status": "planned" } },
-        { "label": "Active", "accepts": "type:applicationBase", "sets": { "lifecycle.status": "active" } },
-        { "label": "Phase out", "accepts": "type:applicationBase", "sets": { "lifecycle.status": "phaseOut" } }
+        {
+          "label": "Planned",
+          "accepts": "type:applicationBase",
+          "sets": {
+            "lifecycle.status": "planned"
+          }
+        },
+        {
+          "label": "Active",
+          "accepts": "type:applicationBase",
+          "sets": {
+            "lifecycle.status": "active"
+          }
+        },
+        {
+          "label": "Phase out",
+          "accepts": "type:applicationBase",
+          "sets": {
+            "lifecycle.status": "phaseOut"
+          }
+        }
       ]
     }
   ]

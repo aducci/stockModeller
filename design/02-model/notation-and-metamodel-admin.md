@@ -9,12 +9,15 @@ Status: **proposed**. Open questions N1–N12 are in the [decision log](../decis
 | Layer | Question it answers | Set by | Changes the model? |
 |---|---|---|---|
 | **Glyph** | What is the tiny picture for this kind of thing? | Type, or its semantic category by default | No |
-| **Rendition** | What form does an occurrence take: box, card, icon, chip, container? | Type (several per type), chosen per occurrence | No |
+| **Rendition** | What form does an occurrence take: box, card, icon, chip, container, compartments? | Type (several per type), chosen per occurrence | No |
+| **Anchors, ports** | Where do lines attach, and may a point stand for an interface? | Rendition; a user may add one to an occurrence | No (a port is an existing object) |
+| **Compartment** | What is listed inside the symbol: properties, related objects, a payload? | Rendition | No (rows are facts that already exist) |
 | **Style rule** | How does the look change with the object's data? | Type, diagram type, lens | No |
 | **Marker** | What should the reader be warned about, at a glance? | Type, diagram type, lens | No |
+| **Decoration** | What is this property's value, as a colour, icon, gauge or ring? | Type, diagram type, lens | No |
 | **Lens** | Which way of looking at this diagram right now? | Repository or user; switched at view time | No |
 | **Stencil, pattern, zone** | What can be put on a diagram, and what does placing it mean? | Diagram type | Yes, through normal changes |
-| **Rules** | Which connections are allowed across which types? | Metamodel (§8) | Validated by the engine |
+| **Rules** | Which connections are allowed across which types? | Metamodel (§10) | Validated by the engine |
 
 Two principles carry the whole design:
 
@@ -115,7 +118,115 @@ An object exists once; how it is drawn is a property of each **occurrence**. A t
 - **Semantic zoom.** A diagram type may set renditions per zoom band: `{ "below": 0.4, "rendition": "icon" }`. At 30 % a landscape becomes a field of coloured glyphs instead of unreadable boxes. This replaces the generic "simplified symbols" in [diagram editor §7](../04-ux/diagram-editor.md#7-rendering) with something the model owner controls.
 - **Shapes** stay parametric: the built-in shapes (`rect`, `roundRect`, `ellipse`, `hexagon`, `cylinder`, `person`, plus `tab`, `chevron`, `pill`, `document`, `note`, `parallelogram`) are functions of width and height, so they resize without distortion. A package can add a custom outline as a path on a 100×100 box with a `corner` inset that does not stretch.
 
-## 5. Style rules: occurrences change with properties
+## 5. Geometry: anchors, stretching and label zones
+
+Three things decide whether a diagram looks drawn or generated: where lines attach, what happens when a symbol is resized, and where the label sits. All three are set per rendition, so a model owner tunes them once.
+
+### 5.1 Anchors (connection points)
+
+A rendition declares an **anchor set**: the positions a line may attach to. Routing, auto-layout and manual connecting all snap to them, so lines meet symbols squarely instead of aiming at a centre point.
+
+| Anchor set | Positions | For |
+|---|---|---|
+| `sides` (default) | The midpoint of each side, 4 anchors | Boxes and cards |
+| `sides:n` | `n` evenly spaced anchors per side (`sides:3` gives 12) | Dense diagrams; integration pictures |
+| `corners` | 4 sides + 4 corners | Containers, zones |
+| `ring:n` | `n` anchors evenly around the outline (ellipses, hexagons, custom paths) | Round and irregular shapes |
+| `named` | Anchors the package places itself, each with a key, a position in shape space (0–1 in each axis), a side and an optional label | Framework notations, ports (§5.2) |
+| `free` | Anywhere on the outline | Freehand diagrams; set per diagram type |
+
+```json
+"renditions": { "application": [ { "key": "box", "anchors": "sides:3", "anchorPolicy": "nearest" } ] }
+```
+
+- `anchorPolicy` says what a line does when it has a choice: `nearest` (default: the anchor closest to the other end), `fixed` (the anchor the user chose stays put when either symbol moves) or `distribute` (several lines on one side spread across that side's anchors, in the order their other ends appear, so parallel lines never overlap).
+- A relationship occurrence stores `sourceAnchor` and `targetAnchor` only when the user pinned one; otherwise routing picks per redraw. Pinning is an occurrence edit with an inverse, so it undoes like anything else.
+- A user may add an anchor to **one occurrence** (`Add connection point`, or Alt-click on the outline): it is stored on that occurrence, named by the user, and is offered to lines like any other. It changes nothing in the model and nothing on the type.
+- A model owner may **promote** an occurrence's anchor to the rendition ("Add to the Application box"), which is a metamodel edit.
+- Fixed anchor counts are what makes orthogonal routing cheap: the router works on a small graph of anchor points and lane corridors rather than searching the whole canvas, and a 2,000-occurrence diagram re-routes in one frame.
+
+### 5.2 Ports: anchors that mean something
+
+An anchor can be **bound to an object**: an interface, an endpoint or a queue drawn as a small square on the parent's edge. Binding is by a path from the parent (`-composedOf-> type:interface`), so ports are model facts shown as geometry, not a separate concept to maintain.
+
+```json
+{ "key": "portsOnTheEdge", "anchors": "named", "ports": { "path": "-composedOf-> type:interface", "side": "auto", "size": 10, "label": "{name}", "labelAt": "outside" } }
+```
+
+- Drawing a line to a port connects to the **port's object**, not the parent, so a call to *Claims API* is a call to the interface, exactly as the semantic layer wants.
+- `side: "auto"` places each port on the side nearest the thing it connects to, which keeps crossings down; `side` can also be fixed per port (`in` on the left, `out` on the right) by a property or a flow's direction.
+- With no port rendition, the same interfaces draw as ordinary nested or separate symbols. Ports are a view choice.
+
+### 5.3 Stretching: shapes that survive resizing
+
+Every shape is a **function of width and height**, never a bitmap or a scaled path:
+
+| Shape family | Resizes by |
+|---|---|
+| `rect`, `roundRect`, `pill`, `ellipse` | Parameters: the corner radius stays constant, so a 400 × 48 box has the same corners as a 130 × 48 one |
+| `hexagon`, `chevron`, `parallelogram`, `tab`, `document`, `note` | A fixed inset (the slant, the tab, the fold) in pixels, with the straight part stretching |
+| `cylinder` | Fixed ellipse height, stretching body |
+| Custom path | **Nine-slice**: the package marks a corner inset, and only the middle bands stretch |
+
+Each rendition declares `minSize`, `maxSize` and a `grow` rule:
+
+| `grow` | Behaviour |
+|---|---|
+| `free` | The user resizes in both axes (default for boxes and containers) |
+| `width` | Height is fixed by the content (cards, chips, compartment shapes), width is free |
+| `fit` | Both axes follow the content: the symbol grows when a compartment gains a row, never clips |
+| `locked` | Fixed size, the glyph rendition's default |
+
+`aspect` may lock a ratio (icons, framework figures). Dragging a corner with Shift locks the current ratio whatever the setting, and auto-layout respects `minSize` so generated diagrams never produce unreadable symbols. The glyph never stretches: it is drawn at a fixed size in its slot, however wide the symbol.
+
+### 5.4 Label zones
+
+A rendition says **where** a label sits, not only what it says:
+
+| Zone | Draws | Default for |
+|---|---|---|
+| `centre` | Centred, wrapped to the shape's inner box | Box |
+| `header` | A bar at the top, left-aligned beside the glyph | Card, container, compartment shapes |
+| `below` | Outside, under the symbol, centred | Glyph rendition, ports |
+| `inlineGlyph` | On one line beside the glyph | Chip |
+| `edge` | Along a side (useful on zones and lanes) | Zones |
+
+Each zone carries `align`, `wrap` (`wrap`, `ellipsis`, `shrink`: shrink drops one step of the type scale before wrapping), `maxLines` and `padding`. Text never silently clips: when it cannot fit, the symbol shows the ellipsis and the full name on hover, and `grow: fit` resizes instead. Relationship labels keep their own placement (`atSource`, `middle`, `atTarget`, with an offset), so verbs sit where they read.
+
+## 6. Compartments: attributes, operations and related objects
+
+> *"shapes support UML in that like a class has attributes — is this just related elements displayed in a consumable and dynamic way?"*
+
+Both, and that is the point. A **compartment** is a strip inside a symbol whose rows come from one of three sources. Nothing new is stored: a compartment is a view over facts that already exist.
+
+| `source` | Rows are | UML analogue |
+|---|---|---|
+| `properties` | The object's own properties, by group or by an explicit list | Attributes that are values (`status: Active`) |
+| `related` | Objects reached by a path query, e.g. `-composedOf-> type:attribute` | Attributes and operations that are model elements in their own right |
+| `payload` | The payload of a flow or an interaction's messages | Message contents |
+
+```json
+{ "key": "class", "form": "compartments", "grow": "fit", "label": { "zone": "header" },
+  "compartments": [
+    { "name": "Attributes", "source": "related", "path": "-composedOf-> type:attribute",
+      "row": "{name}: {dataType}", "sort": "rank", "max": 12, "empty": "hide", "editable": true },
+    { "name": "Operations", "source": "related", "path": "-composedOf-> type:operation", "row": "{name}({signature})" },
+    { "name": "Lifecycle", "source": "properties", "group": "lifecycle", "row": "{label}: {value}" }
+  ] }
+```
+
+| Behaviour | Rule |
+|---|---|
+| **Live** | Rows follow the model. Adding an attribute object anywhere (explorer, catalogue, another diagram) adds the row on every diagram that shows the class |
+| **Editable** | With `editable: true`, typing a row creates the related object and its relationship in one change; deleting a row deletes the relationship (and offers the object). The rules decide what may be typed, so a compartment cannot create something the metamodel refuses |
+| **Overflow** | `max` rows, then "+7 more", which expands in place. `sort` by rank (the explorer's order), name or a property |
+| **Empty** | `hide` (the strip disappears), `show` or `placeholder` ("No attributes") |
+| **Not a second model** | A row is the related object. Selecting it selects that object; its properties panel is the object's. There is no duplicate to keep in step |
+| **Collapse** | Each compartment collapses per occurrence (stored on the occurrence), so one diagram can show signatures and another only names |
+
+This is how a UML-ish class, an ArchiMate element with nested behaviour, a data object with its fields and an API with its operations are all the same rendition with different paths. The semantic layer already distinguishes the cases: `composition` for intrinsic parts, `containment` for structure, `access` for what is read or written.
+
+## 7. Style rules: occurrences change with properties
 
 `colourRules` on diagram types ([diagrams §3](diagrams-and-catalogues.md#3-diagram-types)) generalise into **style rules** that can live in three places and touch any visual attribute:
 
@@ -140,7 +251,7 @@ An object exists once; how it is drawn is a property of each **occurrence**. A t
 
 **Performance.** Rules compile once per metamodel version to predicates. Results are memoised per object version, so a change to one object restyles only its occurrences, and live updates do not re-run every rule on the canvas.
 
-## 6. Markers: conditional annotations
+## 8. Markers and property decorations
 
 What the request called "annotations based on conditions" are **markers**: small glyph badges (optionally with a few characters of text) attached to an occurrence at a fixed slot. The name keeps them apart from diagram **annotations**, which are free text and shapes that are not part of the model ([diagrams §1](diagrams-and-catalogues.md#1-diagrams)).
 
@@ -161,17 +272,55 @@ Built-in markers the engine provides without configuration, each switchable per 
 
 Markers are what makes a diagram a **live dashboard**: every rule that today needs a report ("which apps have no owner?") can be a marker on the picture people already look at.
 
-## 7. Lenses, stencils, patterns and zones
+### 8.1 Decorations: rendering any property onto a shape
 
-### 7.1 Lenses: switch how you look, not what you drew
+A marker says *something is true*. A **decoration** shows *what a property's value is*, in a form the eye reads faster than text. Any property can be drawn on or over a symbol, in a configurable slot, with one of a small set of forms:
+
+| `as` | Draws | Suits |
+|---|---|---|
+| `swatch` | A filled square or a tinted band along one edge | List properties (status, criticality) |
+| `dot` | A filled circle in the value's colour; `dot.outline` when the value is "none" | Any list property; the compact form for dense diagrams |
+| `pips` | n of m filled pips | Short ordered scales: level, fit 1–5 |
+| `gauge` | A horizontal bar, filled to the value, over a track | Percentages, scores, budget used |
+| `ring` | A circular gauge, filled clockwise; the value in the middle when there is room | Percentages where a bar does not fit (glyph and chip renditions) |
+| `icon` | A glyph chosen by the value, from the **value list's icon map** | States with established symbols (cloud, lock, warning) |
+| `text` | The formatted value, in the type scale's small size | Costs, dates, keys |
+| `bars` | A micro bar chart over several properties or a history | Trends, cost over scenarios |
+| `fill`, `stroke` | The symbol's own fill or outline (this is what a style rule does, listed here so the whole set is in one place) | The headline property of the diagram |
+
+```json
+"decorations": [
+  { "property": "assessment.technicalFit", "as": "pips", "of": 5, "slot": "bottomLeft" },
+  { "property": "data.completeness", "as": "ring", "slot": "topRight", "scale": { "min": 0, "max": 100 },
+    "colour": [ { "below": 50, "tone": "error" }, { "below": 80, "tone": "warning" }, { "tone": "ok" } ] },
+  { "property": "lifecycle.status", "as": "swatch", "slot": "leftEdge" },
+  { "property": "technical.hosting", "as": "icon", "slot": "topRight" },
+  { "property": "cost.runCost", "as": "gauge", "slot": "bottom", "scale": { "min": 0, "max": 500000 }, "label": "{value:€0k}" }
+]
+```
+
+| Rule | Why |
+|---|---|
+| **Value lists carry their own icons and colours.** A list value already has a key, a label and a colour ([metamodel §3](metamodel.md#3-property-types)); it gains an optional `glyph` from the glyph set. One definition then drives chips, catalogue cells, legends, markers and decorations | A state looks the same everywhere, and adding a value never means editing six places |
+| **Scales come from the property type.** A number property type may declare `scale` (min, max, unit, and bands with tones). Gauges, rings and heat gradients use it, so "what is a high run cost?" is answered once | No per-diagram magic numbers |
+| **Slots are shared with markers**, plus `leftEdge`, `rightEdge`, `topEdge` and `bottomEdge` for bands, and `inline:<compartment>` to put a decoration on a compartment row (a dot beside each attribute, for instance) | One placement model to learn |
+| **Budget per rendition.** A box takes 3 decorations, a card 6, a chip 1, a glyph 1 (plus markers); more are dropped in order with a note in the editor | A symbol that carries ten dials is unreadable, and the limit says so before the diagram does |
+| **Never colour alone.** A decoration that encodes a state uses shape or position as well as hue, and every decoration has a tooltip with the property's name and value, so the diagram meets the accessibility rule in the [design system](../04-ux/design-system.md#5-accessibility) | Colour-blind readers and printed diagrams |
+| **Zoom aware.** Below the band where a rendition switches to `glyph`, only the first decoration is drawn | Dense landscapes stay readable |
+
+Decorations are evaluated like style rules, with the same cascade and the same memoisation, and can be bundled into a lens: "Data quality" is a lens that adds a completeness ring and an owner marker to every symbol without touching any diagram.
+
+## 9. Lenses, stencils, patterns and zones
+
+### 9.1 Lenses: switch how you look, not what you drew
 
 A **lens** is a named bundle of style rules, markers and a legend that a viewer switches on at view time, from a picker on the diagram toolbar. It changes nothing in the diagram. "Lifecycle", "Run cost heat", "Ownership gaps", "Semantic level", "Changes in scenario Target 2027" are lenses. Lenses live in the repository (shared, versioned with the metamodel) or are a user's own. A diagram may save a default lens; links can carry one (`?lens=lifecycle`). The same lenses apply to catalogues (cell colour, markers in the name column) and the explorer (glyph colour).
 
-### 7.2 Stencils: what the palette offers
+### 9.2 Stencils: what the palette offers
 
 A diagram type's palette is organised in **stencils**: named sections listing object types (each with the rendition it drops as, and optional preset properties: "Application · SaaS · Active") and patterns. Without stencils, the palette lists the allowed types grouped by category, as today.
 
-### 7.3 Patterns: stencils that contain occurrences
+### 9.3 Patterns: stencils that contain occurrences
 
 A **pattern** is a reusable fragment: several occurrences with relative positions, nesting and relationships. Dropping it runs one change.
 
@@ -189,31 +338,31 @@ A **pattern** is a reusable fragment: several occurrences with relative position
 - The pattern is checked against the rules when the package loads, so it cannot produce a refused relationship.
 - **Save selection as pattern** turns any group of occurrences into a pattern (objects become new-object nodes by default).
 
-### 7.4 Zones: placing something means something
+### 9.4 Zones: placing something means something
 
 A **zone** is a diagram region (lanes, a grid or a single frame) whose areas say what they accept and what placing an occurrence there **sets**. Drop an application in the "Phase out" lane and its `lifecycle.status` becomes `phaseOut`, as one change with its inverse. Lanes can be generated from a list property's values, so a roadmap board or a fit/criticality quadrant is a zone, not a special view. Zones are annotations in the model sense (they own no facts), but their effect is a model edit, which the toast states: "Status set to Phase out · Undo".
 
-## 8. Administering the metamodel
+## 10. Administering the metamodel
 
 The [metamodel editor](../04-ux/screens.md#6-metamodel-editor-admins) gets four ways into the same rules. They are views of one draft; every edit lands in the pending metamodel version and publishes with a migration preview ([metamodel §7](metamodel.md#7-versions-and-packages)).
 
-### 8.1 The metamodel map
+### 10.1 The metamodel map
 
 A diagram of the metamodel itself: object types as nodes (their glyph and hue), grouped by category or layer; each **relationship rule** an edge labelled with the relationship type's verb, styled by its kind (§3). Drawing a line between two types adds a rule: a picker offers the relationship types, kinds first that make sense for the pair (an `access` toward an information type, a `realisation` from a more concrete level). Selecting an edge opens block/warn and cardinality. Edge thickness shows how many relationships use the rule; a red dashed edge is a combination **in use but not allowed** (found in data), with **Allow** and **Show the 12 relationships**. The map is the onboarding picture: a new modeller sees the language on one page.
 
-### 8.2 The connection matrix
+### 10.2 The connection matrix
 
-Rows are source types, columns target types. A cell holds one coloured dot per allowed relationship type (the kind's colour; hollow for `warn`). Clicking a cell opens checkboxes for every relationship type, so "what may connect Application to Data object?" is answered and changed in one place. The pivot **by relationship type** gives the per-type source × target grid already in the screens spec. Filters: by kind, by category, "only cells with violations", "only unused rules". Category and wildcard rules (§8.5) show as inherited, lighter dots that can be overridden per cell.
+Rows are source types, columns target types. A cell holds one coloured dot per allowed relationship type (the kind's colour; hollow for `warn`). Clicking a cell opens checkboxes for every relationship type, so "what may connect Application to Data object?" is answered and changed in one place. The pivot **by relationship type** gives the per-type source × target grid already in the screens spec. Filters: by kind, by category, "only cells with violations", "only unused rules". Category and wildcard rules (§10.5) show as inherited, lighter dots that can be overridden per cell.
 
-### 8.3 Sentences
+### 10.3 Sentences
 
 The same rules as a list of sentences, the way the model reads: *Application · serves · Process*, *any component · accesses · any information*. A sentence bar with autocomplete adds rules by typing; pasting a column of sentences (or a CSV) previews and adds them in bulk. Each sentence shows usage and violation counts, and the rule's enforcement as a chip.
 
-### 8.4 Try it
+### 10.4 Try it
 
 A sandbox panel: pick (or drag in) two types and see exactly what a modeller will get: the connect menu in order, what dropping one inside the other offers, the line each choice draws, and the reason for anything refused ("*Server* can't be placed inside *Application*. Allowed: Location"). It answers "why can't I connect these?" before a modeller asks.
 
-### 8.5 Rules that scale
+### 10.5 Rules that scale
 
 | Addition | Example | Why |
 |---|---|---|
@@ -224,14 +373,14 @@ A sandbox panel: pick (or drag in) two types and see exactly what a modeller wil
 
 Rule endpoints therefore become: a type key, `*`, an abstract type (inherited through `extends`) or `category:<name>`. The most specific matching rule decides enforcement; the matrix shows which rule a cell inherits from.
 
-### 8.6 Notation studio
+### 10.6 Notation studio
 
 The notation lives on the type editor, not in a separate tool:
 - **Glyph editor**: a 16×16 grid with snap, line, arc and dot tools, live byte count against the 256-byte budget, preview at 12, 16, 24 and 48 px in both themes; paste or drop an SVG to convert it.
 - **Renditions**: a strip of the type's renditions rendered with a real object of the type (or sample data), side by side in light and dark.
 - **Rules and markers**: a list with the `when` filter, the effect, and a live count ("matches 37 of 412 applications"), previewed on a sample diagram.
 
-## 9. How leading tools compare
+## 11. How leading tools compare
 
 From public documentation, not hands-on testing.
 
@@ -242,6 +391,9 @@ From public documentation, not hands-on testing.
 | Style by properties | Shape script conditions on tagged values (`HasTag`); diagram legends that colour by property | Conditional formatting in perspectives | Report views colour by field | Label expressions; scripting | Display by attribute (configured) | Colour and label views | Limited | Style rules with cascade, on objects and relationships |
 | Conditional annotations | Shape script decorations | Labels from fields | — | Label expressions | — | Label views | — | Markers with slots, tones, text, legend counts |
 | Stencils and patterns | Toolbox profiles; UML patterns | — | — | Palette per viewpoint | Diagram type palettes | Viewpoint palettes | Palettes | Stencils, patterns with bind-to-existing, zones that set properties |
+| Connection points | Fixed per shape script | Automatic | Automatic | Fixed per figure | Fixed per shape | Per notation | Fixed per shape | Anchor sets per rendition, per-occurrence anchors, ports bound to objects |
+| Compartments | UML compartments, built in | Fields in a table view | Fact-sheet sections | Nested elements | Compartments per metaclass | Nested behaviour | UML compartments, built in | Compartments over properties, related objects or a payload, editable in place |
+| Property dials on symbols | Shape script drawing | Conditional formatting | Report colours | Label expressions | Configured display | Colour and label views | Stereotype icons | Decorations: swatch, dot, pips, gauge, ring, icon, text, from value-list glyphs and property scales |
 | Rule administration | Quick Linker definitions inside an MDG technology (files) | Metamodel editor; constraints listing every source → reference → target combination as defined in use, unused or undefined | Relations with cardinality per fact sheet type | Fixed by the ArchiMate spec | Metamodel diagram in Studio | Metamodel designer | Profiles | Map, matrix, sentences and try-it over one draft; category rules; learn from data |
 | Behaviour from meaning | Per technology code | — | — | ArchiMate rules | Per MetaAssociation | ArchiMate derivation | — | 14 semantic kinds drive defaults for look, gestures, tracing and validation |
 
@@ -252,33 +404,39 @@ What the comparison shows:
 - **Bizzdesign's** colour and label views are the clearest precedent for lenses.
 - Nobody derives notation from relationship **meaning**. Connectome can, because the semantic kinds exist ([ADR-010](../06-decisions/ADR-010-semantic-base-types.md)).
 
-## 10. Storage and engine
+## 12. Storage and engine
 
 | Item | Where | Edit |
 |---|---|---|
-| Glyphs, renditions, style rules, markers, lenses, stencils, patterns, zones | New `notation` section of the metamodel package; per-type `renditions`, `glyph`, `hue` on object types | Metamodel edits, versioned and migrated (renaming a rendition key maps occurrences) |
+| Glyphs, renditions (with their anchors, growth, label zones and compartments), style rules, markers, decorations, lenses, stencils, patterns, zones | New `notation` section of the metamodel package; per-type `renditions`, `glyph`, `hue` on object types | Metamodel edits, versioned and migrated (renaming a rendition key maps occurrences) |
+| Value-list `glyph`, property-type `scale` | The value list and the property type | Metamodel edits |
 | A user's own lenses | User preferences, outside the change log | Not a model change |
-| `rendition` on an occurrence | Occurrence row (null = default) | `updateOccurrence` with its inverse |
+| `rendition`, size, collapsed compartments and user-added anchors on an occurrence | Occurrence row (null = the rendition's default) | `updateOccurrence` with its inverse |
+| `sourceAnchor`, `targetAnchor` on a relationship occurrence | Occurrence row, set only when the user pinned one | `updateOccurrence` with its inverse |
+| A compartment row the user typed | The related object and its relationship | Ordinary `createObject` + `createRelationship` in one change |
 | Zone placement | The zone is an annotation; the effect is `setProperties` in the same change | One change, one undo step |
 | Category and level rule endpoints | Relationship `rules` | Metamodel edits |
 
-The engine stays pure: style rules and markers are evaluated in the web app (and by export), never by the server. Validation and rule checks stay in the engine.
+The engine stays pure: style rules, markers, decorations, compartment queries and routing are evaluated in the web app (and by export), never by the server. Validation and rule checks stay in the engine.
 
-## 11. Slices
+## 13. Slices
 
 | Slice | Delivers | Needs |
 |---|---|---|
 | **N-1** | Glyph sprite and the default set by category; line notation from kinds; glyphs in explorer, tabs and palette | Nothing new |
 | **N-2** | Renditions (box, card, glyph, chip, container); per-occurrence switch; semantic zoom | N-1 |
-| **N-3** | Style rules and markers on types and diagram types; legend with counts | Query filter parser (M1) |
+| **N-2a** | Anchors (`sides`, `sides:n`, `ring`), anchor-aware orthogonal routing, pinned and user-added anchors; stretch rules (`grow`, `minSize`, nine-slice) and label zones | N-2 |
+| **N-2b** | Compartments: `properties` and `related` sources, overflow, collapse; editing rows in place | N-2a, query paths (M1) |
+| **N-3** | Style rules, markers and decorations (swatch, dot, pips, gauge, ring, icon, text) on types and diagram types; value-list glyphs and property-type scales; legend with counts | Query filter parser (M1) |
 | **N-4** | Lenses (repository and personal) on diagrams, catalogues, explorer | N-3 |
 | **N-5** | Stencils and patterns; save selection as pattern | N-2 |
 | **N-6** | Zones | N-5 |
+| **N-7** | Ports: anchors bound to objects by a path, `side: auto`, connecting straight to a port | N-2a, N-2b |
 | **A-1** | Metamodel editor: connection matrix, sentences, try-it | M1 metamodel stream |
 | **A-2** | Metamodel map; learn from data; category and level rule endpoints | A-1 |
 | **A-3** | Notation studio (glyph editor, rendition and rule previews) | N-3, A-1 |
 
-N-1 and A-1 are the highest value per effort: every diagram and the explorer get a recognisable language at once, and model owners can see and change the rules without editing JSON.
+N-2a is the one to build early despite its place in the list: anchors decide how every line on every diagram looks, and retrofitting routing later means redrawing customers' diagrams. N-1 and A-1 are otherwise the highest value per effort: every diagram and the explorer get a recognisable language at once, and model owners can see and change the rules without editing JSON.
 
 ## Sources
 

@@ -51,7 +51,7 @@ From the [connection framework](01-product/connection_framework.md), designed in
 
 ## Notation decisions (proposed)
 
-From [notation and metamodel administration](02-model/notation-and-metamodel-admin.md). Defaults proposed on 2026-10-06; none is accepted yet.
+From [notation and metamodel administration](02-model/notation-and-metamodel-admin.md). Defaults proposed on 2026-10-06; none is accepted yet. N13–N19 follow the product owner's comments on PR #11 (connection points, stretching, labels, property rendering and UML-style compartments).
 
 | # | Question | Proposed default | Alternative |
 |---|---|---|---|
@@ -67,6 +67,13 @@ From [notation and metamodel administration](02-model/notation-and-metamodel-adm
 | N10 | Rule endpoints | A type, `*`, an abstract type or `category:<name>`; the most specific rule decides | Types and `*` only |
 | N11 | Rules found in data but not allowed | The metamodel map and matrix show them with **Allow**; nothing changes until accepted | Only listed as validation findings |
 | N12 | Who evaluates style rules and markers? | The web app (and export), never the server; the engine stays pure | The server sends computed styles |
+| N13 | Where may a line attach to a symbol? | An **anchor set** per rendition (`sides`, `sides:n`, `corners`, `ring:n`, `named`, `free`), default `sides`; a user may add an anchor to one occurrence, and an owner may promote it to the type | Free attachment anywhere, with the router choosing (simpler, but routing gets expensive and lines wander) |
+| N14 | Interfaces drawn on a parent's edge | **Ports**: an anchor bound to an object by a path (`-composedOf-> type:interface`); connecting to it connects to that object | A port as a new kind of thing in the model |
+| N15 | Resizing | Shapes are functions of width and height (custom paths use nine-slice); each rendition sets `minSize`, `maxSize` and `grow` (`free`, `width`, `fit`, `locked`); the glyph never stretches | Scale the whole symbol, glyph included |
+| N16 | Labels | **Label zones** per rendition (`centre`, `header`, `below`, `inlineGlyph`, `edge`) with wrap, shrink and max lines; text never silently clips | One label position for every shape |
+| N17 | "A class has attributes": are those related elements? | **Compartments**, with three sources: `properties`, `related` (a path query, so attributes and operations are ordinary objects) and `payload`. Rows are live and editable in place; nothing is duplicated | Attributes as a special storage on the object |
+| N18 | Rendering a property onto a shape | **Decorations**: `swatch`, `dot`, `pips`, `gauge`, `ring`, `icon`, `text`, `bars`, plus fill and stroke, in the marker slots and on compartment rows, with a per-rendition budget | Only colour-by-property, as the diagram types do today |
+| N19 | Where do a decoration's colours, icons and ranges come from? | The value list (its `glyph` and colours) and the property type (its `scale` with bands), so one definition serves chips, cells, legends and diagrams | Per diagram type, as part of the style rule |
 
 ## Found while building (M0)
 
