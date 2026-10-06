@@ -166,3 +166,46 @@ export function toggleInSet(set: PropertySet, key: string): PropertySet {
     properties: set.properties.includes(key) ? set.properties.filter((k) => k !== key) : [...set.properties, key],
   };
 }
+
+export type ConfirmationState = "none" | "current" | "earlier" | "changed";
+
+export interface ConfirmationInfo {
+  state: ConfirmationState;
+  by?: string;
+  at?: string;
+}
+
+/** A quarter as one number, so two dates compare by quarter (reviews are quarterly checkpoints). */
+const quarter = (iso: string) => {
+  const d = new Date(iso);
+  return d.getUTCFullYear() * 4 + Math.floor(d.getUTCMonth() / 3);
+};
+
+interface Confirmable {
+  confirmations?: Record<string, { by: string; at: string }>;
+  fieldVersions: Record<string, { v: number; by: string }>;
+}
+
+/**
+ * Where a property's confirmation stands (design/04-ux/workbench.md "Confirmations"): never confirmed, confirmed this
+ * quarter, confirmed in an earlier quarter, or changed since it was confirmed.
+ */
+export function confirmationOf(item: Confirmable, key: string, now: string): ConfirmationInfo {
+  const c = item.confirmations?.[key];
+  if (!c) return { state: "none" };
+  const stamp = (field: string) => Math.max(item.fieldVersions[field]?.v ?? 0, item.fieldVersions["*"]?.v ?? 0);
+  if (stamp(`properties.${key}`) > stamp(`confirmations.${key}`)) return { state: "changed", ...c };
+  return { state: quarter(c.at) === quarter(now) ? "current" : "earlier", ...c };
+}
+
+/** "6 Oct" this year, "6 Oct 2025" before. */
+export function shortDate(iso: string, now: string): string {
+  const d = new Date(iso);
+  const sameYear = d.getUTCFullYear() === new Date(now).getUTCFullYear();
+  return d.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    ...(sameYear ? {} : { year: "numeric" }),
+    timeZone: "UTC",
+  });
+}

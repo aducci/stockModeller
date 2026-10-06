@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { essentials } from "@connectome/content";
 import { Metamodel } from "@connectome/engine";
 import type { PropertyType, ValueList } from "@connectome/model";
-import { displayValue, editorFor, fieldGroups, isRatingList } from "../src/inspector";
+import { confirmationOf, displayValue, editorFor, fieldGroups, isRatingList, shortDate } from "../src/inspector";
 
 const metamodel = Metamodel.compile(essentials.metamodel, essentials.diagramTypes);
 const list = (key: string) => metamodel.valueList(key)!;
@@ -88,5 +88,32 @@ describe("the properties panel's fields", () => {
     expect(byValue.flatMap((g) => g.fields.map((f) => f.pt.key))).toEqual(["lifecycle.status", "lifecycle.activeFrom"]);
     expect(fieldGroups(metamodel, keys, values, { filter: "fit" }).groups.map((g) => g.name)).toEqual(["Assessment"]);
     expect(fieldGroups(metamodel, keys, values, { filter: "zzz" }).groups).toEqual([]);
+  });
+});
+
+describe("confirmations", () => {
+  const now = "2026-10-20T09:00:00.000Z";
+  const item = (confirmedAt: string, propertyV: number, confirmationV: number) => ({
+    confirmations: { "lifecycle.status": { by: "dana", at: confirmedAt } },
+    fieldVersions: {
+      "*": { v: 1, by: "dana" },
+      "properties.lifecycle.status": { v: propertyV, by: "lee" },
+      "confirmations.lifecycle.status": { v: confirmationV, by: "dana" },
+    },
+  });
+
+  it("is current when confirmed this quarter, earlier when before it, changed when the value moved since", () => {
+    expect(confirmationOf(item("2026-10-06T12:00:00.000Z", 2, 3), "lifecycle.status", now).state).toBe("current");
+    expect(confirmationOf(item("2026-09-30T12:00:00.000Z", 2, 3), "lifecycle.status", now).state).toBe("earlier");
+    expect(confirmationOf(item("2026-10-06T12:00:00.000Z", 4, 3), "lifecycle.status", now)).toMatchObject({
+      state: "changed",
+      by: "dana",
+    });
+    expect(confirmationOf(item("2026-10-06T12:00:00.000Z", 2, 3), "assessment.criticality", now).state).toBe("none");
+  });
+
+  it("writes short dates, with the year only when it is not this one", () => {
+    expect(shortDate("2026-10-06T12:00:00.000Z", now)).toBe("6 Oct");
+    expect(shortDate("2025-06-03T12:00:00.000Z", now)).toBe("3 Jun 2025");
   });
 });

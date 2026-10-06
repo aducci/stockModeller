@@ -55,6 +55,12 @@ Built in slice P-1. One inspector serves objects, relationships, diagrams and fo
 
 A property set is a named, ordered selection of a type's properties (B25). **Shared sets** are defined on object types in the metamodel package (`propertySets`), inherited, a subtype's set replacing one with the same key; later they are assigned to user profiles. **My sets** are the user's own per object type, kept in the browser until profiles exist: *Save as set…* keeps what is shown, *Edit this set…* puts a checkbox on every row. With a set chosen, its properties show in its order as one section named after it; the filter still applies. The choice is remembered per object type. Essentials 1.4.0 gives applications *Quarterly review*, *Ownership* and *Cost*.
 
+#### Confirmations (slice P-3)
+
+Reviews happen in the properties panel itself (decided 2026-10-06). **Review** in the toolbar adds a confirmation column and a bar saying how many shown values are due this quarter, with **Confirm all shown**. Each row shows "✓ 6 Oct" when confirmed this quarter, or **Confirm** when it was never confirmed, was confirmed in an earlier quarter, or changed since it was confirmed (amber); the tooltip says who confirmed it and when. Setting a value while reviewing confirms it in the same change. Choosing a property set first (Essentials' *Quarterly review*) limits the review to that set.
+
+A confirmation is model data: the edit `confirmProperties` stamps each key with the change's author and time in the object's `confirmations`, and is refused for a value changed since the version the reviewer saw. Its inverse `setConfirmations` restores what was there, so Undo is exact (B26). Later (P-4): a review list per owner across many objects, using the same panel elements, reminders, and reviewers without modelling rights.
+
 #### Tool windows (slice P-2)
 
 The right column is a dock of two **tool windows**, each a tab strip over its content (Sparx EA, ABACUS): **Properties** (the inspector) above **Relations**, with a divider between them; either collapses to its tab strip. Open tabs, collapsed windows and the divider are remembered. Tabs are entries in a registry, so History, Comments and an extension's view are one entry each.

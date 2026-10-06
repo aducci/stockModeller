@@ -720,7 +720,7 @@ button.danger {
 }
 .inspector-toolbar input {
   flex: 1;
-  min-width: 0;
+  min-width: 64px;
   padding: 1px 6px;
   font-size: 12px;
   background: var(--pane-2);
@@ -1247,7 +1247,7 @@ ul.messages li {
 /* Property sets and the Relations window */
 .inspector-toolbar .set-picker {
   flex: 0 1 auto;
-  max-width: 45%;
+  max-width: 38%;
   height: 22px;
   padding: 0 4px;
   font-size: 12px;
@@ -1325,4 +1325,65 @@ ul.rel-rows .count {
     ui-monospace,
     monospace;
   color: var(--fg-2);
+}
+
+/* Confirmations (design/04-ux/workbench.md "Confirmations") */
+.review-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--fg-2);
+  background: var(--pane-2);
+  border-bottom: 1px solid var(--line);
+}
+.review-bar button {
+  font-size: 12px;
+  padding: 1px 8px;
+}
+.prop-row > .confirm {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 24px;
+  padding-left: 4px;
+  font-size: 11px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.prop-row:hover > .confirm {
+  background: var(--pane-2);
+}
+.confirm[data-state="current"] {
+  color: var(--added);
+}
+.confirm button {
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: transparent;
+  padding: 0 7px;
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--fg-2);
+}
+.confirm[data-state="earlier"] button,
+.confirm[data-state="changed"] button {
+  border-color: var(--changed);
+  color: var(--changed);
+}
+.confirm button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+button.toggle.icon {
+  padding: 1px 5px;
+  font-size: 13px;
+  line-height: 1;
+}
+button.toggle .badge {
+  margin-left: 2px;
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
 }

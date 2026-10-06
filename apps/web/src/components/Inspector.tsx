@@ -6,7 +6,14 @@ import { create } from "zustand";
 import type { ModelState, Metamodel } from "@connectome/engine";
 import type { Id, PropertySet, PropertyValue } from "@connectome/model";
 import { useWorkbench } from "../state/workbench";
-import { displayValue, type EditorKind, type Field, type FieldGroup } from "../inspector";
+import {
+  displayValue,
+  shortDate,
+  type ConfirmationInfo,
+  type EditorKind,
+  type Field,
+  type FieldGroup,
+} from "../inspector";
 import { byName } from "../text";
 
 // ---------------------------------------------------------------- remembered layout (per browser)
@@ -26,6 +33,9 @@ interface PanelPrefs {
   collapsed: string[];
   /** Height of the top tool window, in percent of the dock. */
   dockSplit: number;
+  /** Review mode: a confirmation column in the properties panel. */
+  review: boolean;
+  setReview(on: boolean): void;
   setHideEmpty(on: boolean): void;
   toggle(id: string): void;
   setToggled(ids: string[]): void;
@@ -39,7 +49,17 @@ interface PanelPrefs {
 }
 
 const PREFS_KEY = "connectome.properties";
-const SAVED = ["hideEmpty", "toggled", "split", "chosenSets", "mySets", "tabs", "collapsed", "dockSplit"] as const;
+const SAVED = [
+  "hideEmpty",
+  "toggled",
+  "split",
+  "chosenSets",
+  "mySets",
+  "tabs",
+  "collapsed",
+  "dockSplit",
+  "review",
+] as const;
 
 function loadPrefs(): Partial<PanelPrefs> {
   try {
@@ -68,7 +88,9 @@ export const usePanelPrefs = create<PanelPrefs>((set, get) => {
     tabs: {},
     collapsed: [],
     dockSplit: 58,
+    review: false,
     ...loadPrefs(),
+    setReview: (review) => update(() => ({ review })),
     setHideEmpty: (hideEmpty) => update(() => ({ hideEmpty })),
     toggle: (id) =>
       update((s) => ({ toggled: s.toggled.includes(id) ? s.toggled.filter((t) => t !== id) : [...s.toggled, id] })),
@@ -181,8 +203,10 @@ export function InspectorToolbar(props: {
   hidden: number;
   sectionIds: string[];
   sets?: SetPicker;
+  /** Review mode: the toggle, and confirming every field shown that is due. */
+  review?: { on: boolean; due: number; toggle(): void; confirmAll(): void };
 }) {
-  const { filter, onFilter, hidden, sectionIds, sets } = props;
+  const { filter, onFilter, hidden, sectionIds, sets, review } = props;
   const [naming, setNaming] = useState(false);
   const hideEmpty = usePanelPrefs((s) => s.hideEmpty);
   const setHideEmpty = usePanelPrefs((s) => s.setHideEmpty);
@@ -231,7 +255,7 @@ export function InspectorToolbar(props: {
         </button>
       </div>
     );
-  return (
+  const bar = (
     <div className="inspector-toolbar">
       {sets && (
         <select
@@ -278,13 +302,26 @@ export function InspectorToolbar(props: {
         onKeyDown={(e) => e.key === "Escape" && onFilter("")}
       />
       <button
-        className="toggle"
+        className="toggle icon"
         aria-pressed={hideEmpty}
-        title="Hide properties that have no value"
+        aria-label={hideEmpty && hidden > 0 ? `Hide empty · ${hidden}` : "Hide empty"}
+        title={
+          hideEmpty ? `Showing only properties with a value (${hidden} hidden)` : "Hide properties that have no value"
+        }
         onClick={() => setHideEmpty(!hideEmpty)}
       >
-        {hideEmpty && hidden > 0 ? `Hide empty · ${hidden}` : "Hide empty"}
+        ∅{hideEmpty && hidden > 0 && <span className="badge">{hidden}</span>}
       </button>
+      {review && (
+        <button
+          className="toggle"
+          aria-pressed={review.on}
+          title="Review: confirm that each value is still right"
+          onClick={review.toggle}
+        >
+          Review
+        </button>
+      )}
       <button
         className="toggle"
         title={anyOpen ? "Collapse all sections" : "Expand all sections"}
@@ -299,8 +336,19 @@ export function InspectorToolbar(props: {
       </button>
     </div>
   );
+  if (!review?.on) return bar;
+  return (
+    <>
+      {bar}
+      <div className="review-bar" role="status">
+        <span>
+          {review.due === 0 ? "Every value shown is confirmed this quarter." : `${review.due} to confirm this quarter`}
+        </span>
+        {review.due > 0 && <button onClick={review.confirmAll}>Confirm all shown</button>}
+      </div>
+    </>
+  );
 }
-
 /** A collapsible section with a sticky header; open or closed is remembered by `id`. */
 export function Section(props: {
   id: string;
@@ -343,6 +391,8 @@ export interface GridContext {
   commit(field: Field, value: PropertyValue | null): boolean;
   /** Editing a property set: a checkbox on every row says whether the property is in it. */
   picking?: { has(key: string): boolean; toggle(key: string): void };
+  /** Reviewing: a confirmation column (design/04-ux/workbench.md "Confirmations"). */
+  review?: { now: string; info(field: Field): ConfirmationInfo; confirm(field: Field): void };
 }
 
 /** Groups of property fields as sections, each a two-column grid with a draggable splitter. */
@@ -375,7 +425,11 @@ function PropertyGrid({ fields, ctx }: { fields: Field[]; ctx: GridContext }) {
     window.addEventListener("pointerup", up);
   };
   return (
-    <div className="prop-grid" ref={grid} style={{ gridTemplateColumns: `${split}% minmax(0, 1fr)` }}>
+    <div
+      className={`prop-grid${ctx.review ? " reviewing" : ""}`}
+      ref={grid}
+      style={{ gridTemplateColumns: `${split}% minmax(0, 1fr)${ctx.review ? " auto" : ""}` }}
+    >
       {fields.map((field) => (
         <PropertyRow key={field.pt.key} field={field} ctx={ctx} />
       ))}
@@ -430,7 +484,39 @@ function PropertyRow({ field, ctx }: { field: Field; ctx: GridContext }) {
           </button>
         )}
       </div>
+      {ctx.review && !readOnly && <ConfirmCell field={field} review={ctx.review} />}
+      {ctx.review && readOnly && <span className="confirm" />}
     </div>
+  );
+}
+
+const CONFIRM_TEXT = {
+  none: "Not confirmed yet",
+  earlier: "Confirmed in an earlier quarter",
+  changed: "Changed since it was confirmed",
+  current: "Confirmed this quarter",
+} as const;
+
+/** "✓ 6 Oct" when confirmed this quarter; otherwise a Confirm button saying why it is due. */
+function ConfirmCell({ field, review }: { field: Field; review: NonNullable<GridContext["review"]> }) {
+  const info = review.info(field);
+  const when = info.at ? ` by ${info.by} on ${shortDate(info.at, review.now)}` : "";
+  if (info.state === "current")
+    return (
+      <span className="confirm" data-state="current" title={`${CONFIRM_TEXT.current}${when}`}>
+        ✓ {shortDate(info.at!, review.now)}
+      </span>
+    );
+  return (
+    <span className="confirm" data-state={info.state}>
+      <button
+        title={`${CONFIRM_TEXT[info.state]}${when}. Confirm that ${field.pt.name} is still right.`}
+        aria-label={`Confirm ${field.pt.name}`}
+        onClick={() => review.confirm(field)}
+      >
+        Confirm
+      </button>
+    </span>
   );
 }
 

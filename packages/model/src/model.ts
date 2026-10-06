@@ -202,6 +202,14 @@ export interface ModelObject extends ModelItem {
   description: string;
   /** build: place among its siblings (in its folder, or its container) in the explorer. */
   rank?: string;
+  /** build: who last confirmed each property's value, and when (reviews in the properties panel); absent = none. */
+  confirmations?: Record<PropertyKey, Confirmation>;
+}
+
+/** build: "this value is still right", as of a commit (edit `confirmProperties`). */
+export interface Confirmation {
+  by: Id;
+  at: IsoDateTime;
 }
 
 export interface Relationship extends ModelItem {

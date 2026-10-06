@@ -131,7 +131,11 @@ interface ModelItem {
 export interface ModelObject extends ModelItem {
   name: string; key: string | null; folderId: Id; description: string;
   rank?: string;                                // build: place among its siblings in the explorer
+  confirmations?: Record<PropertyKey, Confirmation>; // build: who last confirmed each property's value, and when
 }
+
+/** build: "this value is still right", as of a commit (edit `confirmProperties`). */
+export interface Confirmation { by: Id; at: IsoDateTime }
 
 export interface Relationship extends ModelItem {
   sourceId: Id; targetId: Id; name: string;

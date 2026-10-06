@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { ModelState, Metamodel, RelationshipRow } from "@connectome/engine";
 import { LEVEL_PROPERTY, type Id } from "@connectome/model";
 import { useModel, useWorkbench } from "../state/workbench";
-import { fieldGroups, mySet, toggleInSet } from "../inspector";
+import { confirmationOf, fieldGroups, mySet, toggleInSet } from "../inspector";
 import {
   InspectorHeader,
   InspectorToolbar,
@@ -79,11 +79,32 @@ export function ObjectProperties({ id, withRelations = false }: { id: Id; withRe
     // The level falls back to the type's default, and a type can fix it (semantics.md §4.2).
     placeholder: (f) => (f.pt.key === LEVEL_PROPERTY && typeLevel ? `${typeLevel} (type default)` : undefined),
     readOnly: (f) => f.pt.key === LEVEL_PROPERTY && (type?.levelFixed ?? false),
+    // While reviewing, a value set is a value confirmed: one change, one undo.
     commit: (f, value) =>
       edit(`Set ${f.pt.name} of ${object.name}`, [
         { edit: "setProperties", id, baseVersion: object.version, set: { [f.pt.key]: value } },
+        ...(prefs.review
+          ? [{ edit: "confirmProperties" as const, id, baseVersion: object.version, keys: [f.pt.key] }]
+          : []),
       ]),
   };
+  const now = new Date().toISOString();
+  const confirm = (keys: string[]) =>
+    keys.length > 0 &&
+    edit(
+      keys.length === 1
+        ? `Confirm ${metamodel.propertyType(keys[0]!)?.name ?? keys[0]} of ${object.name}`
+        : `Confirm ${keys.length} values of ${object.name}`,
+      [{ edit: "confirmProperties", id, baseVersion: object.version, keys }],
+    );
+  const shownFields = groups.flatMap((g) => g.fields).filter((f) => f.editor !== "calculated" && !ctx.readOnly?.(f));
+  const due = shownFields.filter((f) => confirmationOf(object, f.pt.key, now).state !== "current");
+  if (prefs.review && !editing)
+    ctx.review = {
+      now,
+      info: (f) => confirmationOf(object, f.pt.key, now),
+      confirm: (f) => confirm([f.pt.key]),
+    };
   if (editing)
     ctx.picking = {
       has: (key) => editing.properties.includes(key),
@@ -118,6 +139,12 @@ export function ObjectProperties({ id, withRelations = false }: { id: Id; withRe
           ...["tags", ...(withRelations ? ["relationships", "trace", "occurs"] : [])].map((s) => `object:${s}`),
         ]}
         sets={sets}
+        review={{
+          on: prefs.review && !editing,
+          due: due.length,
+          toggle: () => prefs.setReview(!prefs.review),
+          confirmAll: () => confirm(due.map((f) => f.pt.key)),
+        }}
       />
       <PropertyGroups groups={groups} ctx={ctx} prefix={prefix} />
       {filtering && groups.length === 0 && <p className="muted pad">No properties match “{filter.trim()}”.</p>}

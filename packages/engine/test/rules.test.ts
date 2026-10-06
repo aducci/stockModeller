@@ -397,3 +397,49 @@ describe("names, keys and uniqueness", () => {
     expect(rejection(state, [dup])).toMatchObject({ property: "key" });
   });
 });
+
+describe("confirmations", () => {
+  it("stamps who confirmed a value and when, and refuses a value changed meanwhile", () => {
+    const state = exampleState();
+    const v = state.objects.get("O-APP-1")!.version;
+    applyOk(state, [
+      {
+        edit: "confirmProperties",
+        id: "O-APP-1",
+        baseVersion: v,
+        keys: ["lifecycle.status", "assessment.criticality"],
+      },
+    ]);
+    expect(state.objects.get("O-APP-1")!.confirmations).toEqual({
+      "lifecycle.status": { by: "U-DANA", at: "2026-10-06T12:00:00.000Z" },
+      "assessment.criticality": { by: "U-DANA", at: "2026-10-06T12:00:00.000Z" },
+    });
+
+    // Lee changes the status; Dana's confirmation, sent against the old version, is refused for it.
+    applyOk(
+      state,
+      [{ edit: "setProperties", id: "O-APP-1", baseVersion: v + 1, set: { "lifecycle.status": "phaseOut" } }],
+      { actor: { kind: "user", id: "U-LEE" } },
+    );
+    expect(
+      apply(state, [{ edit: "confirmProperties", id: "O-APP-1", baseVersion: v + 1, keys: ["lifecycle.status"] }]),
+    ).toMatchObject({ ok: false, reasons: [{ code: "conflict", property: "properties.lifecycle.status" }] });
+    // Another property, unchanged since, can still be confirmed against that version.
+    applyOk(state, [
+      { edit: "confirmProperties", id: "O-APP-1", baseVersion: v + 1, keys: ["assessment.businessFit"] },
+    ]);
+  });
+
+  it("refuses a property the type does not have, or one listed twice", () => {
+    const state = exampleState();
+    const v = state.objects.get("O-APP-1")!.version;
+    expect(
+      apply(state, [{ edit: "confirmProperties", id: "O-APP-1", baseVersion: v, keys: ["flow.protocol"] }]),
+    ).toMatchObject({ ok: false, reasons: [{ code: "invalid", property: "keys" }] });
+    expect(
+      apply(state, [
+        { edit: "confirmProperties", id: "O-APP-1", baseVersion: v, keys: ["lifecycle.status", "lifecycle.status"] },
+      ]),
+    ).toMatchObject({ ok: false, reasons: [{ code: "invalid", property: "keys" }] });
+  });
+});
