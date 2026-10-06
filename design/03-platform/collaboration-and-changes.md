@@ -26,6 +26,7 @@ Edit types (full list in [changes.ts](../05-structures/changes.ts)):
 | `createObject`, `setProperties`, `renameObject`, `moveToFolder`, `changeObjectType`, `deleteObject` | `createDiagram`, `updateDiagram`, `deleteDiagram` |
 | `createRelationship`, `reconnectRelationship`, `deleteRelationship` | `addObjectOccurrence`, `moveObjectOccurrence`, `styleOccurrence`, `removeOccurrence` |
 | `createFolder`, `renameFolder`, `moveFolder`, `deleteFolder` | `addRelationshipOccurrence`, `routeRelationshipOccurrence`, `addAnnotation`, `updateAnnotation` |
+| *Proposed:* `changeRelationshipType`, `setPayload` ([semantics §11](../02-model/semantics.md#11-what-changes-in-the-build)) | |
 
 ## 2. Live co-editing
 

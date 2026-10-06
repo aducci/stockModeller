@@ -102,3 +102,5 @@ Edit types added in [changes.ts](../05-structures/changes.ts) (marked `build:`):
 | `styleOccurrence` | A style value of `null` removes that override, so every style edit has an exact inverse |
 | `createRelationship` | Optional `tags`, `externalIds`, so restoring a deleted relationship is exact |
 | `createDiagram` | Optional `description`, for the same reason |
+
+**Planned (proposed, not built):** the semantic layer adds `relationship_type.semantic`, `relationship.payload` (GIN-indexed), `relationship.parent_id` and `relationship.rank`, and keeps object-type `category` and `level` in `definition`. See [semantics §11](../02-model/semantics.md#11-what-changes-in-the-build); rows move into the table above when a slice builds them.

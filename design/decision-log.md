@@ -26,6 +26,29 @@
 | O3 | First markup format | Mermaid (widest adoption), then PlantUML |
 | O4 | Second package after Essentials | ArchiMate 3.2 (most requested in EA); BPMN follows with the BPMN adapter |
 
+## Semantics: proposed defaults awaiting the product owner
+
+From the [connection framework](01-product/connection_framework.md), designed in [semantics.md](02-model/semantics.md) and [ADR-010](06-decisions/ADR-010-semantic-base-types.md). The design already uses each default; answering differently changes the named section.
+
+| # | Question | Proposed default | Alternative |
+|---|---|---|---|
+| S1 | Does a contained object have to live in its container's folder? | **Yes** ("folder follows container", semantics §3): the explorer tree is unambiguous and folder permissions cover whole subtrees | Each object keeps its own folder and shows under its container anyway; permissions then come from a folder the object is not shown in |
+| S2 | Is the semantic level set per object type or per object? | Per object (`semantic.level` property), with the type's default; a type can fix it | Per type only (simpler, but *Payment* at four levels needs four types) |
+| S3 | Which object categories? | The 11 in semantics §4.1 | A shorter list (component, information, behaviour, actor, other) |
+| S4 | Deleting a container: what happens to its contents by default? | **Kept**, moved up a level; "Delete contents too" is a choice in the dialog | Deleted with it, like a folder's contents |
+| S5 | Can a part be composed into more than one whole? | No by default (`singleParent`); a type may allow it | Yes by default |
+| S6 | May a custom type read against its kind's direction (*Realised by* from concept to concrete)? | Yes, with `semanticDirection: reverse` | No: every type must follow the kind's direction |
+| S7 | How are interaction requests and responses stored? | As child flow relationships of the interaction (`parentId`), so tracing treats them as flows | As request/response fields on the interaction (simpler, but only one of each and invisible to flow tracing) |
+| S8 | What can a payload be? | Any objects (a list); non-information payloads are flagged, not refused | Information objects only |
+| S9 | Does specialisation inherit anything (properties, relationships)? | No values are inherited; navigation shows the general object's relationships as "via specialisation", read-only (slice Sem-4) | Inherit property values unless overridden |
+| S10 | Essentials 1.1.0: add `service`, `interface`, `composedOf`, `represents`, `calls`, `triggers`, `specialises` (semantics §10)? | Yes, so the framework's examples can be modelled out of the box | Keep Essentials as is and ship them in a separate package |
+| S11 | Does the explorer show semantic groups (Serves, Flows…) under objects by default? | Yes, collapsed after the contents, with a toggle to hide them | Only in a separate Navigator tab |
+| S12 | Does drawing a containment line nest the content automatically on the diagram? | Yes (with "Show as line" in the toast) | Always a line until the user nests it |
+| S13 | Can diagrams be contained by objects (e.g. a platform's diagrams under it in the explorer)? | No: diagrams stay in folders; drill-down links connect them to objects | Yes, as structure only |
+| S14 | Which "component viewer" is meant by "show the elements hierarchically"? | The diagram editor (nest on connect, §8 there) and a new **Structure** tab on the object page | A dedicated viewer pane |
+| S15 | Explorer groups (decision B22 in the explorer slice): which kind is `groups`? | **Aggregation**: members stay where they are and may be in several groups | Containment (members would move into the group's folder) |
+| S16 | Relationship types without a kind | Treated as `association` | Refused when the metamodel is published |
+
 ## Found while building (M0)
 
 Questions the build raised. Each has a provisional answer in the code; change the code if the product owner decides otherwise.

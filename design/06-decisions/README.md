@@ -13,3 +13,4 @@ Each record states the context, the options, the decision and its consequences. 
 | [ADR-007](ADR-007-api-first-automation.md) | API-first automation in any language; hosted runtime later |
 | [ADR-008](ADR-008-cost-effective-multi-tenant-cloud.md) | Pooled multi-tenant cloud, dedicated placement on demand |
 | [ADR-009](ADR-009-frameworks-as-packages.md) | Frameworks are packages, not features |
+| [ADR-010](ADR-010-semantic-base-types.md) | Semantic base types under a free metamodel; containment is the repository's structure (proposed) |
