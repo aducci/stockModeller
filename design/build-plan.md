@@ -2,20 +2,27 @@
 
 How we turn this design pack into running software. It follows the spec's own roadmap (M0–M4) and build order (the change log first, then the metamodel, then diagrams). This plan only says **how** and **in what order**. The pack says **what**.
 
-## 0. Starting point
+## 0. Status
 
-| Fact | Consequence |
+| Slice | State |
 |---|---|
-| The repo today is a small webpack + dat.GUI demo (`src/app.js`, about 20 lines) | Nothing in it carries over. Connectome goes in a new workspace layout next to it. The demo is removed only if you agree |
-| Node 22 and PostgreSQL 16 are available in the dev container | Matches the spec (§5 of architecture). We can run `schema.sql` and integration tests locally, with no Docker needed |
-| `05-structures/` already has strict TypeScript types, JSON Schemas and examples | These become the first package (`@connectome/model`), so they are code from day one, not just docs |
+| 0.1 Workspace tooling | ✅ Done: npm workspaces, strict TypeScript, ESLint (module boundaries), Prettier, Vitest, GitHub Actions with PostgreSQL 16 |
+| 0.2 `model` | ✅ Done: types, Zod change schemas (checked against the types), JSON Schema validation, ULIDs; drift tests against `design/05-structures` |
+| 0.3 `db` | ✅ Done: `schema.sql` as migration 001, field versions and folder tombstones (002), row-level security everywhere (003); scenario-aware reads; commit path with per-repository serialisation; metamodel install and load |
+| 0.4 `engine` v0 | ✅ Done: every edit type in `changes.ts`, essential rules 1–9, per-property conflicts, an exact inverse per edit (property-tested), Essentials compiled from the package |
+| 0.5 `server` | Next |
+| 0.6–0.9 | Not started |
+
+Decisions taken on the way: [decision-log.md](decision-log.md#found-while-building-m0) (B1–B9) and [storage.md §7](03-platform/storage.md#7-additions-made-while-building).
+
+The original 3D demo in this repository was removed; the repository now holds only Connectome.
 
 ## 1. Repository layout (npm workspaces, TypeScript everywhere)
 
 ```
 /apps
-  web/          React + Vite + Zustand: workbench, diagram renderer (SVG), catalogues
-  server/       Fastify. Starts as role=web or role=worker (one image, ADR-002)
+  web/          React + Vite + Zustand: workbench, diagram renderer (SVG), catalogues   (0.7)
+  server/       Fastify. Starts as role=web or role=worker (one image, ADR-002)         (0.5)
 /packages
   model/        types from 05-structures + Zod schemas + JSON Schema validation
   engine/       the change engine: pure functions (state, change) → (new state, log rows) | rejection
@@ -23,7 +30,7 @@ How we turn this design pack into running software. It follows the spec's own ro
   query/        query-language parser → AST → SQL (from M1)
   sdk/          TypeScript SDK generated from openapi.yaml + connect()/change() helpers (M2)
   content/      packages as JSON: Essentials first (example-metamodel.json)
-/tool2.0        this design pack (source of truth; changes to the design are made here first)
+/design         this design pack (source of truth; changes to the design are made here first)
 ```
 
 Why the engine is a separate, pure package: the spec makes the change engine the only writer and puts every rule in it. Keeping it free of I/O means:
@@ -87,10 +94,10 @@ As in features-and-roadmap.md. Two things are built in from M0 so these phases n
 | Optimistic apply + rebase in the browser is the hardest part of M0 | Share the engine package between browser and server so both sides run identical logic; build 0.4 before any UI |
 | The diagram editor can eat the schedule | Use SVG only (the spec allows SVG up to 2,000 occurrences); canvas rendering and culling wait until performance tests need them |
 | JSONB property validation is the engine's job (ADR-006) | Validators are generated from the metamodel and cached per metamodel version |
-| Spec gaps found while building | Fix them in `tool2.0/` in the same PR, and add an ADR when a decision changes |
+| Spec gaps found while building | Fix them in `design/` in the same PR, and add an ADR when a decision changes |
 
-## 5. Decisions needed before coding starts
+## 5. Decisions taken before coding started
 
-1. **Where to build.** This repo (`stockModeller`), with the 3D demo removed? Or a new repository?
-2. **Package manager.** The plan assumes npm workspaces (already used here). pnpm is the alternative.
-3. **First step.** Start M0 slices 0.1–0.4 (tooling, model, database, engine): no UI, but they lay the foundation everything else depends on.
+1. **Where to build:** this repository; the 3D demo was removed.
+2. **Package manager:** npm workspaces.
+3. **First step:** M0 slices 0.1–0.4.

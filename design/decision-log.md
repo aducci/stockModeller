@@ -25,3 +25,19 @@
 | O2 | Hosted automation runtime (later) | Pick the cheapest scale-to-zero option when it is scheduled (e.g. container jobs vs. V8 isolates); the contract is fixed already |
 | O3 | First markup format | Mermaid (widest adoption), then PlantUML |
 | O4 | Second package after Essentials | ArchiMate 3.2 (most requested in EA); BPMN follows with the BPMN adapter |
+
+## Found while building (M0)
+
+Questions the build raised. Each has a provisional answer in the code; change the code if the product owner decides otherwise.
+
+| # | Question | Provisional answer (in the code now) |
+|---|---|---|
+| B1 | Is a nesting cycle checked per nesting type, or across all nesting types together? | Per type: *contains* can never loop, but a *contains* path and a *composedOf* path may cross |
+| B2 | Which end does a rule's `cardinality` limit? | The source: `0..1` means a source has at most one such relationship to a matching target (e.g. at most one location). Lower bounds (`1..1`, `1..*`) cannot be enforced while editing; they become validation findings later |
+| B3 | What does a `warn` relationship rule mean? | The pair is allowed but discouraged: the change is applied and a warning finding is returned. A pair matched by no rule is refused |
+| B4 | What happens to nested occurrences when their parent occurrence is removed, or the nesting relationship behind them is deleted? | They move to the top level of the diagram and stay where they were on screen |
+| B5 | Folders are not scenario-aware (`folder` has no `scenario_id`). Who may delete them? | Only changes in the baseline. Folders created in a scenario exist in every scenario |
+| B6 | Deleting an object leaves `objectRef` properties elsewhere pointing at it | Left as they are for now; a validation rule should flag them (M3) |
+| B7 | `example-repository.json` scenario edits omit `baseVersion`, which `changes.ts` requires | The tests fill it in from the state; the example should carry it |
+| B8 | Must an object's name be unique only among objects of exactly its type, or also among its subtypes? | Exactly its type (`application` and `saasApplication` are checked separately) |
+| B9 | When an object changes type, values the new type cannot hold | They are dropped; undo restores them |

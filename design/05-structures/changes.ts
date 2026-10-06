@@ -1,19 +1,59 @@
 // Connectome — edits and changes: the only way anything is written. See 03-platform/collaboration-and-changes.md.
-import type { Id, TypeKey, PropertyKey, PropertyValue, ObjectOccurrence, RelationshipOccurrence, Annotation, SymbolStyle, LineStyle } from "./model";
+// Additions made while building are marked "build:" (see storage.md, "Additions made while building").
+import type {
+  Id,
+  TypeKey,
+  PropertyKey,
+  PropertyValue,
+  ObjectOccurrence,
+  RelationshipOccurrence,
+  Annotation,
+  SymbolStyle,
+  LineStyle,
+  RuleFinding,
+} from "./model";
 
-interface OnExisting { id: Id; baseVersion: number }
+export interface OnExisting {
+  id: Id;
+  baseVersion: number;
+}
+
+/** build: a style patch; `null` removes an override (needed so every style edit has an exact inverse). */
+export type StylePatch = { [K in keyof (SymbolStyle & LineStyle)]?: (SymbolStyle & LineStyle)[K] | null };
 
 // ================================================================ model edits
 export type ModelEdit =
-  | { edit: "createObject"; id: Id; type: TypeKey; name: string; folderId: Id; key?: string; description?: string;
-      properties?: Record<PropertyKey, PropertyValue>; tags?: string[]; externalIds?: Record<string, string> }
-  | ({ edit: "setProperties"; set: Record<PropertyKey, PropertyValue> } & OnExisting)    // null clears a value
+  | {
+      edit: "createObject";
+      id: Id;
+      type: TypeKey;
+      name: string;
+      folderId: Id;
+      key?: string;
+      description?: string;
+      properties?: Record<PropertyKey, PropertyValue>;
+      tags?: string[];
+      externalIds?: Record<string, string>;
+    }
+  | ({ edit: "setProperties"; set: Record<PropertyKey, PropertyValue> } & OnExisting) // null clears a value
   | ({ edit: "renameObject"; name: string } & OnExisting)
   | ({ edit: "setTags"; tags: string[] } & OnExisting)
   | ({ edit: "moveToFolder"; folderId: Id } & OnExisting)
   | ({ edit: "changeObjectType"; type: TypeKey; propertyMap?: Record<PropertyKey, PropertyKey> } & OnExisting)
-  | ({ edit: "deleteObject" } & OnExisting)                                               // also deletes its relationships and occurrences
-  | { edit: "createRelationship"; id: Id; type: TypeKey; sourceId: Id; targetId: Id; name?: string; properties?: Record<PropertyKey, PropertyValue> }
+  | ({ edit: "deleteObject" } & OnExisting) // also deletes its relationships and occurrences
+  | {
+      edit: "createRelationship";
+      id: Id;
+      type: TypeKey;
+      sourceId: Id;
+      targetId: Id;
+      name?: string;
+      properties?: Record<PropertyKey, PropertyValue>;
+      /** build: so that restoring a deleted relationship is exact. */
+      tags?: string[];
+      /** build: so that restoring a deleted relationship is exact. */
+      externalIds?: Record<string, string>;
+    }
   | ({ edit: "reconnectRelationship"; sourceId?: Id; targetId?: Id } & OnExisting)
   | ({ edit: "deleteRelationship" } & OnExisting)
   | { edit: "createFolder"; id: Id; parentId: Id | null; name: string }
@@ -23,37 +63,88 @@ export type ModelEdit =
 
 // ================================================================ diagram edits (layout: last writer wins)
 export type DiagramEdit =
-  | { edit: "createDiagram"; id: Id; name: string; diagramType: TypeKey; folderId: Id }
-  | { edit: "updateDiagram"; id: Id; baseVersion: number; set: { name?: string; description?: string; folderId?: Id; diagramType?: TypeKey } }
+  | {
+      edit: "createDiagram";
+      id: Id;
+      name: string;
+      diagramType: TypeKey;
+      folderId: Id;
+      /** build: so that restoring a deleted diagram is exact. */
+      description?: string;
+    }
+  | {
+      edit: "updateDiagram";
+      id: Id;
+      baseVersion: number;
+      set: { name?: string; description?: string; folderId?: Id; diagramType?: TypeKey };
+    }
   | { edit: "deleteDiagram"; id: Id }
   | { edit: "addObjectOccurrence"; diagramId: Id; occurrence: ObjectOccurrence }
-  | { edit: "moveObjectOccurrence"; diagramId: Id; occurrenceId: Id; x: number; y: number; w?: number; h?: number;
+  | {
+      edit: "moveObjectOccurrence";
+      diagramId: Id;
+      occurrenceId: Id;
+      x: number;
+      y: number;
+      w?: number;
+      h?: number;
       /** Nesting under another occurrence must be backed by a nesting relationship (created in the same change if new). */
-      parentOccurrenceId?: Id | null }
-  | { edit: "styleOccurrence"; diagramId: Id; occurrenceId: Id; style: Partial<SymbolStyle & LineStyle>; z?: number }
-  | { edit: "removeOccurrence"; diagramId: Id; occurrenceId: Id }                         // the object stays in the model
+      parentOccurrenceId?: Id | null;
+    }
+  | { edit: "styleOccurrence"; diagramId: Id; occurrenceId: Id; style: StylePatch; z?: number }
+  | { edit: "removeOccurrence"; diagramId: Id; occurrenceId: Id } // the object stays in the model
   | { edit: "addRelationshipOccurrence"; diagramId: Id; occurrence: RelationshipOccurrence }
-  | { edit: "routeRelationshipOccurrence"; diagramId: Id; occurrenceId: Id; route: RelationshipOccurrence["route"]; labelPosition?: number }
+  | {
+      edit: "routeRelationshipOccurrence";
+      diagramId: Id;
+      occurrenceId: Id;
+      route: RelationshipOccurrence["route"];
+      labelPosition?: number;
+    }
   | { edit: "addAnnotation"; diagramId: Id; annotation: Annotation }
-  | { edit: "updateAnnotation"; diagramId: Id; annotationId: Id; set: Partial<Annotation> };
+  | { edit: "updateAnnotation"; diagramId: Id; annotationId: Id; set: Partial<Omit<Annotation, "id">> }
+  /** build: annotations could be added and updated but not removed. */
+  | { edit: "removeAnnotation"; diagramId: Id; annotationId: Id };
 
 export type Edit = ModelEdit | DiagramEdit;
+export type EditKind = Edit["edit"];
 
 // ================================================================ changes
+export const MAX_EDITS_PER_CHANGE = 10_000;
+
 export interface Change {
-  id: Id;                       // generated by the client; resending is safe
+  id: Id; // generated by the client; resending is safe
   scenarioId: Id;
-  label: string;                // "Move Claims Manager"
+  label: string; // "Move Claims Manager"
   changeRequestId?: Id;
-  edits: Edit[];                // 1..10,000, applied in order, all or nothing
+  edits: Edit[]; // 1..10,000, applied in order, all or nothing
 }
+
+export interface Actor {
+  kind: "user" | "automation" | "system";
+  id: Id;
+}
+
+export type ChangeSource = "ui" | "api" | "automation" | "system" | "import" | "merge" | "undo";
 
 export interface CommittedChange extends Change {
   seq: number;
-  actor: { kind: "user" | "automation" | "system"; id: Id };
-  source: "ui" | "api" | "automation" | "system" | "import" | "merge" | "undo";
+  actor: Actor;
+  source: ChangeSource;
   committedAt: string;
   versions: Record<Id, number>;
+}
+
+/**
+ * build: one change_log row. `inverse` is a list because one edit can cascade
+ * (deleting an object also deletes its relationships and occurrences); applying the
+ * inverse lists of a change's entries in reverse order restores the state before it.
+ */
+export interface LogEntry {
+  editIndex: number;
+  itemId: Id | null;
+  edit: Edit;
+  inverse: Edit[];
 }
 
 export type Rejection =
@@ -62,6 +153,8 @@ export type Rejection =
   | { code: "ruleViolation"; editIndex: number; rule: string; message: string }
   | { code: "forbidden"; editIndex: number; scope: string }
   | { code: "invalid"; editIndex: number; property: string; message: string };
+
+export type { RuleFinding };
 
 // ================================================================ live connection (WebSocket)
 export type ClientMessage =
@@ -73,5 +166,15 @@ export type ServerMessage =
   | { type: "committed"; change: CommittedChange }
   | { type: "rejected"; changeId: Id; reasons: Rejection[] }
   | { type: "held"; changeId: Id; changeRequestId: Id }
-  | { type: "presence"; users: Array<{ id: Id; name: string; color: string; diagramId?: Id; selection: Id[]; cursor?: { x: number; y: number } }> }
+  | {
+      type: "presence";
+      users: Array<{
+        id: Id;
+        name: string;
+        color: string;
+        diagramId?: Id;
+        selection: Id[];
+        cursor?: { x: number; y: number };
+      }>;
+    }
   | { type: "resync"; fromSeq: number };

@@ -75,3 +75,11 @@ describe("change schema", () => {
     ).toThrow();
   });
 });
+
+describe("design pack", () => {
+  it("changes.ts in the design pack is the code's changes.ts", () => {
+    const body = (text: string) => text.slice(text.indexOf("import type {"));
+    const code = readFileSync(new URL("../src/changes.ts", import.meta.url), "utf8");
+    expect(body(readDesign("05-structures/changes.ts"))).toBe(body(code));
+  });
+});
