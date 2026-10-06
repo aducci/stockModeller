@@ -38,6 +38,8 @@ export type ModelEdit =
   | ({ edit: "setProperties"; set: Record<PropertyKey, PropertyValue> } & OnExisting) // null clears a value
   | ({ edit: "renameObject"; name: string } & OnExisting)
   | ({ edit: "setTags"; tags: string[] } & OnExisting)
+  /** build: an object's description; "" clears it. */
+  | ({ edit: "setDescription"; description: string } & OnExisting)
   | ({ edit: "moveToFolder"; folderId: Id } & OnExisting)
   | ({ edit: "changeObjectType"; type: TypeKey; propertyMap?: Record<PropertyKey, PropertyKey> } & OnExisting)
   /**

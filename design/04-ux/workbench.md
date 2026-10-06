@@ -34,9 +34,22 @@ Everything opens in place.
 | **Top bar** | Repository, scenario and "as of" pickers (they apply to every open tab), search and commands (⌘K), who is here, notifications, settings |
 | **Explorer** | Four tabs: **Folders** (everything, as stored), **Types** (objects grouped by object type), **Hierarchies** (trees built from nesting relationships), **Queries** (saved queries). Filter box; drag items onto a diagram. Objects show their contents and their relationships by kind ([below](#explorer-a-semantic-navigator)) |
 | **Centre** | Tabs for diagrams, catalogues and other views; split left/right or top/bottom; a dot on a tab when others changed it |
-| **Properties** | Header (name, type, key, folder, badges), then property groups, Relationships (grouped by semantic kind, then type and direction, with inline add; flows show payloads, interactions their messages), "Occurs on" diagrams, tags, external IDs. Footer tabs: History, Comments |
+| **Properties** | One generic inspector for every kind of item ([below](#properties-panel)): header (name, type, key, folder, badges, description), then property groups, Relationships (grouped by semantic kind, then type and direction, with inline add; flows show payloads, interactions their messages), "Occurs on" diagrams, tags, external IDs. Footer tabs: History, Comments |
 | **Bottom panel** | Problems (rule findings), Changes (yours, scenario differences; later: pending review), Comments, History (activity, including API and webhook-driven changes) |
 | **Panels** | Extension panels dock like built-in ones |
+
+### Properties panel
+
+Built in slice P-1. One inspector serves objects, relationships, diagrams and folders; each fills it with its own sections, so a new kind of item or a new section is one entry, not a new panel.
+
+| Part | Behaviour |
+|---|---|
+| Header | Name, edited in place; one line with the type, key and folder (the folder hides when the panel is narrow); the description, clamped to two lines until focused. Enter commits, Shift+Enter adds a line, Esc reverts. Objects (`setDescription`) and diagrams have descriptions; folders and relationships do not (B24) |
+| Toolbar | Sticky. A filter over property names, keys and displayed values (`/` focuses it; other sections hide while it is in use); **Hide empty**, which says how many fields it hides; collapse or expand all |
+| Sections | Property groups and the other sections (Tags, Relationships, Trace, Occurs on, Payload, Messages) collapse; a group's header shows filled/total. Open or closed, Hide empty and the label width are remembered per browser |
+| Grid | Two columns with a draggable splitter, 24 px rows, fields borderless until hovered or focused, a clear button on hover, `*` for required. Below 260 px wide, labels sit above values |
+| Editors | Chosen per property type (B23): text, multi-line, number and money (right-aligned, with unit or currency), date, URL (with an open link), switch or checkbox, dropdown (with the value's colour), segmented radio, rating pips, toggle chips, object picker (with a link to the object), read-only `ƒ` for calculated values. Relationship properties are read-only until `setProperties` covers relationships |
+| Later | Several items selected: common properties, "Mixed" where they differ, one change for all. Rendered properties (gauge, ring, pips, bars) from a property's `scale`, as the notation's decorations draw them |
 
 ## Explorer: a semantic navigator
 

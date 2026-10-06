@@ -122,6 +122,7 @@ export const editSchema = z.discriminatedUnion("edit", [
   z.strictObject({ edit: z.literal("setProperties"), ...onExisting, set: properties }),
   z.strictObject({ edit: z.literal("renameObject"), ...onExisting, name: z.string() }),
   z.strictObject({ edit: z.literal("setTags"), ...onExisting, tags }),
+  z.strictObject({ edit: z.literal("setDescription"), ...onExisting, description: z.string() }),
   z.strictObject({ edit: z.literal("moveToFolder"), ...onExisting, folderId: id }),
   z.strictObject({
     edit: z.literal("changeObjectType"),

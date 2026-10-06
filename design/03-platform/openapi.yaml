@@ -407,7 +407,7 @@ components:
                  createDiagram, updateDiagram, deleteDiagram,
                  addObjectOccurrence, moveObjectOccurrence, styleOccurrence, removeOccurrence,
                  addRelationshipOccurrence, routeRelationshipOccurrence, addAnnotation, updateAnnotation, removeAnnotation,
-                 setTags]
+                 setTags, setDescription]
       additionalProperties: true
     ChangeRequestBody:
       type: object
