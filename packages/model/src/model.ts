@@ -54,6 +54,10 @@ export interface ValueList {
   values: Array<{ key: string; label: string; color?: string; order?: number }>;
 }
 
+/** build: an editor hint on a property type; "auto" picks one from the data type and the value list. */
+export type PropertyEditor =
+  "auto" | "dropdown" | "segmented" | "radio" | "rating" | "switch" | "checkbox" | "checkboxes" | "chips";
+
 export interface PropertyType {
   key: PropertyKey;
   name: string;
@@ -68,6 +72,8 @@ export interface PropertyType {
   validation?: { min?: number; max?: number; pattern?: string; maxLength?: number; decimals?: number };
   formula?: { expression: string; resultType: Exclude<DataType, "calculated" | "richText"> };
   role?: string; // e.g. "lifecycle.activeFrom", "owner"
+  /** build: how the properties panel edits the value (design/04-ux/workbench.md "Properties panel"); default auto. */
+  editor?: PropertyEditor;
   master?: string; // external system that owns the value
 }
 

@@ -571,35 +571,164 @@ button.danger {
   color: #fff;
 }
 
-/* Properties */
+/* Properties: the generic inspector (design/04-ux/workbench.md "Properties panel"). Dense 24 px rows, fields
+   borderless until hovered or focused, sections that collapse, labels above values when the panel is narrow. */
+.props {
+  container-type: inline-size;
+}
 .props-header {
   display: grid;
-  gap: 6px;
-  padding: 10px 12px;
+  gap: 2px;
+  padding: 8px 10px 6px;
   border-bottom: 1px solid var(--line);
+}
+.props-header .meta {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+  padding-left: 5px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.props-header .meta .mono {
+  font-size: 11px;
+}
+.breadcrumb {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.props-header h2.name {
+  margin: 0;
+  padding: 2px 5px;
+  font-size: 15px;
+}
+.props .bare,
+.props .value {
+  border-color: transparent;
+  background: transparent;
+  border-radius: 3px;
+}
+.props .bare:hover:not(:read-only),
+.props .value:hover:not(:disabled, :read-only) {
+  border-color: var(--line);
+}
+.props .bare:focus,
+.props .value:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--pane);
 }
 .props-header input.name {
   font-size: 15px;
   font-weight: 600;
-  width: 100%;
+  padding: 2px 4px;
 }
-.props-header .meta {
+.props-header textarea.description {
+  resize: none;
+  font-size: 12.5px;
+  line-height: 1.4;
+  padding: 2px 4px;
+  field-sizing: content;
+  min-height: 1.4em;
+  /* Two lines until focused, then as long as it needs. */
+  max-height: calc(2.8em + 6px);
+  overflow: hidden;
+}
+.props-header textarea.description:focus {
+  max-height: 40vh;
+  overflow: auto;
+}
+.props ::placeholder {
+  color: var(--fg-2);
+  opacity: 0.7;
+}
+.inspector-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   display: flex;
-  gap: 8px;
+  gap: 4px;
   align-items: center;
-}
-.breadcrumb {
-  font-size: 12px;
-}
-.group {
-  padding: 8px 12px;
+  padding: 4px 8px;
+  background: var(--pane);
   border-bottom: 1px solid var(--line);
 }
-.group h3 {
-  margin: 0 0 6px;
+.inspector-toolbar input {
+  flex: 1;
+  min-width: 0;
+  padding: 1px 6px;
   font-size: 12px;
+  background: var(--pane-2);
+}
+button.toggle {
+  border: 1px solid transparent;
+  background: transparent;
   color: var(--fg-2);
+  padding: 1px 6px;
+  font-size: 12px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+button.toggle:hover {
+  background: var(--pane-2);
+}
+button.toggle[aria-pressed="true"] {
+  background: var(--pane-2);
+  border-color: var(--line);
+  color: var(--accent);
+}
+.group {
+  border-bottom: 1px solid var(--line);
+}
+.group > h3 {
+  position: sticky;
+  top: 29px;
+  z-index: 1;
+  margin: 0;
+  background: var(--pane);
+}
+.section-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 4px 10px;
+  font-size: 11px;
   font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+  text-align: left;
+}
+.section-toggle .caret {
+  width: 0;
+  height: 0;
+  border-left: 4px solid currentColor;
+  border-top: 3.5px solid transparent;
+  border-bottom: 3.5px solid transparent;
+  transition: transform 0.12s;
+}
+.section-toggle[aria-expanded="true"] .caret {
+  transform: rotate(90deg);
+}
+.section-toggle .count {
+  margin-left: auto;
+  font:
+    400 10.5px "IBM Plex Mono",
+    ui-monospace,
+    monospace;
+  letter-spacing: 0;
+}
+.section-body {
+  padding: 0 10px 6px;
+}
+.group.actions-row {
+  padding: 8px 10px;
 }
 .rel-group h4 {
   margin: 6px 0 2px;
@@ -609,15 +738,35 @@ button.danger {
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
-.prop-row {
+.prop-grid {
+  position: relative;
   display: grid;
-  grid-template-columns: 110px 1fr;
-  gap: 8px;
-  align-items: center;
-  padding: 2px 0;
+  margin: 0 -4px 0 0;
 }
-.prop-row label {
+.prop-row {
+  display: contents;
+}
+.prop-row > label,
+.prop-row > .editor {
+  min-height: 24px;
+}
+.prop-row > label {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-right: 8px;
   color: var(--fg-2);
+  font-size: 12px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.prop-row:hover > label,
+.prop-row:hover > .editor {
+  background: var(--pane-2);
+}
+.required {
+  color: var(--removed);
 }
 .editor,
 .field {
@@ -626,23 +775,190 @@ button.danger {
   gap: 4px;
   min-width: 0;
 }
+.editor .field {
+  flex: 1;
+}
 .field input,
 .field textarea,
 .editor select {
   width: 100%;
   min-width: 0;
 }
+.editor .value {
+  height: 22px;
+  padding: 0 4px;
+  font-size: 12.5px;
+}
+.editor textarea.value {
+  height: auto;
+  field-sizing: content;
+  resize: none;
+  padding: 2px 4px;
+}
+.editor select.value.is-empty {
+  color: var(--fg-2);
+}
+.value.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
 .unit {
   color: var(--fg-2);
-  font-size: 12px;
+  font-size: 11px;
 }
-.checks {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.editor .clear {
+  visibility: hidden;
+  border: 0;
+  background: none;
+  padding: 0 3px;
+  color: var(--fg-2);
+}
+.prop-row:hover .clear,
+.editor .clear:focus-visible {
+  visibility: visible;
+}
+.editor .open-link {
+  color: var(--accent);
+  text-decoration: none;
+  padding: 0 2px;
+}
+.swatch {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-left: 4px;
+  border-radius: 50%;
 }
 .readonly {
   color: var(--fg-2);
+  padding-left: 5px;
+  font-variant-numeric: tabular-nums;
+}
+.segmented {
+  display: inline-flex;
+  margin-left: 4px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.segmented button {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0 7px;
+  font-size: 11.5px;
+  line-height: 18px;
+  color: var(--fg-2);
+}
+.segmented button + button {
+  border-left: 1px solid var(--line);
+}
+.segmented button[aria-checked="true"] {
+  background: var(--accent);
+  color: var(--pane);
+}
+.rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding-left: 5px;
+}
+.rating button {
+  width: 14px;
+  height: 10px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: transparent;
+}
+.rating button.on {
+  border-color: transparent;
+  background: var(--accent);
+}
+.rating-label {
+  margin-left: 4px;
+  font-size: 11px;
+  color: var(--fg-2);
+}
+button.switch {
+  position: relative;
+  flex: none;
+  width: 26px;
+  height: 14px;
+  margin-left: 5px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: var(--line);
+}
+button.switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--pane);
+  transition: left 0.12s;
+}
+button.switch[aria-checked="true"] {
+  background: var(--accent);
+}
+button.switch[aria-checked="true"]::after {
+  left: 14px;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: 2px 4px;
+}
+.chips button {
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: transparent;
+  padding: 0 7px;
+  font-size: 11.5px;
+  line-height: 17px;
+  color: var(--fg-2);
+}
+.chips button[aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--pane-2);
+}
+.splitter {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 7px;
+  margin-left: -4px;
+  cursor: col-resize;
+  touch-action: none;
+}
+.splitter:hover {
+  background: linear-gradient(var(--accent), var(--accent)) center / 1px 100% no-repeat;
+}
+@container (max-width: 260px) {
+  .prop-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .prop-row > label {
+    min-height: 16px;
+    padding-top: 4px;
+    font-size: 11px;
+  }
+  .splitter,
+  .props-header .breadcrumb {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .section-toggle .caret,
+  button.switch::after {
+    transition: none;
+  }
 }
 
 /* Toasts */

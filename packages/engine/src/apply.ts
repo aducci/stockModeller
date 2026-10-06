@@ -195,6 +195,8 @@ class Transaction {
         return this.renameObject(edit);
       case "setTags":
         return this.setTags(edit);
+      case "setDescription":
+        return this.setDescription(edit);
       case "moveToFolder":
         return this.moveToFolder(edit);
       case "changeObjectType":
@@ -316,6 +318,16 @@ class Transaction {
     this.write("objects", { ...obj, tags: this.checkTags(e.tags) });
     this.markChanged("objects", obj.id, ["tags"]);
     this.step({ edit: "setTags", id: obj.id, baseVersion: PENDING_VERSION, tags: obj.tags });
+    return obj.id;
+  }
+
+  private setDescription(e: Extract<ModelEdit, { edit: "setDescription" }>): Id {
+    const obj = this.requireLive("objects", e.id);
+    this.checkBase("objects", obj, e.baseVersion, ["description"]);
+    if (e.description.length > 10000) this.invalid("description", "A description can be at most 10,000 characters");
+    this.write("objects", { ...obj, description: e.description });
+    this.markChanged("objects", obj.id, ["description"]);
+    this.step({ edit: "setDescription", id: obj.id, baseVersion: PENDING_VERSION, description: obj.description });
     return obj.id;
   }
 

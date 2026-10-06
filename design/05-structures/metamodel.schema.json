@@ -212,6 +212,10 @@
         "role": {
           "type": "string"
         },
+        "editor": {
+          "enum": ["auto", "dropdown", "segmented", "radio", "rating", "switch", "checkbox", "checkboxes", "chips"],
+          "description": "build: how the properties panel edits the value; auto (default) chooses from the data type and the value list"
+        },
         "master": {
           "type": "string"
         },
