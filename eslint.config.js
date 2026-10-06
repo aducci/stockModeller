@@ -10,15 +10,25 @@ const allowed = {
   engine: ["model"],
   db: ["model", "engine"],
   client: ["model", "engine"],
+  web: ["model", "engine", "client"],
   server: ["model", "engine", "db", "content"],
 };
 const packages = Object.keys(allowed);
 const forbidden = (pkg) =>
   packages.filter((p) => p !== pkg && !allowed[pkg].includes(p)).map((p) => `@connectome/${p}`);
-const dir = (pkg) => (pkg === "server" ? `apps/${pkg}` : `packages/${pkg}`);
+const dir = (pkg) => (pkg === "server" || pkg === "web" ? `apps/${pkg}` : `packages/${pkg}`);
 
 export default tseslint.config(
-  { ignores: ["**/node_modules/**", "design/**", "**/dist/**", "**/coverage/**"] },
+  {
+    ignores: [
+      "**/node_modules/**",
+      "design/**",
+      "**/dist/**",
+      "**/coverage/**",
+      "**/test-results/**",
+      "**/playwright-report/**",
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
@@ -28,8 +38,10 @@ export default tseslint.config(
       "@typescript-eslint/consistent-type-imports": "error",
     },
   },
+  // The web app runs in the browser.
+  { files: ["apps/web/src/**/*.{ts,tsx}"], languageOptions: { globals: { ...globals.browser } } },
   ...packages.map((pkg) => ({
-    files: [`${dir(pkg)}/src/**/*.ts`],
+    files: [`${dir(pkg)}/src/**/*.{ts,tsx}`],
     rules: {
       "no-restricted-imports": [
         "error",
@@ -46,8 +58,8 @@ export default tseslint.config(
             { group: ["../../*"], message: "Import other packages by name, not by relative path." },
           ],
           // The engine is pure: no I/O, so it runs unchanged in the browser and on the server.
-          // The client runs in the browser: no Node modules.
-          ...(pkg === "engine" || pkg === "model" || pkg === "client"
+          // The client and the web app run in the browser: no Node modules.
+          ...(pkg === "engine" || pkg === "model" || pkg === "client" || pkg === "web"
             ? { paths: ["pg", "kysely", "fs", "node:fs", "net", "node:net", "http", "node:http"] }
             : {}),
         },

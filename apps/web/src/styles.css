@@ -1,0 +1,495 @@
+/* Tokens from design/04-ux/design-system.md §1: quiet chrome, the colour belongs to the diagrams. */
+:root {
+  --bg: #e8ecf1;
+  --pane: #ffffff;
+  --pane-2: #f4f6f9;
+  --line: #c9d2dc;
+  --fg: #1d2733;
+  --fg-2: #5b6b7c;
+  --accent: #2c5d98;
+  --added: #1d7a4a;
+  --changed: #a3620a;
+  --removed: #b0322a;
+  --canvas: #fbfcfd;
+  --grid: #edf0f4;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f141a;
+    --pane: #161d26;
+    --pane-2: #1b2430;
+    --line: #2b3746;
+    --fg: #e3e9f0;
+    --fg-2: #97a7b8;
+    --accent: #7fb0ea;
+    --added: #6fd3a0;
+    --changed: #f0b45c;
+    --removed: #f08a80;
+    --canvas: #121922;
+    --grid: #1a232e;
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font:
+    13px/1.4 "IBM Plex Sans",
+    system-ui,
+    sans-serif;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+input,
+select,
+textarea {
+  background: var(--pane);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 3px 6px;
+}
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible,
+.row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+button {
+  background: var(--pane-2);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--pane);
+}
+button.link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent);
+}
+button.link:hover:not(:disabled) {
+  text-decoration: underline;
+}
+.muted {
+  color: var(--fg-2);
+}
+.error {
+  color: var(--removed);
+}
+.mono {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+}
+.pad {
+  padding: 8px 12px;
+}
+ul.plain {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+ul.plain li {
+  padding: 2px 0;
+}
+.chip {
+  display: inline-block;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--pane-2);
+  border: 1px solid var(--line);
+  font-size: 12px;
+}
+
+/* Sign-in and repository pages */
+.page {
+  display: grid;
+  place-items: center;
+  min-height: 100%;
+  padding: 16px;
+}
+.card {
+  background: var(--pane);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 24px;
+  width: min(420px, 100%);
+  display: grid;
+  gap: 12px;
+}
+.card h1 {
+  font-size: 18px;
+  margin: 0;
+}
+.card label {
+  display: grid;
+  gap: 4px;
+}
+
+/* The workbench */
+.workbench {
+  display: grid;
+  height: 100%;
+  grid-template-columns: 260px 1fr 320px;
+  grid-template-rows: auto auto 1fr;
+  grid-template-areas:
+    "top top top"
+    "banner banner banner"
+    "explorer centre properties";
+  border-top: 3px solid transparent;
+}
+.workbench.in-scenario {
+  border-top-color: var(--changed);
+}
+.topbar {
+  grid-area: top;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px;
+  background: var(--pane);
+  border-bottom: 1px solid var(--line);
+}
+.topbar .repo {
+  font-weight: 600;
+  color: var(--fg);
+}
+.topbar .scenario {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  color: var(--fg-2);
+}
+.scenario-chip {
+  border-color: var(--changed);
+  color: var(--changed);
+}
+.spacer {
+  flex: 1;
+}
+.presence {
+  display: flex;
+  gap: 2px;
+}
+.avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  display: grid;
+  place-items: center;
+}
+.save {
+  color: var(--fg-2);
+  font-size: 12px;
+}
+.save.warn {
+  color: var(--changed);
+}
+.banner {
+  grid-area: banner;
+  padding: 4px 12px;
+  background: var(--pane-2);
+  border-bottom: 1px solid var(--changed);
+  color: var(--changed);
+}
+.banner.error {
+  border-color: var(--removed);
+  color: var(--removed);
+}
+.explorer,
+.properties,
+.centre {
+  background: var(--pane);
+  overflow: auto;
+  min-height: 0;
+}
+.explorer {
+  grid-area: explorer;
+  border-right: 1px solid var(--line);
+}
+.properties {
+  grid-area: properties;
+  border-left: 1px solid var(--line);
+}
+.centre {
+  grid-area: centre;
+  display: flex;
+  flex-direction: column;
+  background: var(--canvas);
+}
+.pane-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  background: var(--pane-2);
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fg-2);
+}
+.pane-title .tools {
+  display: flex;
+  gap: 4px;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+.pane-title .tools button {
+  padding: 0 6px;
+  font-size: 12px;
+}
+.filter {
+  margin: 6px 8px;
+  width: calc(100% - 16px);
+}
+.create {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px 8px 8px;
+}
+.create input {
+  flex: 1;
+  min-width: 100px;
+}
+.tree,
+.tree ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  cursor: default;
+  white-space: nowrap;
+}
+.row:hover {
+  background: var(--pane-2);
+}
+.row.selected {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+}
+.row .label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.row .dots {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+.empty {
+  padding: 4px 12px;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  background: var(--pane-2);
+  border-bottom: 1px solid var(--line);
+  min-height: 30px;
+}
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 10px;
+  border-right: 1px solid var(--line);
+  cursor: default;
+}
+.tab.active {
+  background: var(--canvas);
+}
+.tab .close,
+.toast .close {
+  border: none;
+  background: none;
+  padding: 0 4px;
+  color: var(--fg-2);
+}
+.change-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--changed);
+}
+.tab-body {
+  flex: 1;
+  overflow: auto;
+}
+.empty-state {
+  display: grid;
+  place-items: center;
+  height: 100%;
+}
+.object-page {
+  max-width: 640px;
+  padding: 12px;
+}
+.diagram svg {
+  display: block;
+  margin: 0 12px 12px;
+  background: var(--canvas);
+}
+.diagram .occ rect {
+  cursor: pointer;
+}
+.diagram .occ.selected rect {
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+.diagram text {
+  font-size: 12px;
+  fill: #1d2733;
+  pointer-events: none;
+}
+.diagram .container-label {
+  font-weight: 600;
+}
+.diagram .line {
+  stroke: var(--fg-2);
+  stroke-width: 1.5;
+  color: var(--fg-2);
+}
+
+/* Properties */
+.props-header {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.props-header input.name {
+  font-size: 15px;
+  font-weight: 600;
+  width: 100%;
+}
+.props-header .meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.breadcrumb {
+  font-size: 12px;
+}
+.group {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.group h3 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--fg-2);
+  font-weight: 600;
+}
+.prop-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 8px;
+  align-items: center;
+  padding: 2px 0;
+}
+.prop-row label {
+  color: var(--fg-2);
+}
+.editor,
+.field {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.field input,
+.field textarea,
+.editor select {
+  width: 100%;
+  min-width: 0;
+}
+.unit {
+  color: var(--fg-2);
+  font-size: 12px;
+}
+.checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.readonly {
+  color: var(--fg-2);
+}
+
+/* Toasts */
+.toasts {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: grid;
+  gap: 6px;
+  z-index: 10;
+}
+.toast {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  background: var(--fg);
+  color: var(--bg);
+  padding: 6px 8px 6px 12px;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.2);
+}
+.toast button.link {
+  color: var(--bg);
+  font-weight: 600;
+}
+.toast.error {
+  background: var(--removed);
+  color: #fff;
+}
+
+@media (max-width: 900px) {
+  .workbench {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto minmax(160px, 30%) 1fr auto;
+    grid-template-areas: "top" "banner" "explorer" "centre" "properties";
+  }
+}

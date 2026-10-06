@@ -1,0 +1,102 @@
+// Slice 0.7 exit criterion (design/build-plan.md): edits show at once and survive a reload. Plus two people
+// in one repository seeing each other's edits, and undo from the toast.
+import { expect, test, type Browser, type Page } from "@playwright/test";
+
+async function signIn(page: Page, userId = "dev@example.com") {
+  await page.goto("/");
+  await page.getByLabel("Workspace").fill("W-DEV");
+  await page.getByLabel("Email").fill(userId);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByRole("button", { name: "Insurance Group EA" }).click();
+  await expect(page.getByTestId("save-state")).toHaveText("All changes saved");
+}
+
+const explorer = (page: Page) => page.getByRole("navigation", { name: "Explorer" });
+const properties = (page: Page) => page.getByRole("complementary", { name: "Properties" });
+
+async function selectInExplorer(page: Page, name: string) {
+  await explorer(page).getByLabel("Filter the explorer").fill(name);
+  await explorer(page).locator(".row", { hasText: name }).first().click();
+  await expect(properties(page).getByLabel("Name")).toHaveValue(name);
+}
+
+async function rename(page: Page, from: string, to: string) {
+  await selectInExplorer(page, from);
+  await properties(page).getByLabel("Name").fill(to);
+  await properties(page).getByLabel("Name").press("Enter");
+}
+
+async function newPage(browser: Browser, userId: string) {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await signIn(page, userId);
+  return page;
+}
+
+test("an edit shows at once, is saved, and survives a reload", async ({ page }) => {
+  await signIn(page);
+  await rename(page, "Claims Manager", "Claims Hub");
+
+  // At once: the explorer and the properties panel show the new name before the server has answered.
+  await explorer(page).getByLabel("Filter the explorer").fill("");
+  await expect(explorer(page).locator(".row", { hasText: "Claims Hub" })).toBeVisible({ timeout: 200 });
+  await expect(page.getByRole("status").filter({ hasText: "Rename Claims Manager to Claims Hub" })).toBeVisible();
+  await expect(page.getByTestId("save-state")).toHaveText("All changes saved");
+
+  await page.reload();
+  await expect(page.getByTestId("save-state")).toHaveText("All changes saved");
+  await expect(explorer(page).locator(".row", { hasText: "Claims Hub" })).toBeVisible();
+  await expect(explorer(page).locator(".row", { hasText: "Claims Manager" })).toHaveCount(0);
+});
+
+test("two people see each other's edits and presence", async ({ browser }) => {
+  const dana = await newPage(browser, "dana@example.com");
+  const lee = await newPage(browser, "lee@example.com");
+  await expect(dana.locator(".presence .avatar")).toHaveCount(2);
+
+  await rename(dana, "Legacy CRM", "Old CRM");
+  await expect(explorer(lee).locator(".row", { hasText: "Old CRM" })).toBeVisible();
+
+  // Lee sets a property; Dana's panel follows.
+  await selectInExplorer(dana, "Old CRM");
+  await selectInExplorer(lee, "Old CRM");
+  await properties(lee).locator("#prop-lifecycle\\.status").selectOption("retired");
+  await expect(properties(dana).locator("#prop-lifecycle\\.status")).toHaveValue("retired");
+  await expect(dana.getByTestId("save-state")).toHaveText("All changes saved");
+  await expect(lee.getByTestId("save-state")).toHaveText("All changes saved");
+  await dana.context().close();
+  await lee.context().close();
+});
+
+test("creates a folder and an object in it, and undoes from the toast", async ({ page }) => {
+  await signIn(page);
+  await explorer(page).getByRole("button", { name: "+ Folder" }).click();
+  await explorer(page).getByLabel("New folder name").fill("Sandbox");
+  await explorer(page).getByLabel("New folder name").press("Enter");
+  await expect(explorer(page).locator(".row.selected", { hasText: "Sandbox" })).toBeVisible();
+
+  await explorer(page).getByRole("button", { name: "+ Object" }).click();
+  await explorer(page).getByLabel("Object type").selectOption({ label: "Application" });
+  await explorer(page).getByLabel("New object name").fill("Ledger");
+  await explorer(page).getByLabel("New object name").press("Enter");
+  await expect(properties(page).getByLabel("Name")).toHaveValue("Ledger");
+
+  const toast = page.getByRole("status").filter({ hasText: "Create Ledger" });
+  await expect(toast.getByRole("button", { name: "Undo" })).toBeEnabled();
+  await toast.getByRole("button", { name: "Undo" }).click();
+  await expect(explorer(page).locator(".row", { hasText: "Ledger" })).toHaveCount(0);
+  await expect(page.getByTestId("save-state")).toHaveText("All changes saved");
+});
+
+test("refuses an edit that breaks a rule and says why", async ({ page }) => {
+  await signIn(page);
+  // Names are unique per type in the repository: make one, then try to give another the same name.
+  await selectInExplorer(page, "Payments Hub");
+  await explorer(page).getByRole("button", { name: "+ Object" }).click();
+  await explorer(page).getByLabel("Object type").selectOption({ label: "SaaS application" });
+  await explorer(page).getByLabel("New object name").fill("Taken Name");
+  await explorer(page).getByLabel("New object name").press("Enter");
+  await rename(page, "Payments Hub", "Taken Name");
+  await expect(page.getByRole("alert").filter({ hasText: "already exists" })).toBeVisible();
+  await expect(properties(page).getByLabel("Name")).toHaveValue("Payments Hub");
+});

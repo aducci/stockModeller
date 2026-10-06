@@ -74,6 +74,20 @@ export class ApiClient {
     return this.request("GET", `/repositories/${encodeURIComponent(repositoryId)}/snapshot${query}`);
   }
 
+  repositories(): Promise<{ id: Id; name: string; baselineScenarioId: Id; seq: number }[]> {
+    return this.request("GET", "/repositories");
+  }
+
+  scenarios(repositoryId: Id): Promise<{ id: Id; parentId: Id | null; name: string; state: string }[]> {
+    return this.request("GET", `/repositories/${encodeURIComponent(repositoryId)}/scenarios`);
+  }
+
+  /** Undoes one of the user's own committed changes with a new change (it arrives over the live connection). */
+  undo(repositoryId: Id, changeId: Id): Promise<{ seq: number; changeId: Id }> {
+    const path = `/repositories/${encodeURIComponent(repositoryId)}/changes/${encodeURIComponent(changeId)}/undo`;
+    return this.request("POST", path);
+  }
+
   ticket(): Promise<{ ticket: string; expiresAt: string }> {
     return this.request("POST", "/live/tickets");
   }

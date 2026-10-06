@@ -41,7 +41,7 @@ describe("ModelStore", () => {
     expect(store.pendingChanges).toHaveLength(0);
     expect(store.seq).toBe(c.seq);
     expect(rowsOf(store.state)).toEqual(server.rows()); // exact: versions, stamps and timestamps
-    expect(events.map((e) => e.type)).toEqual(["changed", "confirmed", "changed"]);
+    expect(events.map((e) => e.type)).toEqual(["changed", "confirmed", "applied", "changed"]);
   });
 
   it("refuses an edit the engine refuses, and keeps nothing", () => {

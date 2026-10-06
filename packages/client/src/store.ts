@@ -36,6 +36,8 @@ export type StoreEvent =
   | { type: "changed" }
   /** One of the user's own changes was committed. */
   | { type: "confirmed"; change: CommittedChange }
+  /** A committed change (anyone's) was applied to the confirmed state. */
+  | { type: "applied"; change: CommittedChange; own: boolean }
   /** The server refused one of the user's changes; it is gone from the view. */
   | { type: "rejected"; change: Change; reasons: Rejection[] };
 
@@ -109,6 +111,7 @@ export class ModelStore {
       if (index >= 0) own = this.pending.splice(index, 1).length > 0;
     });
     if (own) this.emit({ type: "confirmed", change: committed });
+    this.emit({ type: "applied", change: committed, own });
     this.emit({ type: "changed" });
     return exact ? "applied" : "stale";
   }

@@ -65,7 +65,7 @@ export class LiveSession {
 
   private constructor(
     readonly store: ModelStore,
-    private readonly api: ApiClient,
+    readonly api: ApiClient,
     private readonly options: SessionOptions,
   ) {
     store.subscribe((event) => this.emit(event));

@@ -12,7 +12,7 @@
     "apps/*"
   ],
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json && tsc -p apps/web/tsconfig.json",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -21,7 +21,9 @@
     "check": "npm run format:check && npm run lint && npm run typecheck && npm test",
     "db:migrate": "npm run migrate -w @connectome/db",
     "dev": "npm run dev -w @connectome/server",
-    "seed": "npm run seed -w @connectome/server"
+    "seed": "npm run seed -w @connectome/server",
+    "web": "npm run dev -w @connectome/web",
+    "e2e": "npm run e2e -w @connectome/web"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

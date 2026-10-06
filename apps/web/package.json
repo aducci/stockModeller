@@ -1,0 +1,32 @@
+{
+  "name": "@connectome/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -p tsconfig.json",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "@connectome/client": "0.0.0",
+    "@connectome/engine": "0.0.0",
+    "@connectome/model": "0.0.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@connectome/db": "0.0.0",
+    "@playwright/test": "^1.63.0",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "pg": "^8.23.1",
+    "tsx": "^4.23.15",
+    "vite": "^8.3.3"
+  }
+}
