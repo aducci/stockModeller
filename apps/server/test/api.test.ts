@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, expect, it } from "vitest";
+import { Metamodel, stateFromSnapshot, type RepositorySnapshot } from "@connectome/engine";
 import { buildApp, devAuthenticate } from "../src";
 import { BASELINE, DANA, PROBLEM, REPO, TARGET, describeDb, expectContract, schema, setup, token } from "./helpers";
 
@@ -185,6 +186,30 @@ describeDb("API", () => {
     expect(diagram.relationshipOccurrences).toHaveLength(4);
     expect(diagram.annotations).toHaveLength(1);
     expectContract(res.body, schema("Diagram"));
+  });
+
+  it("returns a scenario's whole state as engine rows in a snapshot", async () => {
+    const res = await api.get(`/repositories/${REPO}/snapshot?scenario=${TARGET}`);
+    expect(res.status).toBe(200);
+    expectContract(res.body, schema("Snapshot"));
+    const snap = res.body as RepositorySnapshot;
+    expect(snap).toMatchObject({ seq: 2, repository: { id: REPO, seq: 2 }, scenario: { id: TARGET } });
+    // The metamodel compiles as the browser will compile it.
+    expect(
+      Metamodel.compile(snap.metamodel.package, snap.metamodel.diagramTypes).objectType("application"),
+    ).toBeDefined();
+    const state = stateFromSnapshot(snap.rows);
+    expect(state.objects.get("O-APP-2")).toMatchObject({ version: 2, properties: { "lifecycle.status": "phaseOut" } });
+    expect(state.objects.get("01J-NEW")).toBeDefined();
+    expect(snap.rows.objects.every((o) => !("scenarioId" in o) && !("baseVersion" in o))).toBe(true);
+    // The rows carry the change's commit time, so a browser replaying the change gets identical rows.
+    const changes = (await api.get(`/repositories/${REPO}/changes?since=1`)).body as { committedAt: string }[];
+    expect(state.objects.get("01J-NEW")!.updatedAt).toBe(changes[0]!.committedAt);
+
+    const baseline = (await api.get(`/repositories/${REPO}/snapshot`)).body as RepositorySnapshot;
+    expect(baseline.scenario.id).toBe(BASELINE);
+    expect(stateFromSnapshot(baseline.rows).objects.get("O-APP-2")).toMatchObject({ version: 1 });
+    expect((await api.get(`/repositories/${REPO}/snapshot?scenario=nope`)).status).toBe(404);
   });
 
   it("lists committed changes since a sequence number", async () => {

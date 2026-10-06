@@ -189,6 +189,19 @@ export class ModelState {
     return [...seen.values()];
   }
 
+  /**
+   * Puts the rows a committed change touched back as they were before it (removing rows it created).
+   * Reverting the changes applied since a point, last first, restores the state exactly, versions included:
+   * the browser uses this to take its pending changes off before applying a confirmed one (rebase).
+   */
+  revert(touched: readonly TouchedRow[]): void {
+    if (this.journal) throw new Error("Cannot revert during a transaction");
+    for (let i = touched.length - 1; i >= 0; i--) {
+      const t = touched[i]!;
+      this.collection(t.collection).set(t.before as never, t.id);
+    }
+  }
+
   /** A deep, independent copy (used by tests and to fork optimistic state). */
   clone(): ModelState {
     const copy = new ModelState();

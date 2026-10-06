@@ -39,6 +39,8 @@ export interface CommitInput {
   versions: Record<string, number>;
   findings: RuleFinding[];
   undoesChangeId?: string;
+  /** The commit time the engine stamped on the rows (ApplyContext.now), so both agree. Defaults to now. */
+  committedAt?: string;
 }
 
 /**
@@ -62,6 +64,7 @@ export async function commitChange(tx: Tx, input: CommitInput): Promise<Committe
       change_request_id: change.changeRequestId ?? null,
       undoes_change_id: input.undoesChangeId ?? null,
       outcome: JSON.stringify({ versions: input.versions, findings: input.findings }),
+      ...(input.committedAt ? { committed_at: new Date(input.committedAt) } : {}),
     })
     .returning("committed_at")
     .executeTakeFirstOrThrow();

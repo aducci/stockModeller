@@ -115,9 +115,12 @@ export class ModelService {
           const view = await this.current(tx, entry, repositoryId, scenario.id, seq);
           const state = options.preview ? view.state.clone() : view.state;
           const actor = { kind: "user" as const, id: principal.userId };
+          // One timestamp for the rows and the change, so a browser replaying the change gets identical rows.
+          const now = new Date().toISOString();
           const result = applyChange(state, change, {
             metamodel: entry.metamodel!,
             actor,
+            now,
             scenario: { id: scenario.id, isBaseline: scenario.parentId === null },
           });
           if (!result.ok) throw rejectionProblem(result.reasons);
@@ -140,6 +143,7 @@ export class ModelService {
             touched: result.touched,
             versions: result.versions,
             findings: result.findings,
+            committedAt: now,
             ...(options.undoesChangeId ? { undoesChangeId: options.undoesChangeId } : {}),
           });
           markWritten(state, result.touched, scenario.id);

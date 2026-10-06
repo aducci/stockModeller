@@ -12,10 +12,11 @@ How we turn this design pack into running software. It follows the spec's own ro
 | 0.4 `engine` v0 | ✅ Done: every edit type in `changes.ts`, essential rules 1–9, per-property conflicts, an exact inverse per edit (property-tested), Essentials compiled from the package |
 | 0.5 `server` | ✅ Done: Fastify app (`apps/server`): `POST …/changes` (idempotent, preview), `GET …/changes?since=`, undo, scenario-aware reads of folders, objects (with a `type:`/`folder:` query subset and paging), relationships, diagrams, occurrences and history; repositories and scenarios; problem+json errors; development sign-in; per-repository resolution cache checked against the sequence; responses checked against `openapi.yaml` |
 | 0.6 Live updates | ✅ Done: WebSocket `/api/v1/live` with catch-up from `?since=` (or `resync`), commits fanned out between instances by `LISTEN/NOTIFY` (one read per instance and repository, in sequence order, filtered to the scenario and its ancestors), submit and rejections over the socket, presence shared between instances and expiring, short-lived tickets for browsers. Exit test: a commit reaches the other client in < 300 ms, also across two instances |
-| 0.7 Web app shell | Next |
+| 0.7a Client store | ✅ Done: `GET …/snapshot` (engine rows + metamodel, B16); `packages/client` (no UI): `ModelStore` applies edits at once with the shared engine, keeps them pending, replays every committed change in sequence order and rebases pending changes on top (reverting the rows they touched); a change it cannot reproduce makes it reload (B17). `LiveSession`: snapshot, ticket, live connection, resend after reconnect, pause after 2 minutes offline, presence. Tested against the concurrency table, random three-user interleavings (every store ends with exactly the server's rows) and a real server |
+| 0.7b Web app shell | Next: `apps/web` on top of `@connectome/client` |
 | 0.8–0.9 | Not started |
 
-Decisions taken on the way: [decision-log.md](decision-log.md#found-while-building-m0) (B1–B15) and [storage.md §7](03-platform/storage.md#7-additions-made-while-building).
+Decisions taken on the way: [decision-log.md](decision-log.md#found-while-building-m0) (B1–B17) and [storage.md §7](03-platform/storage.md#7-additions-made-while-building).
 
 The original 3D demo in this repository was removed; the repository now holds only Connectome.
 
@@ -30,6 +31,7 @@ The original 3D demo in this repository was removed; the repository now holds on
   engine/       the change engine: pure functions (state, change) → (new state, log rows) | rejection
   db/           schema.sql as migrations, Kysely types, scenario-aware read helpers, RLS session setup
   query/        query-language parser → AST → SQL (from M1)
+  client/       the browser's store and live session: optimistic edits, rebase, reconnect (no UI)       (0.7)
   sdk/          TypeScript SDK generated from openapi.yaml + connect()/change() helpers (M2)
   content/      packages as JSON: Essentials first (example-metamodel.json)
 /design         this design pack (source of truth; changes to the design are made here first)

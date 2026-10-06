@@ -21,6 +21,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@connectome/client": "0.0.0",
     "@types/ws": "^8.18.2",
     "ajv": "^8.20.0",
     "tsx": "^4.23.15",
