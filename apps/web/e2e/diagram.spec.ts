@@ -235,3 +235,48 @@ test("validation scenario 4: one renames while the other moves, and both changes
   await dana.context().close();
   await lee.context().close();
 });
+
+test("shows an occurrence as a card, undoes it, cycles with R, and draws glyphs when zoomed out", async ({ page }) => {
+  await signIn(page);
+  await openDiagram(page);
+  await addFromPalette(page, "Application", "Quote Engine", 660, 560);
+  const quote = symbol(page, "Quote Engine");
+  await expect(quote).toHaveAttribute("data-rendition", "box");
+  const boxWidth = await quote.locator("rect").first().getAttribute("width");
+
+  // Right-click › Show as › Card: one change, which resizes the occurrence to the card's size.
+  await quote.locator("rect").first().click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Show as" }).click();
+  await page.getByRole("menuitem", { name: "Card" }).click();
+  await expect(quote).toHaveAttribute("data-rendition", "card");
+  await expect(quote.locator("rect").first()).toHaveAttribute("width", "180");
+  await saved(page);
+
+  // One undo puts both the rendition and the size back.
+  const toast = page.getByRole("status").filter({ hasText: "Show Quote Engine as card" });
+  await toast.getByRole("button", { name: "Undo" }).click();
+  await expect(quote).toHaveAttribute("data-rendition", "box");
+  await expect(quote.locator("rect").first()).toHaveAttribute("width", boxWidth!);
+  await saved(page);
+
+  // R steps to the next rendition.
+  await quote.locator("rect").first().click();
+  await page.keyboard.press("r");
+  await expect(quote).toHaveAttribute("data-rendition", "card");
+  await page.keyboard.press("r");
+  await expect(quote).toHaveAttribute("data-rendition", "glyph");
+  await page.keyboard.press("r");
+  await expect(quote).toHaveAttribute("data-rendition", "chip");
+  await saved(page);
+
+  // Below 40% every occurrence that holds nothing is drawn as its glyph; back at 100% the chip returns.
+  const zoom = page.getByRole("group", { name: "Zoom" });
+  for (let i = 0; i < 4; i++) await zoom.getByRole("button", { name: "Zoom out" }).click();
+  await expect(zoom.getByRole("button", { name: "Reset zoom" })).toHaveText("33%");
+  await expect(quote).toHaveAttribute("data-rendition", "glyph");
+  await expect(symbol(page, "Payments Hub")).toHaveAttribute("data-rendition", "glyph");
+  // A container keeps its form, so what is nested inside it stays visible.
+  await expect(symbol(page, "Claims Management")).toHaveAttribute("data-rendition", "box");
+  await zoom.getByRole("button", { name: "Reset zoom" }).click();
+  await expect(quote).toHaveAttribute("data-rendition", "chip");
+});

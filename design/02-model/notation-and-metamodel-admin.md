@@ -2,7 +2,7 @@
 
 How an object looks, and how a model owner sets the rules behind the tool. Builds on the [metamodel](metamodel.md), [diagrams](diagrams-and-catalogues.md) and the [semantic layer](semantics.md) ([ADR-010](../06-decisions/ADR-010-semantic-base-types.md)).
 
-Status: **accepted** (decisions N1–N20 in the [decision log](../decision-log.md#notation-decisions), 2026-10-06). Built so far: slice N-1 (the default glyph set and lines from kinds). Example package section: [example-notation.json](../05-structures/example-notation.json). Rendered icon set and admin mockups: [Notation Studio](https://claude.ai/artifact/VGwsxvR79zbkJbuDGsKcfS).
+Status: **accepted** (decisions N1–N20 in the [decision log](../decision-log.md#notation-decisions), 2026-10-06). Built so far: slices N-1 (the default glyph set and lines from kinds) and N-2 (renditions and semantic zoom). Example package section: [example-notation.json](../05-structures/example-notation.json). Rendered icon set and admin mockups: [Notation Studio](https://claude.ai/artifact/VGwsxvR79zbkJbuDGsKcfS).
 
 ## 1. The idea in one table
 
@@ -118,6 +118,7 @@ An object exists once; how it is drawn is a property of each **occurrence**. A t
 - Two occurrences of one object on the same diagram may use different renditions (a card in the centre, chips at the edges).
 - **Switch rendition** on the context menu and `R` cycles through them; a multi-selection switches together.
 - **Semantic zoom.** A diagram type may set renditions per zoom band: `{ "below": 0.4, "rendition": "icon" }`. At 30 % a landscape becomes a field of coloured glyphs instead of unreadable boxes. This replaces the generic "simplified symbols" in [diagram editor §7](../04-ux/diagram-editor.md#7-rendering) with something the model owner controls.
+- **Built in slice N-2:** the five built-in renditions `box`, `card` (3 property rows: the values that are set, in the type's order, list values by label with their colour), `glyph`, `chip` and `container`, in `RENDITIONS` in `packages/model/src/notation.ts`. The occurrence's `style.rendition` holds the key (absent = `box`); switching runs one change of `styleOccurrence` plus `moveObjectOccurrence` to the rendition's size, so one undo restores both. A diagram type's `renditions` sets `default` and `semanticZoom`; with none, below 40 % every occurrence is a glyph whose name keeps its on-screen size. An occurrence with others nested inside it keeps its form at any zoom. The editor zooms from 25 % to 200 % (buttons, `+`/`-`/`0`, Ctrl/⌘ + wheel). Per-type renditions with their own `fields`, shapes and sizes come with the package `notation` section in N-3.
 - **Shapes** stay parametric: the built-in shapes (`rect`, `roundRect`, `ellipse`, `hexagon`, `cylinder`, `person`, plus `tab`, `chevron`, `pill`, `document`, `note`, `parallelogram`) are functions of width and height, so they resize without distortion. A package can add a custom outline as a path on a 100×100 box with a `corner` inset that does not stretch.
 
 ## 5. Geometry: anchors, stretching and label zones
@@ -413,7 +414,7 @@ What the comparison shows:
 | Glyphs, renditions (with their anchors, growth, label zones and compartments), style rules, markers, decorations, lenses, stencils, patterns, zones | New `notation` section of the metamodel package; per-type `renditions`, `glyph`, `hue` on object types | Metamodel edits, versioned and migrated (renaming a rendition key maps occurrences) |
 | Value-list `glyph`, property-type `scale` | The value list and the property type | Metamodel edits |
 | A user's own lenses | User preferences, outside the change log | Not a model change |
-| `rendition`, size, collapsed compartments and user-added anchors on an occurrence | Occurrence row (null = the rendition's default) | `updateOccurrence` with its inverse |
+| `rendition`, size, collapsed compartments and user-added anchors on an occurrence | `rendition` in the occurrence's `style` (absent = the default; built in N-2); the rest in the occurrence row | `styleOccurrence` (and `moveObjectOccurrence` for the size) with their inverses |
 | `sourceAnchor`, `targetAnchor` on a relationship occurrence | Occurrence row, set only when the user pinned one | `updateOccurrence` with its inverse |
 | A compartment row the user typed | The related object and its relationship | Ordinary `createObject` + `createRelationship` in one change |
 | Zone placement | The zone is an annotation; the effect is `setProperties` in the same change | One change, one undo step |
@@ -426,7 +427,7 @@ The engine stays pure: style rules, markers, decorations, compartment queries an
 | Slice | Delivers | Needs |
 |---|---|---|
 | **N-1** ✅ | Glyph sprite and the default set by category; line notation from kinds; glyphs in the explorer, the palette and on symbols; Essentials 1.3.0 draws from its semantics | Nothing new |
-| **N-2** | Renditions (box, card, glyph, chip, container); per-occurrence switch; semantic zoom | N-1 |
+| **N-2** ✅ | Renditions (box, card, glyph, chip, container); per-occurrence switch; semantic zoom | N-1 |
 | **N-2a** | Anchors (`sides`, `sides:n`, `ring`), anchor-aware orthogonal routing, pinned and user-added anchors; stretch rules (`grow`, `minSize`, nine-slice) and label zones | N-2 |
 | **N-2b** | Compartments: `properties` and `related` sources, overflow, collapse; editing rows in place | N-2a, query paths (M1) |
 | **N-3** | Style rules, markers and decorations (swatch, dot, pips, gauge, ring, icon, text) on types and diagram types; value-list glyphs and property-type scales; legend with counts | Query filter parser (M1) |

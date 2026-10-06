@@ -23,7 +23,7 @@ const ALIASES: Readonly<Record<string, string>> = {
 };
 
 /** Ink for a glyph on a colour a package chose itself (notation §2: hex stays allowed, hues are theme-aware). */
-const ON_LITERAL_FILL = "#1d2733";
+export const ON_LITERAL_FILL = "#1d2733";
 
 export interface Notation {
   /** A key of GLYPHS. */

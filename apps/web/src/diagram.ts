@@ -1,7 +1,17 @@
 // The diagram editor's arithmetic and model look-ups (design/04-ux/diagram-editor.md), kept free of React so
 // they can be tested on their own.
-import type { DiagramRow, Metamodel, ModelState, ResolvedObjectType } from "@connectome/engine";
-import type { Id, RelationshipType, SymbolStyle, TypeKey } from "@connectome/model";
+import type { DiagramRow, Metamodel, ModelState, ObjectRow, ResolvedObjectType } from "@connectome/engine";
+import {
+  DEFAULT_SEMANTIC_ZOOM,
+  RENDITIONS,
+  isRendition,
+  type Id,
+  type PropertyValue,
+  type RelationshipType,
+  type Rendition,
+  type SymbolStyle,
+  type TypeKey,
+} from "@connectome/model";
 
 export const GRID = 8;
 const DEFAULT_SIZE = { width: 120, height: 48 };
@@ -27,6 +37,76 @@ export function symbolFor(
   // A diagram type's symbol for a parent type applies to its subtypes, the nearest one winning.
   const inherited = [...(objectType?.lineage ?? [type])].reverse().map((t) => byDiagram[t] ?? {});
   return { ...DEFAULT_SIZE, ...objectType?.symbol, ...Object.assign({}, ...inherited), ...override };
+}
+
+/**
+ * The rendition an occurrence is drawn in (notation-and-metamodel-admin.md §4): below a semantic zoom level the
+ * level's rendition wins; otherwise the occurrence's own, then its symbol's (type or diagram type), then the diagram
+ * type's default, then a box.
+ */
+export function renditionFor(
+  metamodel: Metamodel,
+  diagram: DiagramRow,
+  symbol: Partial<SymbolStyle>,
+  zoom = 1,
+): { key: string } & Rendition {
+  const config = metamodel.diagramType(diagram.diagramType)?.definition.renditions;
+  const levels = [...(config?.semanticZoom ?? DEFAULT_SEMANTIC_ZOOM)].sort((a, b) => a.below - b.below);
+  const zoomed = levels.find((level) => zoom < level.below)?.rendition;
+  const key = [zoomed, symbol.rendition, config?.default].find((k): k is string => !!k && isRendition(k)) ?? "box";
+  return { key, ...RENDITIONS[key]! };
+}
+
+/** The size an occurrence takes when it switches to a rendition: the rendition's own, or the type's for a box. */
+export function renditionSize(rendition: Rendition, typeSymbol: { width: number; height: number }) {
+  return { w: rendition.width ?? typeSymbol.width, h: rendition.height ?? typeSymbol.height };
+}
+
+export interface CardRow {
+  label: string;
+  text: string;
+  /** A list value's own colour, drawn as a dot before the text. */
+  colour?: string;
+}
+
+/** The property rows a card shows: the object's values that are set, in its type's order, up to `rows`. */
+export function cardRows(metamodel: Metamodel, object: ObjectRow, rows: number): CardRow[] {
+  const keys = [...(metamodel.objectType(object.type)?.properties ?? [])];
+  const out: CardRow[] = [];
+  for (const key of keys) {
+    const value = object.properties[key];
+    const pt = metamodel.propertyType(key);
+    if (value === undefined || value === null || value === "" || !pt) continue;
+    if (Array.isArray(value) && value.length === 0) continue;
+    const list = pt.valueList ? metamodel.valueList(pt.valueList) : undefined;
+    const entry = (k: unknown) => list?.values.find((v) => v.key === k);
+    const text = list
+      ? (Array.isArray(value) ? value : [value]).map((k) => entry(k)?.label ?? String(k)).join(", ")
+      : formatValue(value);
+    out.push({ label: pt.name, text, colour: Array.isArray(value) ? undefined : entry(value)?.color });
+    if (out.length === rows) break;
+  }
+  return out;
+}
+
+function formatValue(value: PropertyValue): string {
+  if (typeof value === "object" && value !== null && !Array.isArray(value)) return `${value.amount} ${value.currency}`;
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  return Array.isArray(value) ? value.join(", ") : String(value);
+}
+
+/** Shortens text to fit a width at the canvas's 12px font, with an ellipsis. */
+export function fitText(text: string, width: number, charWidth = 6.6): string {
+  const max = Math.max(1, Math.floor(width / charWidth));
+  return text.length <= max ? text : `${text.slice(0, Math.max(1, max - 1))}…`;
+}
+
+export const ZOOM_STEPS = [0.25, 0.33, 0.5, 0.67, 0.8, 1, 1.25, 1.5, 2] as const;
+
+/** The next zoom step in a direction from the current zoom. */
+export function stepZoom(zoom: number, direction: 1 | -1): number {
+  const steps = direction > 0 ? ZOOM_STEPS : [...ZOOM_STEPS].reverse();
+  return steps.find((z) => (direction > 0 ? z > zoom + 1e-6 : z < zoom - 1e-6)) ?? steps[steps.length - 1]!;
 }
 
 /** Diagram positions of every occurrence on a diagram (nested ones are stored relative to their parent). */

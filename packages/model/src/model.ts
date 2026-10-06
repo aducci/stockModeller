@@ -76,6 +76,8 @@ export interface SymbolStyle {
   fill: string;
   stroke: string;
   icon?: string;
+  /** Which rendition draws it: box, card, glyph, chip or container (notation-and-metamodel-admin.md §4). */
+  rendition?: string;
   width: number;
   height: number;
   label: string;

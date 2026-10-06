@@ -502,7 +502,7 @@ ul.plain li {
 }
 .canvas text {
   font-size: 12px;
-  fill: #1d2733;
+  fill: var(--occ-ink, var(--fg));
   pointer-events: none;
 }
 .canvas .container-label {
@@ -510,7 +510,35 @@ ul.plain li {
 }
 .canvas .repeat {
   font-size: 10px;
-  fill: #5b6b7c;
+  opacity: 0.7;
+}
+.canvas text.on-canvas {
+  fill: var(--fg);
+  stroke: var(--canvas);
+  stroke-width: 3px;
+  paint-order: stroke;
+}
+.canvas .card-label {
+  font-size: 11px;
+  opacity: 0.7;
+}
+.canvas .occ .divider {
+  stroke-width: 1;
+  opacity: 0.5;
+}
+.palette .zoom {
+  display: flex;
+  margin-left: auto;
+  gap: 2px;
+}
+.palette .zoom button {
+  min-width: 28px;
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--pane);
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
 }
 .canvas .line {
   stroke: var(--fg-2);

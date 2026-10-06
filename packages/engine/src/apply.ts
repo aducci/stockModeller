@@ -3,6 +3,7 @@
 // Pure: no I/O. The same code runs on the server (inside a database transaction) and in the browser (optimistically).
 import {
   LEVEL_PROPERTY,
+  isRendition,
   MAX_EDITS_PER_CHANGE,
   type Actor,
   type Annotation,
@@ -102,7 +103,7 @@ class Reject extends Error {
 
 const MAX_NAME = 200;
 const VERSIONED: ReadonlySet<CollectionName> = new Set<VersionedCollection>(["objects", "relationships", "diagrams"]);
-const SYMBOL_STYLE_KEYS = new Set(["shape", "fill", "stroke", "icon", "width", "height", "label"]);
+const SYMBOL_STYLE_KEYS = new Set(["shape", "fill", "stroke", "icon", "rendition", "width", "height", "label"]);
 const LINE_STYLE_KEYS = new Set(["style", "color", "startArrow", "endArrow"]);
 /** A placeholder replaced by the item's final version when the change finishes. */
 const PENDING_VERSION = -1;
@@ -1265,6 +1266,9 @@ class Transaction {
   private checkStyle(style: object, allowed: ReadonlySet<string>, property: string): void {
     for (const key of Object.keys(style))
       if (!allowed.has(key)) this.invalid(`${property}.${key}`, "Not a style of this item");
+    const rendition = (style as { rendition?: unknown }).rendition;
+    if (rendition != null && (typeof rendition !== "string" || !isRendition(rendition)))
+      this.invalid(`${property}.rendition`, `Unknown rendition "${String(rendition)}"`);
   }
 
   private checkName(name: string): void {

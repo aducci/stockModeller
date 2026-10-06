@@ -82,6 +82,8 @@ export interface DiagramType {
   nesting?: "nested" | "lines";
   showExistingRelationships?: boolean;
   symbols?: Record<TypeKey, Partial<SymbolStyle>>;
+  /** The rendition occurrences start in, and the zoom levels below which every occurrence draws smaller. */
+  renditions?: { default?: string; semanticZoom?: { below: number; rendition: string }[] };
   colourRules?: { name?: string; when: string; apply: ColourRuleAction }[];
   labels?: Record<TypeKey, string>;
   layout?: {

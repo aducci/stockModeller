@@ -103,3 +103,31 @@ export function glyphForCategory(category: SemanticCategory | undefined): Catego
 export function lineForKind(kind: SemanticKind): LineNotation {
   return KIND_NOTATION[kind];
 }
+
+/** The forms an occurrence can be drawn in (§4). A package may add named renditions of its own in slice N-3. */
+export type RenditionForm = "box" | "card" | "glyph" | "chip" | "container";
+
+export interface Rendition {
+  form: RenditionForm;
+  /** Its size when an occurrence switches to it; a box keeps the type's own symbol size. */
+  width?: number;
+  height?: number;
+  /** For a card: how many property rows it shows. */
+  rows?: number;
+}
+
+/** The built-in renditions, by key. */
+export const RENDITIONS: Readonly<Record<string, Rendition>> = {
+  box: { form: "box" },
+  card: { form: "card", width: 180, height: 96, rows: 3 },
+  glyph: { form: "glyph", width: 96, height: 64 },
+  chip: { form: "chip", width: 132, height: 24 },
+  container: { form: "container", width: 240, height: 160 },
+};
+
+/** Semantic zoom when a diagram type sets none: below 40% every occurrence is drawn as its glyph. */
+export const DEFAULT_SEMANTIC_ZOOM: readonly { below: number; rendition: string }[] = [
+  { below: 0.4, rendition: "glyph" },
+];
+
+export const isRendition = (key: string): boolean => Object.hasOwn(RENDITIONS, key);

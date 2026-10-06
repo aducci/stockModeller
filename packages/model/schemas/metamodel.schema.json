@@ -248,6 +248,9 @@
         "icon": {
           "type": "string"
         },
+        "rendition": {
+          "type": "string"
+        },
         "width": {
           "type": "integer"
         },

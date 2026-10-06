@@ -95,6 +95,7 @@ Found while building the change engine (M0 slices 0.2–0.4). `schema.sql` stays
 | `change_log.inverse` holds a **list** of edits | One edit can cascade (deleting an object deletes its relationships and occurrences). Undo applies each entry's list, last entry first |
 | Relationship-type `semantic`, `semanticDirection` and `cascadeDelete`, object-type `category`, `level` and `levelFixed` are kept in `definition` (no migration; slice Sem-1) | They are definition fields like `verb` and `symbol`. The core package is never stored: every compile merges it in |
 | `rank text` on `folder`, `object` and `diagram` (migration 005; slice 0.8b) | The explorer's order. A fractional-index key, so placing an item between two others rewrites one row; `NULL` (absent in the API) sorts after ranked siblings, by name. An object's siblings are its folder's root objects, or its container's contents (semantics §3) |
+| `rendition` in an occurrence's `style`, and `renditions` (`default`, `semanticZoom`) on a diagram type (no migration; slice N-2) | `style` is already `jsonb` and diagram types live in the package. The engine accepts only the built-in keys (`box`, `card`, `glyph`, `chip`, `container`) until packages can declare their own (slice N-3) |
 
 Edit types added in [changes.ts](../05-structures/changes.ts) (marked `build:`):
 
