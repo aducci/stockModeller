@@ -8,6 +8,7 @@ import { Explorer } from "./Explorer";
 import { Centre } from "./Centre";
 import { Properties } from "./Properties";
 import { Toasts } from "./Toasts";
+import { DeleteObjectDialog } from "./DeleteObjectDialog";
 
 export function Workbench({ repositoryId, scenarioId }: { repositoryId: string; scenarioId: string | null }) {
   const signIn = useAuth((s) => s.signIn)!;
@@ -68,6 +69,7 @@ export function Workbench({ repositoryId, scenarioId }: { repositoryId: string; 
       <Centre />
       <Properties />
       <Toasts />
+      <DeleteObjectDialog />
     </div>
   );
 }

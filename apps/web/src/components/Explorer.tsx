@@ -5,6 +5,7 @@ import { ulid, type Id } from "@connectome/model";
 import { useAuth } from "../state/auth";
 import { useModel, useWorkbench, type Selection } from "../state/workbench";
 import { byName } from "../text";
+import { DRAG_OBJECT } from "./DiagramEditor";
 
 export function Explorer() {
   const { state } = useModel();
@@ -137,6 +138,13 @@ function Row(props: { item: Selection; depth: number; icon: string; label: strin
       tabIndex={0}
       aria-selected={selected}
       data-kind={item.kind}
+      // Objects can be dragged onto a diagram as another occurrence of the same object.
+      draggable={item.kind === "object"}
+      onDragStart={(e) => {
+        if (item.kind !== "object") return;
+        e.dataTransfer.setData(DRAG_OBJECT, item.id);
+        e.dataTransfer.effectAllowed = "copy";
+      }}
       onClick={() => {
         select(item);
         if (item.kind === "folder") onToggle?.();

@@ -22,6 +22,8 @@ export interface Toast {
   /** The change it reports: Undo becomes available once the server has committed it. */
   changeId?: Id;
   committed?: boolean;
+  /** A further step offered next to Undo (e.g. "Delete object" after removing it from a diagram). */
+  action?: { label: string; run(): void };
 }
 
 interface OpenOptions {
@@ -46,6 +48,8 @@ interface WorkbenchState {
   /** Tabs whose item someone else changed since the tab was last looked at. */
   changedTabs: ReadonlySet<Id>;
   toasts: Toast[];
+  /** The object the "Delete object" dialog asks about (Shift+Delete). */
+  confirmDelete: Id | null;
 
   open(options: OpenOptions): Promise<void>;
   close(): void;
@@ -54,9 +58,12 @@ interface WorkbenchState {
   closeTab(id: Id): void;
   activateTab(id: Id): void;
   /** Applies a change at once and sends it. Returns false (and shows why) when it is refused. */
-  edit(label: string, edits: Edit[]): boolean;
+  edit(label: string, edits: Edit[], action?: Toast["action"]): boolean;
   undo(changeId: Id): Promise<void>;
   dismiss(toastId: string): void;
+  askDeleteObject(id: Id | null): void;
+  /** A toast that reports no change (e.g. why a gesture did nothing). */
+  notify(text: string, tone?: Toast["tone"]): void;
 }
 
 let unsubscribe: (() => void) | undefined;
@@ -88,6 +95,7 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
     activeTab: null,
     changedTabs: new Set(),
     toasts: [],
+    confirmDelete: null,
 
     async open(options) {
       get().close();
@@ -146,6 +154,7 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
           tabs: [],
           activeTab: null,
           changedTabs: new Set(),
+          confirmDelete: null,
         });
       } catch (error) {
         if (mine !== generation) return;
@@ -188,7 +197,7 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
       set((s) => ({ activeTab: id, changedTabs: without(s.changedTabs, id) }));
     },
 
-    edit(label, edits) {
+    edit(label, edits, action) {
       const session = get().session;
       if (!session) return false;
       const id = ulid();
@@ -197,7 +206,7 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
         toast({ text: `${label}: ${describeRejection(result.reasons[0]!)}`, tone: "error" });
         return false;
       }
-      toast({ text: label, tone: "info", changeId: id, committed: false });
+      toast({ text: label, tone: "info", changeId: id, committed: false, ...(action ? { action } : {}) });
       return true;
     },
 
@@ -215,6 +224,14 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
 
     dismiss(toastId) {
       set((s) => ({ toasts: s.toasts.filter((t) => t.id !== toastId) }));
+    },
+
+    askDeleteObject(id) {
+      set({ confirmDelete: id });
+    },
+
+    notify(text, tone = "info") {
+      toast({ text, tone });
     },
   };
 });
