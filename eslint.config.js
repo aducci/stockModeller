@@ -9,6 +9,7 @@ const allowed = {
   content: ["model"],
   engine: ["model"],
   db: ["model", "engine"],
+  client: ["model", "engine"],
   server: ["model", "engine", "db", "content"],
 };
 const packages = Object.keys(allowed);
@@ -45,7 +46,8 @@ export default tseslint.config(
             { group: ["../../*"], message: "Import other packages by name, not by relative path." },
           ],
           // The engine is pure: no I/O, so it runs unchanged in the browser and on the server.
-          ...(pkg === "engine" || pkg === "model"
+          // The client runs in the browser: no Node modules.
+          ...(pkg === "engine" || pkg === "model" || pkg === "client"
             ? { paths: ["pg", "kysely", "fs", "node:fs", "net", "node:net", "http", "node:http"] }
             : {}),
         },

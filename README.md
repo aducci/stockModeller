@@ -6,7 +6,7 @@ The product and technical design lives in [`design/`](design/README.md) and is t
 
 ## Status
 
-Milestone **M0 (Skeleton)**, slices 0.1–0.6 are done: the model types, the change engine, the database layer, the REST API and live updates over WebSocket. The web app comes next.
+Milestone **M0 (Skeleton)**, slices 0.1–0.6 and 0.7a are done: the model types, the change engine, the database layer, the REST API, live updates over WebSocket, and the browser's store (optimistic edits and rebase). The web app's screens come next.
 
 ## Layout
 
@@ -17,8 +17,9 @@ Milestone **M0 (Skeleton)**, slices 0.1–0.6 are done: the model types, the cha
 | [`packages/content`](packages/content) | Ready-made metamodel packages; Essentials ships first                                                                                                                                                                      |
 | [`packages/engine`](packages/engine)   | The change engine: applies a change atomically, enforces the model's rules and per-property conflicts, and records an inverse for every edit. Pure TypeScript with no I/O, so the server and the browser run the same code |
 | [`packages/db`](packages/db)           | PostgreSQL: migrations, row-level security per workspace, scenario-aware reads, and the commit path (change log + rows + sequence in one transaction)                                                                      |
+| [`packages/client`](packages/client)   | The web app's store and live session: edits show at once (same engine as the server), stay pending until confirmed, and are rebased over other people's changes. No UI                                                     |
 
-Module boundaries are enforced by ESLint (`eslint.config.js`): `model` imports nothing, `engine` only `model`, `db` only `model` and `engine`; the server may use them all.
+Module boundaries are enforced by ESLint (`eslint.config.js`): `model` imports nothing, `engine` only `model`, `db` and `client` only `model` and `engine`; the server may use them all.
 
 ## Development
 

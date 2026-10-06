@@ -1,7 +1,7 @@
 // Property test: for random valid changes, applying the logged inverses restores the previous state exactly.
 import { describe, expect, it } from "vitest";
 import type { Edit, Id } from "@connectome/model";
-import { invertLog, type ModelState } from "../src";
+import { COLLECTIONS, invertLog, type ModelState, type TouchedRow } from "../src";
 import { apply, applyOk, checkInvariants, exampleState, line, metamodel, occurrence, snapshot } from "./fixtures";
 
 /** Destructive edits are picked less often, so the model keeps growing structure to test against. */
@@ -196,6 +196,35 @@ describe("inverses", () => {
       checkInvariants(state);
     }
     expect(applied).toBeGreaterThan(50);
+  });
+
+  it.each([1, 2, 3])("revert restores rows exactly, versions and tombstones included (seed %i)", (seed) => {
+    const next = random(seed);
+    const state = exampleState();
+    // Every row, deleted ones too, with all bookkeeping: revert must be exact, unlike undo.
+    const dump = () =>
+      Object.fromEntries(
+        COLLECTIONS.map((c) => [
+          c,
+          [...state.collection(c).all()].sort((a, b) => a.id.localeCompare(b.id)).map((r) => structuredClone(r)),
+        ]),
+      );
+    for (let round = 0; round < 20; round++) {
+      const before = dump();
+      const touched: TouchedRow[][] = [];
+      for (let n = 0; n < 10; n++) {
+        const options = candidates(state, next, round * 100 + n).filter((e) => !RARE.has(e.edit) || next() < 0.15);
+        const result = apply(state, [options[Math.floor(next() * options.length)]!]);
+        if (result.ok) touched.push(result.touched);
+      }
+      const after = dump();
+      for (const t of [...touched].reverse()) state.revert(t);
+      expect(dump()).toEqual(before);
+      checkInvariants(state);
+      // Put them back on (as the browser does after a rebase) and keep going from there.
+      for (const t of touched) for (const row of t) state.collection(row.collection).set(row.after as never, row.id);
+      expect(dump()).toEqual(after);
+    }
   });
 
   it("keeps ids stable across undo and redo", () => {

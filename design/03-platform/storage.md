@@ -91,6 +91,7 @@ Found while building the change engine (M0 slices 0.2–0.4). `schema.sql` stays
 | Row-level security on **every** table with `workspace_id`, forced for table owners; `workspace` by `id`; `group_member` through its group; role `connectome_app` (migration 003) | `schema.sql` showed the pattern on `object` only. `app_user` stays global (one person, many workspaces) |
 | Package-level `layers` and `exchangeMappings` are kept in `repository.settings.metamodel` | No table holds them yet |
 | `change.outcome jsonb` (migration 004) | Resending a change id returns its original outcome (versions and findings), as api.md §1 promises |
+| `change.committed_at` equals the `updatedAt` the change stamps on its rows | The server passes one timestamp to the engine and to the commit, so a browser replaying a committed change (with its `committedAt`) produces exactly the rows the server stored (decision B17) |
 | `change_log.inverse` holds a **list** of edits | One edit can cascade (deleting an object deletes its relationships and occurrences). Undo applies each entry's list, last entry first |
 
 Edit types added in [changes.ts](../05-structures/changes.ts) (marked `build:`):

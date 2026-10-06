@@ -1,7 +1,8 @@
 // Scenario-aware reads of the model: folders, objects, relationships, diagrams.
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { itemHistory } from "@connectome/db";
+import { itemHistory, loadMetamodelPackage } from "@connectome/db";
+import { snapshotRows, type RepositorySnapshot } from "@connectome/engine";
 import type { Routes } from "../app";
 import { compileQuery } from "../queries";
 import { notFound } from "../problems";
@@ -130,5 +131,27 @@ export function modelRoutes(app: FastifyInstance, { service, principal }: Routes
       if (!diagram) throw notFound(`Diagram ${req.params.id}`);
       return diagram;
     });
+  });
+
+  // The whole scenario as engine rows, for the browser's optimistic store (decision B16).
+  app.get<RepoParams>("/repositories/:repo/snapshot", async (req) => {
+    const { scenario: scenarioId } = scenarioQuery.parse(req.query);
+    return service.read(
+      principal(req),
+      req.params.repo,
+      scenarioId,
+      async ({ repository, scenario, state, seq }, tx): Promise<RepositorySnapshot> => {
+        // Serialise now: the cached state may change as soon as the read lets go of it.
+        const rows = snapshotRows(state);
+        const { metamodel, diagramTypes } = await loadMetamodelPackage(tx, repository.id);
+        return {
+          repository: { ...repository, seq },
+          scenario,
+          seq,
+          metamodel: { package: metamodel, diagramTypes },
+          rows,
+        };
+      },
+    );
   });
 }

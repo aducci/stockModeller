@@ -72,6 +72,18 @@ paths:
         '101': { description: Switching protocols }
         '401': { $ref: '#/components/responses/Problem' }
 
+  /repositories/{repo}/snapshot:
+    parameters: [ { $ref: '#/components/parameters/repo' }, { $ref: '#/components/parameters/scenario' } ]
+    get:
+      summary: The whole scenario as change-engine rows, with the metamodel, for the web app's local store
+      description: >
+        Rows include deleted ones (tombstones) with their versions and field versions, so the browser can run the
+        change engine on them. Open the live connection with ?since= the returned seq. Whole-repository loading is
+        an M0 simplification (decision B16).
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Snapshot' } } } }
+        '404': { $ref: '#/components/responses/Problem' }
+
   /repositories/{repo}/folders:
     parameters: [ { $ref: '#/components/parameters/repo' } ]
     get:
@@ -267,6 +279,46 @@ components:
         name: { type: string }
         state: { type: string, enum: [baseline, draft, proposed, approved, merged, archived] }
         branchedAtSeq: { type: [integer, 'null'] }
+    Snapshot:
+      type: object
+      required: [repository, scenario, seq, metamodel, rows]
+      properties:
+        repository: { $ref: '#/components/schemas/Repository' }
+        scenario: { $ref: '#/components/schemas/Scenario' }
+        seq: { type: integer, description: Sequence number the rows reflect }
+        metamodel:
+          type: object
+          required: [package, diagramTypes]
+          properties:
+            package: { type: object, description: A metamodel package (05-structures/metamodel.schema.json) }
+            diagramTypes: { type: array, items: { type: object, description: 05-structures/diagram-type.schema.json } }
+        rows:
+          type: object
+          description: Engine rows per collection (packages/engine/src/rows.ts)
+          required: [folders, objects, relationships, diagrams, objectOccurrences, relationshipOccurrences, annotations]
+          additionalProperties: false
+          properties:
+            folders: { type: array, items: { $ref: '#/components/schemas/SnapshotRow' } }
+            objects: { type: array, items: { $ref: '#/components/schemas/SnapshotVersionedRow' } }
+            relationships: { type: array, items: { $ref: '#/components/schemas/SnapshotVersionedRow' } }
+            diagrams: { type: array, items: { $ref: '#/components/schemas/SnapshotVersionedRow' } }
+            objectOccurrences: { type: array, items: { $ref: '#/components/schemas/SnapshotRow' } }
+            relationshipOccurrences: { type: array, items: { $ref: '#/components/schemas/SnapshotRow' } }
+            annotations: { type: array, items: { $ref: '#/components/schemas/SnapshotRow' } }
+    SnapshotRow:
+      type: object
+      required: [id, deleted]
+      properties: { id: { type: string }, deleted: { type: boolean } }
+    SnapshotVersionedRow:
+      allOf:
+        - { $ref: '#/components/schemas/SnapshotRow' }
+        - type: object
+          required: [version, fieldVersions]
+          properties:
+            version: { type: integer }
+            fieldVersions:
+              type: object
+              additionalProperties: { type: object, required: [v, by], properties: { v: { type: integer }, by: { type: string } } }
     Folder:
       type: object
       required: [id, name]
