@@ -232,6 +232,8 @@ export class Metamodel {
       if (containment && (rt.nesting === false || rt.singleParent === false))
         problems.push(`Relationship type "${rt.key}" is a containment, which always nests with a single parent`);
       // Types without a kind keep the nesting they had before kinds existed.
+      if (rt.cascadeDelete && semantic !== "composition")
+        problems.push(`Relationship type "${rt.key}" cascades deletes but is not a composition`);
       if (rt.nesting && rt.semantic !== undefined && !kind.nestable)
         problems.push(`Relationship type "${rt.key}" is a ${semantic}, which cannot be shown by nesting`);
       mm.relationshipTypes.set(rt.key, {

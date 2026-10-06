@@ -78,6 +78,7 @@ export interface RelationshipType {
   singleParent?: boolean;                       // at most one parent through this type
   semantic?: SemanticKind;                      // what the engine understands it to mean (default "association")
   semanticDirection?: "forward" | "reverse";    // reverse: the source plays the kind's target role
+  cascadeDelete?: boolean;                      // composition: deleting the whole deletes its parts
   properties?: PropertyKey[];
   line?: Partial<LineStyle>;
 }

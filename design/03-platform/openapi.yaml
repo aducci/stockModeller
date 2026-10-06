@@ -361,7 +361,7 @@ components:
         edit:
           type: string
           enum: [createObject, setProperties, renameObject, moveToFolder, changeObjectType, deleteObject,
-                 createRelationship, reconnectRelationship, deleteRelationship,
+                 createRelationship, reconnectRelationship, changeRelationshipType, deleteRelationship,
                  createFolder, renameFolder, moveFolder, deleteFolder,
                  createDiagram, updateDiagram, deleteDiagram,
                  addObjectOccurrence, moveObjectOccurrence, styleOccurrence, removeOccurrence,

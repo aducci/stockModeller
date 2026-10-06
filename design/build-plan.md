@@ -18,7 +18,8 @@ How we turn this design pack into running software. It follows the spec's own ro
 | 0.8b Explorer menus, drag and drop, groups | Planned (plan awaiting OK) |
 | 0.9 History panel | Next |
 | Sem-1 Semantic metamodel | ✅ Done: 14 semantic kinds on relationship types (`semantic`, `semanticDirection`), categories and levels on object types, the core package (`semantic.level`, `access.mode`, `influence.effect`, `interaction.*`) merged into every metamodel with its keys reserved, Essentials 1.1.0 (every type classified; `service`, `interface`, `composedOf`, `represents`, `calls`, `triggers`, `specialises`), kind checks when a metamodel compiles, fixed levels enforced, and the properties panel grouping relationships by kind |
-| Sem-2 to Sem-4 Semantics | Next: [semantics §11](02-model/semantics.md#11-what-changes-in-the-build) (containment, flows and interactions, navigation and trace) |
+| Sem-2 Containment | ✅ Done: one container per object across all containment types, folder follows container (moves cascade to contents, a content cannot leave its container's folder alone), re-parenting reconnects the same relationship, `deleteObject.contents` (`moveUp` by default, or `deleteContents`), composition `cascadeDelete`, the `changeRelationshipType` edit; the explorer shows contents under their container and accepts drops onto objects (contain) and folders (take out); drawing a containment line on a nested diagram nests the content; the delete dialog asks what happens to the contents. The Alt+drop type menu waits for the explorer slice |
+| Sem-3 and Sem-4 Semantics | Next: [semantics §11](02-model/semantics.md#11-what-changes-in-the-build) (flows and interactions, navigation and trace) |
 
 Decisions taken on the way: [decision-log.md](decision-log.md#found-while-building-m0) (B1–B20) and [storage.md §7](03-platform/storage.md#7-additions-made-while-building).
 

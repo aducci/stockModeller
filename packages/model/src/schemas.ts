@@ -129,7 +129,11 @@ export const editSchema = z.discriminatedUnion("edit", [
     type: typeKey,
     propertyMap: z.record(propertyKey, propertyKey).optional(),
   }),
-  z.strictObject({ edit: z.literal("deleteObject"), ...onExisting }),
+  z.strictObject({
+    edit: z.literal("deleteObject"),
+    ...onExisting,
+    contents: z.enum(["moveUp", "deleteContents"]).optional(),
+  }),
   z.strictObject({
     edit: z.literal("createRelationship"),
     id,
@@ -146,6 +150,13 @@ export const editSchema = z.discriminatedUnion("edit", [
     ...onExisting,
     sourceId: id.optional(),
     targetId: id.optional(),
+  }),
+  z.strictObject({
+    edit: z.literal("changeRelationshipType"),
+    ...onExisting,
+    type: typeKey,
+    propertyMap: z.record(propertyKey, propertyKey).optional(),
+    set: properties.optional(),
   }),
   z.strictObject({ edit: z.literal("deleteRelationship"), ...onExisting }),
   z.strictObject({ edit: z.literal("createFolder"), id, parentId: id.nullable(), name: z.string() }),

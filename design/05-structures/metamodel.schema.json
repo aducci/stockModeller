@@ -425,6 +425,10 @@
           ],
           "description": "reverse: the type's source plays the kind's target role (e.g. 'realised by')"
         },
+        "cascadeDelete": {
+          "type": "boolean",
+          "description": "composition only: deleting the whole deletes its parts"
+        },
         "nesting": {
           "type": "boolean",
           "description": "Forms hierarchies; can be shown by placing a symbol inside another"
