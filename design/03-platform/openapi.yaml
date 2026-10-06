@@ -46,6 +46,32 @@ paths:
       responses:
         '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Scenario' } } } } }
 
+  /live/tickets:
+    post:
+      summary: A short-lived ticket for opening the live connection from a browser (which cannot set headers on a WebSocket)
+      responses:
+        '200':
+          description: Valid for 60 seconds
+          content: { application/json: { schema: { type: object, required: [ticket, expiresAt], properties: { ticket: { type: string }, expiresAt: { type: string, format: date-time } } } } }
+
+  /live:
+    get:
+      summary: Live connection (WebSocket). Messages are ClientMessage / ServerMessage in 05-structures/changes.ts
+      description: >
+        Sign in with the Authorization header or ?ticket=. After catching up from ?since= (or immediately), the server
+        streams `committed` changes of the scenario and its ancestors in sequence order, `presence`, and `rejected` for
+        the sender's own failed submits. A client more than 1,000 changes behind gets `resync` and reloads.
+        Close codes: 4400 bad query, 4404 unknown repository or scenario.
+      security: [ { bearer: [] }, {} ]
+      parameters:
+        - { name: repository, in: query, required: true, schema: { type: string } }
+        - { name: scenario, in: query, schema: { type: string }, description: Scenario id (default baseline) }
+        - { name: since, in: query, schema: { type: integer }, description: Last sequence number the client has applied }
+        - { name: ticket, in: query, schema: { type: string } }
+      responses:
+        '101': { description: Switching protocols }
+        '401': { $ref: '#/components/responses/Problem' }
+
   /repositories/{repo}/folders:
     parameters: [ { $ref: '#/components/parameters/repo' } ]
     get:

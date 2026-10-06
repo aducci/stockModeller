@@ -19,8 +19,22 @@ export class ApiError extends Error {
     readonly code: ProblemCode,
     readonly title: string,
     readonly details: ProblemDetail[] = [],
+    /** The engine's reasons, when the engine rejected a change. */
+    readonly reasons?: Rejection[],
   ) {
     super(title);
+  }
+
+  /** The error as a change rejection (for the live connection). */
+  toRejections(): Rejection[] {
+    if (this.reasons) return this.reasons;
+    if (this.details.length === 0) return [{ code: "invalid", editIndex: 0, property: "", message: this.title }];
+    return this.details.map((d) => ({
+      code: "invalid",
+      editIndex: d.editIndex ?? 0,
+      property: d.property ?? "",
+      message: d.message ?? this.title,
+    }));
   }
 
   toProblem() {
@@ -65,5 +79,5 @@ export function rejectionProblem(reasons: Rejection[]): ApiError {
         return { editIndex: r.editIndex, property: r.property, message: r.message };
     }
   });
-  return new ApiError(STATUS[first.code], first.code, TITLE[first.code], details);
+  return new ApiError(STATUS[first.code], first.code, TITLE[first.code], details, reasons);
 }

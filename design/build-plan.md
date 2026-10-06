@@ -11,10 +11,11 @@ How we turn this design pack into running software. It follows the spec's own ro
 | 0.3 `db` | ✅ Done: `schema.sql` as migration 001, field versions and folder tombstones (002), row-level security everywhere (003); scenario-aware reads; commit path with per-repository serialisation; metamodel install and load |
 | 0.4 `engine` v0 | ✅ Done: every edit type in `changes.ts`, essential rules 1–9, per-property conflicts, an exact inverse per edit (property-tested), Essentials compiled from the package |
 | 0.5 `server` | ✅ Done: Fastify app (`apps/server`): `POST …/changes` (idempotent, preview), `GET …/changes?since=`, undo, scenario-aware reads of folders, objects (with a `type:`/`folder:` query subset and paging), relationships, diagrams, occurrences and history; repositories and scenarios; problem+json errors; development sign-in; per-repository resolution cache checked against the sequence; responses checked against `openapi.yaml` |
-| 0.6 Live updates | Next |
-| 0.7–0.9 | Not started |
+| 0.6 Live updates | ✅ Done: WebSocket `/api/v1/live` with catch-up from `?since=` (or `resync`), commits fanned out between instances by `LISTEN/NOTIFY` (one read per instance and repository, in sequence order, filtered to the scenario and its ancestors), submit and rejections over the socket, presence shared between instances and expiring, short-lived tickets for browsers. Exit test: a commit reaches the other client in < 300 ms, also across two instances |
+| 0.7 Web app shell | Next |
+| 0.8–0.9 | Not started |
 
-Decisions taken on the way: [decision-log.md](decision-log.md#found-while-building-m0) (B1–B12) and [storage.md §7](03-platform/storage.md#7-additions-made-while-building).
+Decisions taken on the way: [decision-log.md](decision-log.md#found-while-building-m0) (B1–B15) and [storage.md §7](03-platform/storage.md#7-additions-made-while-building).
 
 The original 3D demo in this repository was removed; the repository now holds only Connectome.
 

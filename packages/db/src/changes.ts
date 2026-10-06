@@ -2,8 +2,19 @@
 // in one transaction (architecture.md §6 step 3). Writes serialise per repository, never globally.
 import type { Actor, Change, ChangeSource, CommittedChange, LogEntry, RuleFinding } from "@connectome/model";
 import type { TouchedRow } from "@connectome/engine";
+import { sql } from "kysely";
 import type { Tx } from "./client";
 import { writeTouchedRows } from "./model-state";
+
+/** The NOTIFY channel announcing committed changes (architecture.md §6 step 4). */
+export const CHANGES_CHANNEL = "connectome_changes";
+
+/** The payload of a change notice: small (NOTIFY payloads are limited), listeners read the change itself. */
+export interface ChangeNotice {
+  workspaceId: string;
+  repositoryId: string;
+  seq: number;
+}
 
 /** Locks the repository row for this transaction and returns its last sequence number. */
 export async function lockRepository(tx: Tx, repositoryId: string): Promise<number> {
@@ -75,6 +86,10 @@ export async function commitChange(tx: Tx, input: CommitInput): Promise<Committe
   }
   await writeTouchedRows(tx, input.touched, { workspaceId, repositoryId, scenarioId: change.scenarioId });
   await tx.updateTable("repository").set({ seq }).where("id", "=", repositoryId).execute();
+  // Delivered to every listening web instance when (and only if) the transaction commits.
+  await sql`select pg_notify(${CHANGES_CHANNEL}, ${JSON.stringify({ workspaceId, repositoryId, seq } satisfies ChangeNotice)})`.execute(
+    tx,
+  );
   return {
     ...change,
     seq,
@@ -113,4 +128,53 @@ export async function changeLogSince(tx: Tx, repositoryId: string, afterSeq: num
     .orderBy("change_log.seq")
     .orderBy("change_log.edit_index")
     .execute();
+}
+
+const ACTOR_KIND: Record<string, CommittedChange["actor"]["kind"]> = { automation: "automation", system: "system" };
+
+/** Committed changes with seq in (afterSeq, uptoSeq], oldest first, as sent over the live connection. */
+export async function committedChanges(
+  tx: Tx,
+  repositoryId: string,
+  afterSeq: number,
+  uptoSeq: number = Number.MAX_SAFE_INTEGER,
+  limit = 1000,
+): Promise<CommittedChange[]> {
+  const changes = await tx
+    .selectFrom("change")
+    .selectAll()
+    .where("repository_id", "=", repositoryId)
+    .where("seq", ">", afterSeq)
+    .where("seq", "<=", uptoSeq)
+    .orderBy("seq")
+    .limit(limit)
+    .execute();
+  if (changes.length === 0) return [];
+  const log = await tx
+    .selectFrom("change_log")
+    .select(["seq", "edit"])
+    .where("repository_id", "=", repositoryId)
+    .where("seq", ">", afterSeq)
+    .where("seq", "<=", changes.at(-1)!.seq)
+    .orderBy("seq")
+    .orderBy("edit_index")
+    .execute();
+  const edits = new Map<number, unknown[]>();
+  for (const row of log) {
+    const list = edits.get(row.seq) ?? [];
+    list.push(row.edit);
+    edits.set(row.seq, list);
+  }
+  return changes.map((c) => ({
+    id: c.id,
+    scenarioId: c.scenario_id,
+    label: c.label,
+    ...(c.change_request_id ? { changeRequestId: c.change_request_id } : {}),
+    edits: (edits.get(c.seq) ?? []) as CommittedChange["edits"],
+    seq: c.seq,
+    actor: { kind: ACTOR_KIND[c.source] ?? "user", id: c.actor_id ?? "system" },
+    source: c.source as CommittedChange["source"],
+    committedAt: c.committed_at.toISOString(),
+    versions: c.outcome.versions ?? {},
+  }));
 }

@@ -235,3 +235,19 @@ export const changeSchema = z.strictObject({
 export function parseChange(input: unknown) {
   return changeSchema.parse(input);
 }
+
+/** Messages a browser sends over the live connection (ClientMessage in changes.ts). */
+export const clientMessageSchema = z.discriminatedUnion("type", [
+  z.strictObject({ type: z.literal("submit"), change: changeSchema }),
+  z.strictObject({
+    type: z.literal("presence"),
+    diagramId: id.optional(),
+    selection: z.array(id).max(1000).optional(),
+    cursor: z.strictObject({ x: z.number().finite(), y: z.number().finite() }).optional(),
+  }),
+  z.strictObject({
+    type: z.literal("interest"),
+    add: z.array(id).max(10_000).optional(),
+    remove: z.array(id).max(10_000).optional(),
+  }),
+]);
