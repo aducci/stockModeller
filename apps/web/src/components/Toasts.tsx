@@ -15,6 +15,17 @@ export function Toasts() {
               Undo
             </button>
           )}
+          {t.action && (
+            <button
+              className="link"
+              onClick={() => {
+                dismiss(t.id);
+                t.action!.run();
+              }}
+            >
+              {t.action.label}
+            </button>
+          )}
           <button className="close" aria-label="Dismiss" onClick={() => dismiss(t.id)}>
             ×
           </button>
