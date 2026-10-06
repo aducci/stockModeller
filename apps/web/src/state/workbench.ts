@@ -26,6 +26,10 @@ export interface Toast {
   action?: { label: string; run(): void };
 }
 
+/** What the explorer is asked to show inline: a form for a new item, or a rename box on a row. Menus set it. */
+export type ExplorerTask =
+  { kind: "create"; what: "folder" | "object" | "diagram"; folderId: Id | null } | { kind: "rename"; item: Selection };
+
 interface OpenOptions {
   authorization: string;
   userId: string;
@@ -50,18 +54,21 @@ interface WorkbenchState {
   toasts: Toast[];
   /** The object the "Delete object" dialog asks about (Shift+Delete). */
   confirmDelete: Id | null;
+  explorerTask: ExplorerTask | null;
 
   open(options: OpenOptions): Promise<void>;
   close(): void;
   select(selection: Selection | null): void;
   openTab(tab: Tab): void;
   closeTab(id: Id): void;
+  closeAllTabs(): void;
   activateTab(id: Id): void;
   /** Applies a change at once and sends it. Returns false (and shows why) when it is refused. */
   edit(label: string, edits: Edit[], action?: Toast["action"]): boolean;
   undo(changeId: Id): Promise<void>;
   dismiss(toastId: string): void;
   askDeleteObject(id: Id | null): void;
+  setExplorerTask(task: ExplorerTask | null): void;
   /** A toast that reports no change (e.g. why a gesture did nothing). */
   notify(text: string, tone?: Toast["tone"]): void;
 }
@@ -96,6 +103,7 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
     changedTabs: new Set(),
     toasts: [],
     confirmDelete: null,
+    explorerTask: null,
 
     async open(options) {
       get().close();
@@ -155,6 +163,7 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
           activeTab: null,
           changedTabs: new Set(),
           confirmDelete: null,
+          explorerTask: null,
         });
       } catch (error) {
         if (mine !== generation) return;
@@ -193,6 +202,10 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
       });
     },
 
+    closeAllTabs() {
+      set({ tabs: [], activeTab: null, changedTabs: new Set() });
+    },
+
     activateTab(id) {
       set((s) => ({ activeTab: id, changedTabs: without(s.changedTabs, id) }));
     },
@@ -228,6 +241,10 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
 
     askDeleteObject(id) {
       set({ confirmDelete: id });
+    },
+
+    setExplorerTask(task) {
+      set({ explorerTask: task });
     },
 
     notify(text, tone = "info") {

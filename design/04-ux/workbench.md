@@ -53,6 +53,20 @@ Everything opens in place.
 | Breadcrumb | Folder path of the selection; hierarchy path when the selection is nested |
 | ⌘[ / ⌘] | Back and forward through visited diagrams and selections |
 
+## Menus
+
+One menu component serves the top bar's menu bar and the explorer's right-click menu, so an item reads and behaves the same in both. Arrows move, → opens a submenu and ← closes it, Enter runs, Esc closes. An item that cannot run now stays visible, greyed out, and its tooltip says why ("Not empty: holds 3 items").
+
+| Menu | Items |
+|---|---|
+| **File** (top bar) | New folder, New object, New diagram · Rename (F2) · Delete · Close tab, Close all tabs · Switch repository…, Sign out. New items go into the selected folder or the selected item's folder |
+| Explorer: folder | New ▸ (folder, object, diagram) · Rename · Delete folder (only when empty) |
+| Explorer: object | Open · New ▸ · Rename · Delete object… (the dialog listing what goes with it) |
+| Explorer: diagram | Open · New ▸ · Rename · Delete diagram |
+| Explorer: empty space | New folder at the top level |
+
+In the explorer, F2 renames the focused row in place, Delete deletes it, and Shift+F10 or the context-menu key opens its menu. Edit and View menus, drag and drop in the explorer, and groups follow in later slices.
+
 ## States
 
 | State | Indicator |
