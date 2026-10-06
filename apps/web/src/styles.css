@@ -303,9 +303,38 @@ ul.plain li {
 .row.selected {
   background: color-mix(in srgb, var(--accent) 15%, transparent);
 }
-.row.drop-target {
+/* Explorer drag and drop: a line where the item lands, or an outline around what it goes into */
+.row.drop-into {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
+}
+.row.drop-before {
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+.row.drop-after {
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+.tree.drop-end {
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+.tree {
+  min-height: 48px;
+}
+.row.marked {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.row.member .label {
+  font-style: italic;
+  color: var(--fg-2);
+}
+.drop-hint {
+  position: sticky;
+  bottom: 0;
+  padding: 4px 8px;
+  background: var(--pane-2);
+  border-top: 1px solid var(--line);
+  color: var(--fg-2);
+  font-size: 12px;
 }
 .row .label {
   overflow: hidden;

@@ -1,7 +1,7 @@
-// The explorer's Folders tab (design/04-ux/workbench.md): everything as stored, with a filter, a right-click
-// menu on every row (and on the empty space) and inline create and rename. Contained objects show inside their
-// container, and dropping an object onto another puts it there (semantics.md §3). The Types, Hierarchies and
-// Queries tabs arrive in M1.
+// The explorer's Folders tab (design/04-ux/workbench.md): everything as stored, in the order people put it, with a
+// filter, a right-click menu on every row (and on the empty space), inline create and rename, and drag and drop.
+// Contained objects show inside their container (semantics.md §3) and groups list their members (decision B22).
+// The Types, Hierarchies and Queries tabs arrive in M1.
 import {
   createContext,
   useContext,
@@ -13,15 +13,38 @@ import {
   type KeyboardEvent,
   type MouseEvent,
 } from "react";
-import { ulid, type Id } from "@connectome/model";
+import { ulid, type Edit, type Id } from "@connectome/model";
 import { useAuth } from "../state/auth";
 import { useModel, useWorkbench, type Selection } from "../state/workbench";
-import { containerOf, containPlan, contentsOf, moveToFolderPlan, type Plan } from "../semantics";
 import { byName } from "../text";
 import { folderChain, targetFolder } from "../explorer";
+import {
+  childrenOf,
+  containAsPlan,
+  dropPlan,
+  dropPosition,
+  groupMembers,
+  isGroup,
+  isWithin,
+  partPlan,
+  removeFromGroupPlan,
+  rankEdits,
+  typeChoices,
+  type Drag,
+  type Parent,
+  type Plan,
+  type Position,
+} from "../dragdrop";
 import { DRAG_OBJECT } from "./DiagramEditor";
 import { ContextMenu, type MenuEntry } from "./Menu";
-import { backgroundMenu, deleteItem, itemMenu, openItem, renameItem } from "./commands";
+import { backgroundMenu, deleteItem, itemMenu, marksMenu, memberMenu, openItem, renameItem, runPlan } from "./commands";
+
+/** Marks a drag that started in the explorer (folders and diagrams carry nothing else). */
+const DRAG_EXPLORER = "application/x-connectome-explorer";
+/** What is being dragged: the browser hides drag data until the drop, but every dragover needs to know. */
+let dragging: Drag | null = null;
+/** Hovering this long over a closed folder or container while dragging opens it. */
+const OPEN_AFTER_MS = 600;
 
 interface OpenMenu {
   x: number;
@@ -29,17 +52,26 @@ interface OpenMenu {
   label: string;
   entries: MenuEntry[];
 }
-const MenuContext = createContext<(menu: OpenMenu) => void>(() => {});
+interface ExplorerContext {
+  openMenu(menu: OpenMenu): void;
+  /** Why the current drop target refuses the drag (shown under the tree), or null. */
+  setHint(hint: string | null): void;
+}
+const Context = createContext<ExplorerContext>({ openMenu: () => {}, setHint: () => {} });
 
 export function Explorer() {
-  const { state } = useModel();
+  const { state, metamodel } = useModel();
   const selection = useWorkbench((s) => s.selection);
   const task = useWorkbench((s) => s.explorerTask);
   const setTask = useWorkbench((s) => s.setExplorerTask);
+  const toggleMark = useWorkbench((s) => s.toggleMark);
   const [filter, setFilter] = useState("");
   const [menu, setMenu] = useState<OpenMenu | null>(null);
-  const roots = state.folders.find("byParent", "").sort(byName);
+  const [hint, setHint] = useState<string | null>(null);
+  const [rootDrop, setRootDrop] = useState(false);
+  const roots = childrenOf(state, metamodel, { kind: "root" });
   const folderId = targetFolder(state, selection);
+  const context = useRef<ExplorerContext>({ openMenu: setMenu, setHint }).current;
 
   const onBackgroundMenu = (e: MouseEvent) => {
     // Rows open their own menu; this is the empty space below and between them.
@@ -48,9 +80,39 @@ export function Explorer() {
     setMenu({ x: e.clientX, y: e.clientY, label: "Explorer", entries: backgroundMenu() });
   };
 
+  // The empty space below the tree: folders dropped there go to the end of the top level.
+  const last = roots[roots.length - 1];
+  const rootPlan = (): Plan | null =>
+    dragging && last ? dropPlan(state, metamodel, dragging, { kind: "folder", id: last.id }, "after") : null;
+  const onTreeDragOver = (e: DragEvent) => {
+    if (e.target !== e.currentTarget || !e.dataTransfer.types.includes(DRAG_EXPLORER)) return;
+    const plan = rootPlan();
+    if (!plan || "error" in plan) {
+      setHint(plan && "error" in plan ? plan.error : null);
+      setRootDrop(false);
+      return;
+    }
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setHint(null);
+    setRootDrop(true);
+  };
+  const onTreeDrop = (e: DragEvent) => {
+    if (e.target !== e.currentTarget) return;
+    e.preventDefault();
+    setRootDrop(false);
+    const plan = rootPlan();
+    if (plan) runPlan(plan);
+  };
+
   const query = filter.trim().toLocaleLowerCase();
   return (
-    <nav className="explorer" aria-label="Explorer" onContextMenu={onBackgroundMenu}>
+    <nav
+      className="explorer"
+      aria-label="Explorer"
+      onContextMenu={onBackgroundMenu}
+      onKeyDown={(e) => e.key === "Escape" && toggleMark(null)}
+    >
       <div className="pane-title">
         <span>Explorer</span>
         <span className="tools">
@@ -83,41 +145,74 @@ export function Explorer() {
           key={`${task.what}:${task.folderId}`}
           kind={task.what}
           folderId={task.folderId}
+          members={task.members ?? []}
           onDone={() => setTask(null)}
         />
       )}
-      <MenuContext.Provider value={setMenu}>
-        <ul className="tree" role="tree">
+      <Context.Provider value={context}>
+        <ul
+          className={`tree${rootDrop ? " drop-end" : ""}`}
+          role="tree"
+          onDragOver={onTreeDragOver}
+          onDragLeave={() => setRootDrop(false)}
+          onDrop={onTreeDrop}
+        >
           {query ? <FilterResults query={query} /> : roots.map((f) => <FolderNode key={f.id} id={f.id} depth={0} />)}
         </ul>
-      </MenuContext.Provider>
+      </Context.Provider>
+      {hint && (
+        <div className="drop-hint" role="status">
+          {hint}
+        </div>
+      )}
       {menu && <ContextMenu {...menu} onClose={() => setMenu(null)} />}
     </nav>
   );
 }
 
-function FolderNode({ id, depth }: { id: Id; depth: number }) {
-  const { state } = useModel();
-  const [open, setOpen] = useState(depth < 2);
-  const folder = state.folders.get(id);
-  // The explorer reveals the selection (design/04-ux/workbench.md, "Selection"): a folder opens when something
-  // inside it is selected, e.g. a new item or one the File menu is renaming.
+/** The rows under a parent, in the explorer's order. */
+function Children({ parent, depth }: { parent: Parent; depth: number }) {
+  const { state, metamodel } = useModel();
+  return (
+    <>
+      {childrenOf(state, metamodel, parent).map((c) =>
+        c.kind === "folder" ? (
+          <FolderNode key={c.id} id={c.id} depth={depth} />
+        ) : c.kind === "object" ? (
+          <ObjectNode key={c.id} id={c.id} depth={depth} />
+        ) : (
+          <li key={c.id} role="treeitem">
+            <Row item={{ kind: "diagram", id: c.id }} depth={depth} icon="⧉" label={c.name} />
+          </li>
+        ),
+      )}
+    </>
+  );
+}
+
+/** Opens a folder or container when something inside it is selected (the explorer reveals the selection). */
+function useReveal(id: Id, setOpen: (open: boolean) => void) {
+  const { state, metamodel } = useModel();
   const selection = useWorkbench((s) => s.selection);
-  const holdsSelection =
-    selection !== null && selection.id !== id && folderChain(state, targetFolder(state, selection)).includes(id);
+  const holds =
+    !!selection &&
+    selection.id !== id &&
+    (folderChain(state, targetFolder(state, selection)).includes(id) ||
+      (selection.kind === "object" &&
+        isWithin(state, metamodel, selection, { kind: "object", id }) &&
+        state.objects.get(id) !== undefined));
   useEffect(() => {
-    if (holdsSelection) setOpen(true);
-  }, [holdsSelection, selection?.id]);
+    if (holds) setOpen(true);
+  }, [holds, selection?.id, setOpen]);
+}
+
+function FolderNode({ id, depth }: { id: Id; depth: number }) {
+  const { state, metamodel } = useModel();
+  const [open, setOpen] = useState(depth < 2);
+  useReveal(id, setOpen);
+  const folder = state.folders.get(id);
   if (!folder) return null;
-  const folders = state.folders.find("byParent", id).sort(byName);
-  const { metamodel } = useModel();
-  // Contents show inside their container, not at the folder's top level.
-  const objects = state.objects
-    .find("byFolder", id)
-    .filter((o) => !containerOf(state, metamodel, o.id))
-    .sort(byName);
-  const diagrams = state.diagrams.find("byFolder", id).sort(byName);
-  const empty = folders.length + objects.length + diagrams.length === 0;
+  const empty = childrenOf(state, metamodel, { kind: "folder", id }).length === 0;
   return (
     <li role="treeitem" aria-expanded={open}>
       <Row
@@ -126,20 +221,11 @@ function FolderNode({ id, depth }: { id: Id; depth: number }) {
         icon={empty ? "📁" : open ? "▾ 📁" : "▸ 📁"}
         label={folder.name}
         onToggle={() => setOpen(!open)}
+        onExpand={() => setOpen(true)}
       />
       {open && !empty && (
         <ul role="group">
-          {folders.map((f) => (
-            <FolderNode key={f.id} id={f.id} depth={depth + 1} />
-          ))}
-          {diagrams.map((d) => (
-            <li key={d.id} role="treeitem">
-              <Row item={{ kind: "diagram", id: d.id }} depth={depth + 1} icon="⧉" label={d.name} />
-            </li>
-          ))}
-          {objects.map((o) => (
-            <ObjectNode key={o.id} id={o.id} depth={depth + 1} />
-          ))}
+          <Children parent={{ kind: "folder", id }} depth={depth + 1} />
         </ul>
       )}
     </li>
@@ -149,23 +235,38 @@ function FolderNode({ id, depth }: { id: Id; depth: number }) {
 function ObjectNode({ id, depth }: { id: Id; depth: number }) {
   const { state, metamodel } = useModel();
   const [open, setOpen] = useState(true);
+  useReveal(id, setOpen);
   const object = state.objects.get(id);
   if (!object) return null;
-  const contents = contentsOf(state, metamodel, id);
-  const icon = contents.length === 0 ? "▭" : open ? "▾ ▭" : "▸ ▭";
+  const contents = childrenOf(state, metamodel, { kind: "object", id });
+  const group = isGroup(state, metamodel, id);
+  const members = group ? groupMembers(state, id) : [];
+  const hasChildren = contents.length + members.length > 0;
+  const shape = group ? "⬚" : "▭";
+  const icon = !hasChildren ? shape : open ? `▾ ${shape}` : `▸ ${shape}`;
   return (
-    <li role="treeitem" aria-expanded={contents.length > 0 ? open : undefined}>
+    <li role="treeitem" aria-expanded={hasChildren ? open : undefined}>
       <Row
         item={{ kind: "object", id }}
         depth={depth}
         icon={icon}
         label={object.name}
         onToggle={() => setOpen(!open)}
+        onExpand={() => setOpen(true)}
       />
-      {open && contents.length > 0 && (
+      {open && hasChildren && (
         <ul role="group">
-          {contents.map((c) => (
-            <ObjectNode key={c.id} id={c.id} depth={depth + 1} />
+          <Children parent={{ kind: "object", id }} depth={depth + 1} />
+          {members.map(({ relationship, member }) => (
+            <li key={relationship.id} role="treeitem">
+              <Row
+                item={{ kind: "object", id: member.id }}
+                depth={depth + 1}
+                icon="↗"
+                label={member.name}
+                memberOf={relationship.id}
+              />
+            </li>
           ))}
         </ul>
       )}
@@ -194,75 +295,194 @@ function FilterResults({ query }: { query: string }) {
   );
 }
 
-function Row(props: { item: Selection; depth: number; icon: string; label: string; onToggle?: () => void }) {
-  const { item, depth, icon, label, onToggle } = props;
+function Row(props: {
+  item: Selection;
+  depth: number;
+  icon: string;
+  label: string;
+  onToggle?: () => void;
+  /** Opens a closed folder or container (hovering over it while dragging). */
+  onExpand?: () => void;
+  /** A group member's reference row: the `groups` relationship it shows. */
+  memberOf?: Id;
+}) {
+  const { item, depth, icon, label, onToggle, onExpand, memberOf } = props;
   const { state, metamodel } = useModel();
-  const edit = useWorkbench((s) => s.edit);
-  const notify = useWorkbench((s) => s.notify);
-  const [dropping, setDropping] = useState(false);
-  // An object dropped onto a folder moves there; onto an object, it goes inside it.
-  const droppable = item.kind === "folder" || item.kind === "object";
-  const onDrop = (e: DragEvent) => {
-    setDropping(false);
-    const dragged = e.dataTransfer.getData(DRAG_OBJECT);
-    if (!dragged || !droppable) return;
-    e.preventDefault();
-    const plan: Plan =
-      item.kind === "folder"
-        ? moveToFolderPlan(state, metamodel, dragged, item.id)
-        : containPlan(state, metamodel, dragged, item.id);
-    if ("error" in plan) notify(plan.error, "error");
-    else edit(plan.label, plan.edits);
-  };
-  const selected = useWorkbench((s) => s.selection?.id === item.id);
-  const renaming = useWorkbench((s) => s.explorerTask?.kind === "rename" && s.explorerTask.item.id === item.id);
+  const { openMenu, setHint } = useContext(Context);
+  const selected = useWorkbench((s) => s.selection?.id === item.id && !memberOf);
+  const marked = useWorkbench((s) => !memberOf && s.marked.some((m) => m.id === item.id));
+  const renaming = useWorkbench(
+    (s) => !memberOf && s.explorerTask?.kind === "rename" && s.explorerTask.item.id === item.id,
+  );
   const select = useWorkbench((s) => s.select);
+  const toggleMark = useWorkbench((s) => s.toggleMark);
   const presence = useWorkbench((s) => s.presence);
-  const openMenu = useContext(MenuContext);
   const myId = useAuth((s) => s.signIn?.userId);
+  const [drop, setDrop] = useState<Position | null>(null);
+  const openTimer = useRef<number | undefined>(undefined);
   const others = presence.filter((u) => u.id !== myId && u.selection.includes(item.id));
+  // Folders hold anything; objects hold contents (or, for a group, members). Member rows are not drop targets.
+  const canHold = item.kind !== "diagram";
+
   const openIt = () => {
     if (item.kind === "folder") onToggle?.();
     else openItem(item);
   };
   const showMenu = (x: number, y: number) => {
+    const marks = useWorkbench.getState().marked;
+    if (marks.length > 1 && marks.some((m) => m.id === item.id) && !memberOf) {
+      return openMenu({ x, y, label: `${marks.length} items`, entries: marksMenu(state, metamodel, marks) });
+    }
     select(item);
-    openMenu({ x, y, label: label, entries: itemMenu(state, item) });
+    openMenu({
+      x,
+      y,
+      label,
+      entries: memberOf ? memberMenu(state, item, memberOf) : itemMenu(state, metamodel, item),
+    });
   };
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Enter") openIt();
-    else if (e.key === "F2") renameItem(item);
-    else if (e.key === "Delete") deleteItem(state, item);
-    else if (e.key === "ContextMenu" || (e.key === "F10" && e.shiftKey)) {
+    else if (e.key === "F2" && !memberOf) renameItem(item);
+    else if (e.key === "Delete") {
+      if (memberOf) runPlan(removeFromGroupPlan(state, memberOf));
+      else deleteItem(state, item);
+    } else if (e.key === "ContextMenu" || (e.key === "F10" && e.shiftKey)) {
       const rect = e.currentTarget.getBoundingClientRect();
       showMenu(rect.left + 24, rect.bottom);
     } else return;
     e.preventDefault();
   };
+
+  // ---------------------------------------------------------------- drag and drop
+  const stopTimer = () => {
+    window.clearTimeout(openTimer.current);
+    openTimer.current = undefined;
+  };
+  const planFor = (e: DragEvent): { position: Position; plan: Plan } | null => {
+    if (!dragging || memberOf) return null;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const position = dropPosition(e.clientY - rect.top, rect.height, canHold);
+    return { position, plan: dropPlan(state, metamodel, dragging, item, position) };
+  };
+  const onDragStart = (e: DragEvent) => {
+    const marks = useWorkbench.getState().marked;
+    const items = !memberOf && marks.some((m) => m.id === item.id) ? marks : [item];
+    dragging = { items, ...(memberOf ? { memberOf } : {}) };
+    e.dataTransfer.effectAllowed = "copyMove";
+    e.dataTransfer.setData(DRAG_EXPLORER, item.id);
+    // A single object can also be dropped on a diagram, as another occurrence.
+    if (item.kind === "object" && items.length === 1) e.dataTransfer.setData(DRAG_OBJECT, item.id);
+  };
+  const onDragOver = (e: DragEvent) => {
+    if (!e.dataTransfer.types.includes(DRAG_EXPLORER)) return;
+    const result = planFor(e);
+    if (!result || "error" in result.plan) {
+      setDrop(null);
+      setHint(result && "error" in result.plan ? result.plan.error : null);
+      stopTimer();
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = "move";
+    setHint(null);
+    setDrop(result.position);
+    if (result.position === "into" && onExpand && openTimer.current === undefined) {
+      openTimer.current = window.setTimeout(onExpand, OPEN_AFTER_MS);
+    } else if (result.position !== "into") stopTimer();
+  };
+  const onDragLeave = (e: DragEvent) => {
+    if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+    setDrop(null);
+    stopTimer();
+  };
+  const onDrop = (e: DragEvent) => {
+    const result = planFor(e);
+    setDrop(null);
+    setHint(null);
+    stopTimer();
+    if (!result) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const drag = dragging!;
+    // Alt+drop onto an object: choose how it relates (workbench.md, "Explorer: a semantic navigator").
+    const one = drag.items.length === 1 && drag.items[0]!.kind === "object" && !drag.memberOf;
+    if (
+      e.altKey &&
+      one &&
+      result.position === "into" &&
+      item.kind === "object" &&
+      !isGroup(state, metamodel, item.id)
+    ) {
+      return openMenu({
+        x: e.clientX,
+        y: e.clientY,
+        label: "Relationship type",
+        entries: altDropMenu(drag.items[0]!.id, item.id),
+      });
+    }
+    runPlan(result.plan);
+  };
+  const altDropMenu = (childId: Id, parentId: Id): MenuEntry[] => {
+    const choices = typeChoices(state, metamodel, childId, parentId);
+    // Contained objects take their place at the end of the new container's contents.
+    const atEnd = (plan: Plan): Plan => {
+      if ("error" in plan) return plan;
+      const siblings = childrenOf(state, metamodel, { kind: "object", id: parentId }).filter((s) => s.id !== childId);
+      const child = state.objects.get(childId)!;
+      const ranks: Edit[] = rankEdits(siblings, siblings.length, [{ kind: "object", id: childId, name: child.name }]);
+      return { ...plan, edits: [...plan.edits, ...ranks] };
+    };
+    return [
+      {
+        label: "Contain as",
+        disabled: choices.contain.length ? null : "No containment rule allows this pair",
+        submenu: choices.contain.map((t) => ({
+          label: t.name,
+          run: () => runPlan(atEnd(containAsPlan(state, metamodel, childId, parentId, t.key))),
+        })),
+      },
+      {
+        label: "Add as part",
+        disabled: choices.part.length ? null : "No composition or aggregation rule allows this pair",
+        submenu: choices.part.map((t) => ({
+          label: t.name,
+          run: () => runPlan(partPlan(state, metamodel, childId, parentId, t.key)),
+        })),
+      },
+    ];
+  };
+
   if (renaming) return <RenameBox item={item} depth={depth} icon={icon} name={label} />;
   return (
     <div
-      className={`row${selected ? " selected" : ""}${dropping ? " drop-target" : ""}`}
+      className={`row${selected ? " selected" : ""}${marked ? " marked" : ""}${memberOf ? " member" : ""}${
+        drop ? ` drop-${drop}` : ""
+      }`}
       style={{ paddingLeft: 8 + depth * 14 }}
       tabIndex={0}
       aria-selected={selected}
       data-kind={item.kind}
-      // Objects can be dragged onto a diagram as another occurrence of the same object.
-      draggable={item.kind === "object"}
-      onDragStart={(e) => {
-        if (item.kind !== "object") return;
-        e.dataTransfer.setData(DRAG_OBJECT, item.id);
-        e.dataTransfer.effectAllowed = "copyMove";
+      title={memberOf ? `${label}: stored in its own folder` : undefined}
+      draggable
+      onDragStart={onDragStart}
+      onDragEnd={() => {
+        dragging = null;
+        setHint(null);
       }}
-      onDragOver={(e) => {
-        if (!droppable || !e.dataTransfer.types.includes(DRAG_OBJECT)) return;
-        e.preventDefault();
-        e.dataTransfer.dropEffect = "move";
-        setDropping(true);
-      }}
-      onDragLeave={() => setDropping(false)}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
       onDrop={onDrop}
-      onClick={() => {
+      onClick={(e) => {
+        if ((e.ctrlKey || e.metaKey) && !memberOf) {
+          // Ctrl/⌘-click marks rows to drag or group together; the selection joins the marks.
+          const { selection, marked: marks } = useWorkbench.getState();
+          if (marks.length === 0 && selection && selection.id !== item.id) toggleMark(selection);
+          toggleMark(item);
+          return;
+        }
+        toggleMark(null);
         select(item);
         if (item.kind === "folder") onToggle?.();
       }}
@@ -270,6 +490,7 @@ function Row(props: { item: Selection; depth: number; icon: string; label: strin
       onKeyDown={onKeyDown}
       onContextMenu={(e) => {
         e.preventDefault();
+        e.stopPropagation();
         showMenu(e.clientX, e.clientY);
       }}
     >
@@ -297,7 +518,6 @@ function Row(props: { item: Selection; depth: number; icon: string; label: strin
   );
 }
 
-/** Inline rename (F2 or the menus): Enter saves, Esc or an unchanged name cancels. */
 function RenameBox({ item, depth, icon, name }: { item: Selection; depth: number; icon: string; name: string }) {
   const { state } = useModel();
   const edit = useWorkbench((s) => s.edit);
@@ -347,8 +567,14 @@ function RenameBox({ item, depth, icon, name }: { item: Selection; depth: number
   );
 }
 
-function CreateForm(props: { kind: "folder" | "object" | "diagram"; folderId: Id | null; onDone(): void }) {
-  const { kind, folderId, onDone } = props;
+function CreateForm(props: {
+  kind: "folder" | "object" | "diagram" | "group";
+  folderId: Id | null;
+  /** For a new group: the objects it gathers. */
+  members: Id[];
+  onDone(): void;
+}) {
+  const { kind, folderId, members, onDone } = props;
   const { metamodel } = useModel();
   const edit = useWorkbench((s) => s.edit);
   const select = useWorkbench((s) => s.select);
@@ -373,19 +599,32 @@ function CreateForm(props: { kind: "folder" | "object" | "diagram"; folderId: Id
         ? edit(`Create folder ${trimmed}`, [{ edit: "createFolder", id, parentId: folderId, name: trimmed }])
         : kind === "object"
           ? edit(`Create ${trimmed}`, [{ edit: "createObject", id, type, name: trimmed, folderId: folderId! }])
-          : edit(`Create diagram ${trimmed}`, [
-              { edit: "createDiagram", id, name: trimmed, diagramType: type, folderId: folderId! },
-            ]);
+          : kind === "diagram"
+            ? edit(`Create diagram ${trimmed}`, [
+                { edit: "createDiagram", id, name: trimmed, diagramType: type, folderId: folderId! },
+              ])
+            : // A group, with the objects it was made from (decision B22).
+              edit(members.length ? `Group ${members.length} items as ${trimmed}` : `Create group ${trimmed}`, [
+                { edit: "createObject", id, type: "group", name: trimmed, folderId: folderId! },
+                ...members.map((m): Edit => ({
+                  edit: "createRelationship",
+                  id: ulid(),
+                  type: "groups",
+                  sourceId: id,
+                  targetId: m,
+                })),
+              ]);
     if (ok) {
-      select({ kind, id });
+      useWorkbench.getState().toggleMark(null);
+      select({ kind: kind === "group" ? "object" : kind, id });
       if (kind === "diagram") openTab({ kind, id });
       onDone();
     }
   };
-  const words = { folder: "folder", object: "object", diagram: "diagram" }[kind];
+  const words = kind;
   return (
     <form className="create" onSubmit={submit} onKeyDown={(e) => e.key === "Escape" && onDone()}>
-      {kind !== "folder" && (
+      {(kind === "object" || kind === "diagram") && (
         <select
           aria-label={kind === "object" ? "Object type" : "Diagram type"}
           value={type}
@@ -401,7 +640,7 @@ function CreateForm(props: { kind: "folder" | "object" | "diagram"; folderId: Id
       <input
         autoFocus
         aria-label={`New ${words} name`}
-        placeholder={kind === "folder" ? "Folder name" : "Name"}
+        placeholder={kind === "folder" ? "Folder name" : kind === "group" ? "Group name" : "Name"}
         value={name}
         onChange={(e) => setName(e.target.value)}
       />
