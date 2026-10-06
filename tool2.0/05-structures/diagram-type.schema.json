@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://connectome.app/schemas/diagram-type.schema.json",
+  "title": "Connectome diagram type",
+  "description": "Defines a kind of diagram: allowed types, symbols, colour rules, labels, layout, legend and generation. See 02-model/diagrams-and-catalogues.md §3.",
+  "type": "object",
+  "required": ["key", "name", "objectTypes"],
+  "additionalProperties": false,
+  "properties": {
+    "key": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9]*$" },
+    "name": { "type": "string" },
+    "description": { "type": "string" },
+    "objectTypes": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+    "relationshipTypes": { "type": "array", "items": { "type": "string" } },
+    "nesting": { "enum": ["nested", "lines"], "default": "nested", "description": "How nesting relationships are shown" },
+    "showExistingRelationships": { "type": "boolean", "default": true, "description": "Offer relationships between shown objects as faint lines" },
+    "symbols": { "type": "object", "additionalProperties": { "type": "object" }, "description": "Object type key → symbol override" },
+    "colourRules": {
+      "type": "array",
+      "items": {
+        "type": "object", "required": ["when", "apply"], "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "when": { "type": "string", "description": "Query filter, e.g. 'type:application'" },
+          "apply": {
+            "oneOf": [
+              { "type": "object", "required": ["colourBy"], "additionalProperties": false,
+                "properties": { "colourBy": { "type": "string", "description": "A list property: uses its value colours" } } },
+              { "type": "object", "required": ["gradient"], "additionalProperties": false,
+                "properties": { "gradient": { "type": "object", "required": ["property", "min", "max", "from", "to"], "additionalProperties": false,
+                  "properties": { "property": { "type": "string" }, "min": { "type": "number" }, "max": { "type": "number" }, "from": { "type": "string" }, "to": { "type": "string" } } } } },
+              { "type": "object", "required": ["badge"], "additionalProperties": false,
+                "properties": { "badge": { "type": "object", "required": ["icon", "tooltip"], "properties": { "icon": { "type": "string" }, "tooltip": { "type": "string" } } } } },
+              { "type": "object", "required": ["fade"], "additionalProperties": false, "properties": { "fade": { "const": true } } }
+            ]
+          }
+        }
+      }
+    },
+    "labels": { "type": "object", "additionalProperties": { "type": "string" }, "description": "Object type key → label template" },
+    "layout": { "type": "object", "additionalProperties": false,
+      "properties": { "algorithm": { "enum": ["nested", "layered", "grid", "radial", "none"] }, "direction": { "enum": ["down", "right"] }, "spacing": { "type": "integer" } } },
+    "legend": { "type": "object", "additionalProperties": false, "properties": { "show": { "type": "boolean" }, "position": { "enum": ["topRight", "bottomRight", "bottomLeft"] } } },
+    "inactiveObjects": { "enum": ["show", "fade", "hide"], "default": "fade", "description": "Objects not active on the 'as of' date" },
+    "generate": {
+      "type": "array",
+      "items": {
+        "type": "object", "required": ["key", "forEach", "include", "name", "folder"], "additionalProperties": false,
+        "properties": {
+          "key": { "type": "string" },
+          "forEach": { "type": "string", "description": "Query: one diagram per matching object" },
+          "include": { "type": "array", "items": { "type": "object", "required": ["path"], "additionalProperties": false,
+            "properties": { "path": { "type": "string" }, "depth": { "type": "integer", "minimum": 1, "maximum": 6 } } } },
+          "layout": { "enum": ["nested", "layered", "grid", "radial"] },
+          "name": { "type": "string" },
+          "folder": { "type": "string" },
+          "orphans": { "enum": ["archive", "delete", "keep"], "default": "archive" },
+          "trigger": { "enum": ["manual", "onChange", "nightly"], "default": "manual" }
+        }
+      }
+    }
+  }
+}

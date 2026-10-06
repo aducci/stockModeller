@@ -1,0 +1,286 @@
+openapi: 3.1.0
+info:
+  title: Connectome API
+  version: 1.0.0-design
+  description: Core of the public API. All model writes go through changes. Edit shapes mirror 05-structures/changes.ts.
+servers:
+  - url: https://{region}.connectome.app/api/v1
+    variables:
+      region: { default: eu, enum: [eu, us, au] }
+security:
+  - bearer: []
+
+paths:
+  /repositories/{repo}/folders:
+    parameters: [ { $ref: '#/components/parameters/repo' } ]
+    get:
+      summary: Folder tree
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Folder' } } } } }
+
+  /repositories/{repo}/objects:
+    parameters: [ { $ref: '#/components/parameters/repo' }, { $ref: '#/components/parameters/scenario' } ]
+    get:
+      summary: Find objects with the query language
+      parameters:
+        - { name: q, in: query, schema: { type: string }, example: 'type:application AND lifecycle.status = active' }
+        - { name: include, in: query, schema: { type: string }, example: 'properties,relationships' }
+        - { name: limit, in: query, schema: { type: integer, default: 100, maximum: 1000 } }
+        - { name: cursor, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  seq: { type: integer }
+                  items: { type: array, items: { $ref: '#/components/schemas/ModelObject' } }
+                  hidden: { type: integer }
+                  nextCursor: { type: [string, 'null'] }
+
+  /repositories/{repo}/objects/{id}:
+    parameters: [ { $ref: '#/components/parameters/repo' }, { $ref: '#/components/parameters/scenario' }, { $ref: '#/components/parameters/id' } ]
+    get:
+      summary: One object
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/ModelObject' } } } }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /repositories/{repo}/objects/{id}/occurrences:
+    parameters: [ { $ref: '#/components/parameters/repo' }, { $ref: '#/components/parameters/scenario' }, { $ref: '#/components/parameters/id' } ]
+    get:
+      summary: Diagrams on which the object occurs
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { type: object, properties: { diagramId: { type: string }, diagramName: { type: string }, occurrenceId: { type: string } } } }
+
+  /repositories/{repo}/relationships:
+    parameters: [ { $ref: '#/components/parameters/repo' }, { $ref: '#/components/parameters/scenario' } ]
+    get:
+      summary: Find relationships
+      parameters:
+        - { name: type, in: query, schema: { type: string } }
+        - { name: source, in: query, schema: { type: string } }
+        - { name: target, in: query, schema: { type: string } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Relationship' } } } } }
+
+  /repositories/{repo}/changes:
+    parameters: [ { $ref: '#/components/parameters/repo' }, { $ref: '#/components/parameters/scenario' } ]
+    post:
+      summary: Commit a change (atomic list of edits)
+      parameters:
+        - { name: preview, in: query, schema: { type: boolean, default: false } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ChangeRequestBody' } } }
+      responses:
+        '201': { description: Committed, content: { application/json: { schema: { $ref: '#/components/schemas/ChangeResult' } } } }
+        '202': { description: Held for review by a governance policy, content: { application/json: { schema: { $ref: '#/components/schemas/ChangeResult' } } } }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+    get:
+      summary: Committed changes since a sequence number
+      parameters: [ { name: since, in: query, required: true, schema: { type: integer } } ]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ChangeSummary' } } } } }
+
+  /repositories/{repo}/changes/{changeId}/undo:
+    parameters: [ { $ref: '#/components/parameters/repo' }, { name: changeId, in: path, required: true, schema: { type: string } } ]
+    post:
+      summary: Undo a change (a new change built from inverse edits)
+      responses:
+        '201': { description: Undone, content: { application/json: { schema: { $ref: '#/components/schemas/ChangeResult' } } } }
+
+  /repositories/{repo}/diagrams/{id}:
+    parameters: [ { $ref: '#/components/parameters/repo' }, { $ref: '#/components/parameters/scenario' }, { $ref: '#/components/parameters/id' } ]
+    get:
+      summary: A diagram with its occurrences and annotations
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Diagram' } } } }
+
+  /repositories/{repo}/diagrams/{id}/render:
+    parameters: [ { $ref: '#/components/parameters/repo' }, { $ref: '#/components/parameters/scenario' }, { $ref: '#/components/parameters/id' } ]
+    get:
+      summary: Render a diagram
+      parameters:
+        - { name: format, in: query, schema: { type: string, enum: [svg, png, pdf] } }
+        - { name: asOf, in: query, schema: { type: string, format: date } }
+      responses:
+        '200': { description: File, content: { image/svg+xml: {}, image/png: {}, application/pdf: {} } }
+
+  /repositories/{repo}/scenarios/{scenarioId}/compare:
+    parameters: [ { $ref: '#/components/parameters/repo' }, { name: scenarioId, in: path, required: true, schema: { type: string } } ]
+    post:
+      summary: Compare with another scenario
+      parameters: [ { name: with, in: query, required: true, schema: { type: string } } ]
+      responses:
+        '200': { description: Differences, content: { application/json: { schema: { $ref: '#/components/schemas/Comparison' } } } }
+
+  /repositories/{repo}/automations/{id}/runs:
+    parameters: [ { $ref: '#/components/parameters/repo' }, { $ref: '#/components/parameters/id' } ]
+    post:
+      summary: Start a hosted automation run (later phase; launch automation uses this API from any language)
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { parameters: { type: object }, preview: { type: boolean }, scenario: { type: string } } }
+      responses:
+        '202': { description: Queued, content: { application/json: { schema: { $ref: '#/components/schemas/AutomationRun' } } } }
+
+components:
+  securitySchemes:
+    bearer: { type: http, scheme: bearer }
+  parameters:
+    repo: { name: repo, in: path, required: true, schema: { type: string } }
+    id: { name: id, in: path, required: true, schema: { type: string } }
+    scenario: { name: scenario, in: query, required: false, schema: { type: string }, description: Scenario id (default baseline) }
+  responses:
+    Problem:
+      description: Error (RFC 9457)
+      content:
+        application/problem+json:
+          schema:
+            type: object
+            properties:
+              title: { type: string }
+              status: { type: integer }
+              code: { type: string, enum: [conflict, ruleViolation, forbidden, notFound, invalid, gone] }
+              details:
+                type: array
+                items: { type: object, properties: { editIndex: { type: integer }, property: { type: string }, rule: { type: string }, message: { type: string } } }
+  schemas:
+    Folder:
+      type: object
+      required: [id, name]
+      properties: { id: { type: string }, parentId: { type: [string, 'null'] }, name: { type: string } }
+    Properties:
+      type: object
+      additionalProperties: true
+      description: 'Property key → value, e.g. {"lifecycle.status": "active"}'
+    ModelObject:
+      type: object
+      required: [id, type, name, folderId, version]
+      properties:
+        id: { type: string }
+        type: { type: string }
+        name: { type: string }
+        key: { type: [string, 'null'] }
+        folderId: { type: string }
+        description: { type: string }
+        properties: { $ref: '#/components/schemas/Properties' }
+        tags: { type: array, items: { type: string } }
+        externalIds: { type: object, additionalProperties: { type: string } }
+        version: { type: integer }
+    Relationship:
+      type: object
+      required: [id, type, sourceId, targetId, version]
+      properties:
+        id: { type: string }
+        type: { type: string }
+        sourceId: { type: string }
+        targetId: { type: string }
+        name: { type: string }
+        properties: { $ref: '#/components/schemas/Properties' }
+        derivedBy: { type: [string, 'null'] }
+        version: { type: integer }
+    Edit:
+      type: object
+      required: [edit]
+      description: One edit; see 05-structures/changes.ts for every shape.
+      properties:
+        edit:
+          type: string
+          enum: [createObject, setProperties, renameObject, moveToFolder, changeObjectType, deleteObject,
+                 createRelationship, reconnectRelationship, deleteRelationship,
+                 createFolder, renameFolder, moveFolder, deleteFolder,
+                 createDiagram, updateDiagram, deleteDiagram,
+                 addObjectOccurrence, moveObjectOccurrence, styleOccurrence, removeOccurrence,
+                 addRelationshipOccurrence, routeRelationshipOccurrence, addAnnotation, updateAnnotation]
+      additionalProperties: true
+    ChangeRequestBody:
+      type: object
+      required: [id, label, edits]
+      properties:
+        id: { type: string }
+        label: { type: string }
+        changeRequestId: { type: string }
+        edits: { type: array, minItems: 1, maxItems: 10000, items: { $ref: '#/components/schemas/Edit' } }
+    ChangeResult:
+      type: object
+      properties:
+        seq: { type: integer }
+        changeId: { type: string }
+        versions: { type: object, additionalProperties: { type: integer } }
+        heldInChangeRequest: { type: [string, 'null'] }
+        findings:
+          type: array
+          items: { type: object, properties: { rule: { type: string }, itemId: { type: string }, severity: { type: string }, message: { type: string } } }
+    ChangeSummary:
+      type: object
+      properties:
+        seq: { type: integer }
+        changeId: { type: string }
+        label: { type: string }
+        actor: { type: string }
+        source: { type: string }
+        committedAt: { type: string, format: date-time }
+        edits: { type: array, items: { $ref: '#/components/schemas/Edit' } }
+    Diagram:
+      type: object
+      required: [id, name, diagramType, folderId]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        diagramType: { type: string }
+        folderId: { type: string }
+        objectOccurrences:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              objectId: { type: string }
+              parentOccurrenceId: { type: [string, 'null'] }
+              x: { type: integer }
+              y: { type: integer }
+              w: { type: integer }
+              h: { type: integer }
+              z: { type: integer }
+              style: { type: object }
+        relationshipOccurrences:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              relationshipId: { type: string }
+              sourceOccurrenceId: { type: string }
+              targetOccurrenceId: { type: string }
+              shownAs: { type: string, enum: [line, nesting] }
+              route: { type: object }
+        annotations: { type: array, items: { type: object } }
+    Comparison:
+      type: object
+      properties:
+        objects: { $ref: '#/components/schemas/ItemDifferences' }
+        relationships: { $ref: '#/components/schemas/ItemDifferences' }
+        diagrams: { type: array, items: { type: object, properties: { diagramId: { type: string }, added: { type: integer }, removed: { type: integer }, moved: { type: integer } } } }
+    ItemDifferences:
+      type: object
+      properties:
+        added: { type: array, items: { type: string } }
+        removed: { type: array, items: { type: string } }
+        changed: { type: array, items: { type: object, properties: { id: { type: string }, properties: { type: object } } } }
+    AutomationRun:
+      type: object
+      properties:
+        id: { type: string }
+        status: { type: string, enum: [queued, running, succeeded, failed, cancelled, timedOut] }
+        preview: { type: boolean }
+        report: { type: [object, 'null'] }
