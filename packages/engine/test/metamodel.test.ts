@@ -63,3 +63,51 @@ describe("compiling a broken package", () => {
     }
   });
 });
+
+describe("property sets", () => {
+  const pkg = (sets: { parent?: unknown[]; child?: unknown[] }): MetamodelPackage =>
+    ({
+      name: "t",
+      version: "1",
+      propertyTypes: [
+        { key: "a.one", name: "One", group: "a", dataType: "text" },
+        { key: "a.two", name: "Two", group: "a", dataType: "text" },
+      ],
+      objectTypes: [
+        { key: "base", name: "Base", abstract: true, properties: ["a.one"], propertySets: sets.parent },
+        { key: "thing", name: "Thing", extends: "base", properties: ["a.two"], propertySets: sets.child },
+      ],
+      relationshipTypes: [],
+    }) as MetamodelPackage;
+
+  it("are inherited, and a subtype's set replaces one with the same key in place", () => {
+    const mm = Metamodel.compile(
+      pkg({
+        parent: [
+          { key: "review", name: "Review", properties: ["a.one"] },
+          { key: "short", name: "Short", properties: ["a.one"] },
+        ],
+        child: [{ key: "review", name: "Review", properties: ["a.two", "a.one"] }],
+      }),
+    );
+    expect(mm.objectType("thing")!.propertySets).toEqual([
+      { key: "review", name: "Review", properties: ["a.two", "a.one"] },
+      { key: "short", name: "Short", properties: ["a.one"] },
+    ]);
+    expect(metamodel.objectType("application")!.propertySets.map((s) => s.key)).toEqual([
+      "review",
+      "ownership",
+      "cost",
+    ]);
+  });
+
+  it("may only list the type's own properties", () => {
+    let problems = "";
+    try {
+      Metamodel.compile(pkg({ parent: [{ key: "x", name: "X", properties: ["a.two"] }] }));
+    } catch (e) {
+      if (e instanceof MetamodelError) problems = e.problems.join("\n");
+    }
+    expect(problems).toContain('Property set "x" of "base" lists "a.two", which the type does not have');
+  });
+});

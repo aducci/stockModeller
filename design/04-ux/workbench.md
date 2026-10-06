@@ -45,11 +45,28 @@ Built in slice P-1. One inspector serves objects, relationships, diagrams and fo
 | Part | Behaviour |
 |---|---|
 | Header | Name, edited in place; one line with the type, key and folder (the folder hides when the panel is narrow); the description, clamped to two lines until focused. Enter commits, Shift+Enter adds a line, Esc reverts. Objects (`setDescription`) and diagrams have descriptions; folders and relationships do not (B24) |
-| Toolbar | Sticky. A filter over property names, keys and displayed values (`/` focuses it; other sections hide while it is in use); **Hide empty**, which says how many fields it hides; collapse or expand all |
-| Sections | Property groups and the other sections (Tags, Relationships, Trace, Occurs on, Payload, Messages) collapse; a group's header shows filled/total. Open or closed, Hide empty and the label width are remembered per browser |
+| Toolbar | Sticky. A **property set** picker (P-2), then a filter over property names, keys and displayed values (`/` focuses it; other sections hide while it is in use); **Hide empty**, which says how many fields it hides; collapse or expand all |
+| Sections | Property groups and the other sections (Tags, Payload, Messages) collapse; a group's header shows filled/total. Open or closed, Hide empty and the label width are remembered per browser |
 | Grid | Two columns with a draggable splitter, 24 px rows, fields borderless until hovered or focused, a clear button on hover, `*` for required. Below 260 px wide, labels sit above values |
 | Editors | Chosen per property type (B23): text, multi-line, number and money (right-aligned, with unit or currency), date, URL (with an open link), switch or checkbox, dropdown (with the value's colour), segmented radio, rating pips, toggle chips, object picker (with a link to the object), read-only `ƒ` for calculated values. Relationship properties are read-only until `setProperties` covers relationships |
 | Later | Several items selected: common properties, "Mixed" where they differ, one change for all. Rendered properties (gauge, ring, pips, bars) from a property's `scale`, as the notation's decorations draw them |
+
+#### Property sets (slice P-2)
+
+A property set is a named, ordered selection of a type's properties (B25). **Shared sets** are defined on object types in the metamodel package (`propertySets`), inherited, a subtype's set replacing one with the same key; later they are assigned to user profiles. **My sets** are the user's own per object type, kept in the browser until profiles exist: *Save as set…* keeps what is shown, *Edit this set…* puts a checkbox on every row. With a set chosen, its properties show in its order as one section named after it; the filter still applies. The choice is remembered per object type. Essentials 1.4.0 gives applications *Quarterly review*, *Ownership* and *Cost*.
+
+#### Tool windows (slice P-2)
+
+The right column is a dock of two **tool windows**, each a tab strip over its content (Sparx EA, ABACUS): **Properties** (the inspector) above **Relations**, with a divider between them; either collapses to its tab strip. Open tabs, collapsed windows and the divider are remembered. Tabs are entries in a registry, so History, Comments and an extension's view are one entry each.
+
+| Relations tab | Content |
+|---|---|
+| Relationships | A view picker and a filter (name, type, verb, group, payload). *By meaning* (grouped by kind and direction, payloads, messages), *By object* (each related object once, with every relationship to it), *Data flows (2 steps)* and *Dependencies (n steps, 1–6)* (traces both ways, with the steps and the object they came through), *Structure* (containment, composition, aggregation, specialisation). The views are built in; package-defined views come with lenses |
+| Trace | The traces of Sem-4, highlighted on diagrams |
+| Occurs on | One row per diagram with its folder and ×N when the object repeats; opens the diagram; **Add to ‹open diagram›** when the open diagram does not show it yet (below what is drawn) |
+| Stencils (later) | The open diagram's stencils and patterns (notation §9.2–9.3), after slice N-3 |
+
+The object page in the centre shows the same three views as sections.
 
 ## Explorer: a semantic navigator
 

@@ -15,7 +15,7 @@ export function Centre() {
 
   return (
     <main className="centre">
-      <div className="tabs" role="tablist">
+      <div className="tabs" role="tablist" aria-label="Open items">
         {tabs.map((t) => (
           <div
             key={t.id}
@@ -48,7 +48,7 @@ export function Centre() {
         )}
         {active?.kind === "object" && (
           <div className="object-page">
-            <ObjectProperties id={active.id} />
+            <ObjectProperties id={active.id} withRelations />
           </div>
         )}
         {active?.kind === "diagram" && <DiagramEditor key={active.id} id={active.id} />}

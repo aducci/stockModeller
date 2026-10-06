@@ -1,7 +1,7 @@
 // The properties panel's field model (design/04-ux/workbench.md "Properties panel"): which editor each property
 // gets, which fields a filter or "Hide empty" leaves, and how complete each group is. Pure, so it is unit-tested.
 import type { Metamodel } from "@connectome/engine";
-import type { PropertyEditor, PropertyType, PropertyValue, ValueList } from "@connectome/model";
+import type { PropertyEditor, PropertySet, PropertyType, PropertyValue, ValueList } from "@connectome/model";
 
 /** The editors the panel draws; `auto` on a property type resolves to one of these. */
 export type EditorKind =
@@ -103,6 +103,8 @@ export interface FieldOptions {
   filter?: string;
   /** Leaves out fields with no value (calculated fields always stay). */
   hideEmpty?: boolean;
+  /** Only the set's properties, in its order, as one group named after it. */
+  set?: PropertySet;
 }
 
 export function groupName(key: string): string {
@@ -110,7 +112,10 @@ export function groupName(key: string): string {
   return key.charAt(0).toUpperCase() + key.slice(1);
 }
 
-/** The property fields of an item, by group, in the type's order; `hidden` counts what Hide empty left out. */
+/**
+ * The property fields of an item, by group in the type's order (or in a property set's order, as one group);
+ * `hidden` counts what Hide empty left out.
+ */
 export function fieldGroups(
   metamodel: Metamodel,
   keys: Iterable<string>,
@@ -120,14 +125,23 @@ export function fieldGroups(
   const query = options.filter?.trim().toLowerCase() ?? "";
   const groups = new Map<string, FieldGroup>();
   let hidden = 0;
-  for (const key of keys) {
+  const own = new Set(keys);
+  const set = options.set;
+  for (const key of set ? set.properties.filter((k) => own.has(k)) : own) {
     const pt = metamodel.propertyType(key);
     if (!pt) continue;
     const list = pt.valueList ? metamodel.valueList(pt.valueList) : undefined;
     const value = values[key] ?? null;
     const empty = pt.dataType !== "calculated" && isEmpty(value);
-    const group = groups.get(pt.group) ?? { key: pt.group, name: groupName(pt.group), fields: [], filled: 0, total: 0 };
-    groups.set(pt.group, group);
+    const groupKey = set ? `set:${set.key}` : pt.group;
+    const group = groups.get(groupKey) ?? {
+      key: groupKey,
+      name: set ? set.name : groupName(pt.group),
+      fields: [],
+      filled: 0,
+      total: 0,
+    };
+    groups.set(groupKey, group);
     group.total++;
     if (!empty) group.filled++;
     if (options.hideEmpty && empty) {
@@ -138,4 +152,17 @@ export function fieldGroups(
     group.fields.push({ pt, value, list, editor: editorFor(pt, list), empty });
   }
   return { groups: [...groups.values()].filter((g) => g.fields.length > 0), hidden };
+}
+
+/** A user's own property set: a key unlikely to collide with a package's, and only properties the type has. */
+export function mySet(name: string, properties: Iterable<string>, now = Date.now()): PropertySet {
+  return { key: `my${now.toString(36)}`, name: name.trim(), properties: [...properties] };
+}
+
+/** A set with one property added (at the end) or removed. */
+export function toggleInSet(set: PropertySet, key: string): PropertySet {
+  return {
+    ...set,
+    properties: set.properties.includes(key) ? set.properties.filter((k) => k !== key) : [...set.properties, key],
+  };
 }

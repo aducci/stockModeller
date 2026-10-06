@@ -6,7 +6,7 @@ import { navigate } from "../route";
 import { saveState } from "../text";
 import { Explorer } from "./Explorer";
 import { Centre } from "./Centre";
-import { Properties } from "./Properties";
+import { Dock } from "./Dock";
 import { Toasts } from "./Toasts";
 import { DeleteObjectDialog } from "./DeleteObjectDialog";
 import { MenuBar } from "./Menu";
@@ -69,7 +69,7 @@ export function Workbench({ repositoryId, scenarioId }: { repositoryId: string; 
       )}
       <Explorer />
       <Centre />
-      <Properties />
+      <Dock />
       <Toasts />
       <DeleteObjectDialog />
     </div>

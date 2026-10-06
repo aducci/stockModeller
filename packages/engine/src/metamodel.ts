@@ -7,6 +7,7 @@ import {
   type MetamodelPackage,
   type ObjectType,
   type PayloadUse,
+  type PropertySet,
   type PropertyType,
   type RelationshipRule,
   type RelationshipType,
@@ -38,6 +39,8 @@ export interface ResolvedObjectType {
   category: SemanticCategory;
   level: SemanticLevel | undefined;
   levelFixed: boolean;
+  /** Its property sets, inherited: the root's first, a subtype's set replacing one with the same key in place. */
+  propertySets: PropertySet[];
 }
 
 /** A relationship type with its semantic defaults filled in (semantics.md §2.2). */
@@ -215,6 +218,15 @@ export class Metamodel {
         if (!mm.propertyTypes.has(p)) problems.push(`Object type "${ot.key}" uses unknown property type "${p}"`);
       }
       const inherited = <K extends keyof ObjectType>(field: K) => chain.find((t) => t[field] !== undefined)?.[field];
+      const propertySets = new Map<string, PropertySet>();
+      for (const t of [...chain].reverse()) for (const set of t.propertySets ?? []) propertySets.set(set.key, set);
+      for (const set of ot.propertySets ?? []) {
+        if ((ot.propertySets ?? []).filter((x) => x.key === set.key).length > 1)
+          problems.push(`Object type "${ot.key}" defines property set "${set.key}" twice`);
+        for (const p of set.properties)
+          if (!properties.has(p))
+            problems.push(`Property set "${set.key}" of "${ot.key}" lists "${p}", which the type does not have`);
+      }
       mm.objectTypes.set(ot.key, {
         definition: ot,
         lineage,
@@ -225,6 +237,7 @@ export class Metamodel {
         category: inherited("category") ?? "other",
         level: inherited("level"),
         levelFixed: inherited("levelFixed") ?? false,
+        propertySets: [...propertySets.values()],
       });
       if (inherited("levelFixed") && !inherited("level"))
         problems.push(`Object type "${ot.key}" fixes its level but names none`);
