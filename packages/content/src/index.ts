@@ -13,3 +13,5 @@ export const essentials: ContentPackage = {
   metamodel: essentialsJson as MetamodelPackage,
   diagramTypes: [applicationLandscapeJson as DiagramType],
 };
+
+export { insuranceGroup } from "./examples";

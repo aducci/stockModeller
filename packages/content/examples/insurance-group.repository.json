@@ -1,0 +1,269 @@
+{
+  "format": "connectome.repository/1",
+  "repository": {
+    "id": "R0000000000000000000000001",
+    "name": "Insurance Group EA",
+    "metamodel": "Essentials@1.0.0",
+    "settings": { "currency": "EUR" }
+  },
+  "scenarios": [
+    { "id": "S0000000000000000000000001", "parentId": null, "name": "Baseline", "state": "baseline" },
+    {
+      "id": "S0000000000000000000000002",
+      "parentId": "S0000000000000000000000001",
+      "name": "Target 2027",
+      "state": "draft"
+    }
+  ],
+  "folders": [
+    { "id": "F01", "parentId": null, "name": "Business" },
+    { "id": "F02", "parentId": "F01", "name": "Capabilities" },
+    { "id": "F03", "parentId": "F01", "name": "Processes" },
+    { "id": "F04", "parentId": null, "name": "Applications" },
+    { "id": "F05", "parentId": null, "name": "Technology" },
+    { "id": "F06", "parentId": null, "name": "Diagrams" },
+    { "id": "F07", "parentId": null, "name": "Catalogues" }
+  ],
+  "objects": [
+    {
+      "id": "O-CAP-1",
+      "type": "capability",
+      "name": "Claims Management",
+      "folderId": "F02",
+      "properties": { "assessment.criticality": "high" }
+    },
+    { "id": "O-CAP-2", "type": "capability", "name": "Claim Intake", "folderId": "F02", "properties": {} },
+    { "id": "O-CAP-3", "type": "capability", "name": "Claim Settlement", "folderId": "F02", "properties": {} },
+    {
+      "id": "O-PRC-1",
+      "type": "process",
+      "name": "Handle Claim",
+      "folderId": "F03",
+      "properties": { "lifecycle.status": "active" }
+    },
+    { "id": "O-STP-1", "type": "processStep", "name": "Assess Claim", "folderId": "F03", "properties": {} },
+    { "id": "O-STP-2", "type": "processStep", "name": "Pay Claim", "folderId": "F03", "properties": {} },
+    {
+      "id": "O-APP-1",
+      "type": "application",
+      "name": "Claims Manager",
+      "key": "APP-0001",
+      "folderId": "F04",
+      "properties": {
+        "lifecycle.status": "active",
+        "lifecycle.activeFrom": "2015-04-01",
+        "ownership.businessOwner": "dana@example.com",
+        "assessment.businessFit": "4",
+        "assessment.technicalFit": "2",
+        "assessment.criticality": "high",
+        "cost.runCost": { "amount": 120000, "currency": "EUR" },
+        "technical.users": 350
+      },
+      "externalIds": { "servicenow": "cmdb_ci_appl_7781" }
+    },
+    {
+      "id": "O-APP-2",
+      "type": "application",
+      "name": "Legacy CRM",
+      "key": "APP-0002",
+      "folderId": "F04",
+      "properties": {
+        "lifecycle.status": "active",
+        "assessment.technicalFit": "1",
+        "cost.runCost": { "amount": 210000, "currency": "EUR" }
+      }
+    },
+    {
+      "id": "O-APP-3",
+      "type": "saasApplication",
+      "name": "Payments Hub",
+      "folderId": "F04",
+      "properties": {
+        "lifecycle.status": "active",
+        "assessment.technicalFit": "5",
+        "ownership.businessOwner": "lee@example.com"
+      }
+    },
+    {
+      "id": "O-SRV-1",
+      "type": "server",
+      "name": "SRV-APP-01",
+      "folderId": "F05",
+      "properties": { "lifecycle.status": "active" }
+    }
+  ],
+  "relationships": [
+    { "id": "R-01", "type": "contains", "sourceId": "O-CAP-1", "targetId": "O-CAP-2", "properties": {} },
+    { "id": "R-02", "type": "contains", "sourceId": "O-CAP-1", "targetId": "O-CAP-3", "properties": {} },
+    { "id": "R-03", "type": "contains", "sourceId": "O-PRC-1", "targetId": "O-STP-1", "properties": {} },
+    { "id": "R-04", "type": "contains", "sourceId": "O-PRC-1", "targetId": "O-STP-2", "properties": {} },
+    { "id": "R-05", "type": "realizes", "sourceId": "O-APP-1", "targetId": "O-CAP-2", "properties": {} },
+    { "id": "R-06", "type": "realizes", "sourceId": "O-APP-3", "targetId": "O-CAP-3", "properties": {} },
+    { "id": "R-07", "type": "serves", "sourceId": "O-APP-1", "targetId": "O-PRC-1", "properties": {} },
+    {
+      "id": "R-08",
+      "type": "flowsTo",
+      "sourceId": "O-APP-1",
+      "targetId": "O-APP-3",
+      "properties": { "flow.frequency": 300, "flow.protocol": "REST" }
+    },
+    { "id": "R-09", "type": "flowsTo", "sourceId": "O-APP-2", "targetId": "O-APP-1", "properties": {} },
+    { "id": "R-10", "type": "hostedOn", "sourceId": "O-APP-1", "targetId": "O-SRV-1", "properties": {} },
+    { "id": "R-11", "type": "flowsTo", "sourceId": "O-STP-1", "targetId": "O-STP-2", "properties": {} }
+  ],
+  "scenarioChanges": {
+    "S0000000000000000000000002": [
+      {
+        "edit": "setProperties",
+        "id": "O-APP-2",
+        "set": { "lifecycle.status": "retired", "lifecycle.retiredFrom": "2027-03-31" }
+      },
+      {
+        "edit": "createObject",
+        "id": "O-APP-4",
+        "type": "saasApplication",
+        "name": "Cloud CRM",
+        "folderId": "F04",
+        "properties": {
+          "lifecycle.status": "planned",
+          "lifecycle.activeFrom": "2026-07-01",
+          "assessment.technicalFit": "5"
+        }
+      },
+      { "edit": "deleteRelationship", "id": "R-09" },
+      { "edit": "createRelationship", "id": "R-12", "type": "flowsTo", "sourceId": "O-APP-4", "targetId": "O-APP-1" }
+    ]
+  },
+  "diagrams": [
+    {
+      "id": "D-01",
+      "name": "Claims landscape",
+      "diagramType": "applicationLandscape",
+      "folderId": "F06",
+      "objectOccurrences": [
+        {
+          "id": "OO-1",
+          "objectId": "O-CAP-1",
+          "parentOccurrenceId": null,
+          "x": 20,
+          "y": 20,
+          "w": 520,
+          "h": 220,
+          "z": 0
+        },
+        {
+          "id": "OO-2",
+          "objectId": "O-CAP-2",
+          "parentOccurrenceId": "OO-1",
+          "x": 16,
+          "y": 36,
+          "w": 230,
+          "h": 160,
+          "z": 1
+        },
+        {
+          "id": "OO-3",
+          "objectId": "O-CAP-3",
+          "parentOccurrenceId": "OO-1",
+          "x": 270,
+          "y": 36,
+          "w": 230,
+          "h": 160,
+          "z": 1
+        },
+        {
+          "id": "OO-4",
+          "objectId": "O-APP-1",
+          "parentOccurrenceId": null,
+          "x": 60,
+          "y": 110,
+          "w": 130,
+          "h": 48,
+          "z": 2
+        },
+        {
+          "id": "OO-5",
+          "objectId": "O-APP-3",
+          "parentOccurrenceId": null,
+          "x": 330,
+          "y": 110,
+          "w": 130,
+          "h": 48,
+          "z": 2
+        },
+        {
+          "id": "OO-6",
+          "objectId": "O-APP-1",
+          "parentOccurrenceId": null,
+          "x": 60,
+          "y": 320,
+          "w": 130,
+          "h": 48,
+          "z": 2
+        }
+      ],
+      "relationshipOccurrences": [
+        {
+          "id": "RO-1",
+          "relationshipId": "R-01",
+          "sourceOccurrenceId": "OO-1",
+          "targetOccurrenceId": "OO-2",
+          "shownAs": "nesting"
+        },
+        {
+          "id": "RO-2",
+          "relationshipId": "R-02",
+          "sourceOccurrenceId": "OO-1",
+          "targetOccurrenceId": "OO-3",
+          "shownAs": "nesting"
+        },
+        {
+          "id": "RO-3",
+          "relationshipId": "R-08",
+          "sourceOccurrenceId": "OO-4",
+          "targetOccurrenceId": "OO-5",
+          "shownAs": "line",
+          "route": { "mode": "auto" }
+        },
+        {
+          "id": "RO-4",
+          "relationshipId": "R-08",
+          "sourceOccurrenceId": "OO-6",
+          "targetOccurrenceId": "OO-5",
+          "shownAs": "line",
+          "route": { "mode": "auto" }
+        }
+      ],
+      "annotations": [
+        {
+          "id": "AN-1",
+          "x": 20,
+          "y": 260,
+          "w": 300,
+          "h": 40,
+          "content": { "shape": "note", "text": "Settlement moves to Payments Hub in Q3." }
+        }
+      ]
+    }
+  ],
+  "catalogues": [
+    {
+      "id": "C-01",
+      "name": "Applications",
+      "folderId": "F07",
+      "query": "type:applicationBase",
+      "columns": [
+        { "kind": "name" },
+        { "kind": "key" },
+        { "kind": "type" },
+        { "kind": "folder" },
+        { "kind": "property", "property": "lifecycle.status", "editable": true },
+        { "kind": "property", "property": "ownership.businessOwner", "editable": true },
+        { "kind": "property", "property": "assessment.technicalFit", "editable": true },
+        { "kind": "related", "path": "-realizes-> type:capability", "label": "Capabilities" },
+        { "kind": "property", "property": "cost.runCost", "editable": true }
+      ],
+      "sort": [{ "column": 0, "direction": "asc" }]
+    }
+  ]
+}

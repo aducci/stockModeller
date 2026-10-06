@@ -14,3 +14,10 @@ describe("Essentials", () => {
     for (const t of essentials.diagramTypes) expect(validateDiagramType(t).ok).toBe(true);
   });
 });
+
+describe("example repository", () => {
+  it("is the design pack's example, unchanged", async () => {
+    const { insuranceGroup } = await import("../src");
+    expect(insuranceGroup.data).toEqual(readDesignJson("05-structures/example-repository.json"));
+  });
+});

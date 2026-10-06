@@ -11,6 +11,41 @@ security:
   - bearer: []
 
 paths:
+  /repositories:
+    get:
+      summary: Repositories in the caller's workspace
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Repository' } } } } }
+    post:
+      summary: Create a repository with the Essentials package and a baseline scenario
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [name], properties: { id: { type: string }, name: { type: string }, description: { type: string } } } } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Repository' } } } }
+
+  /repositories/{repo}:
+    parameters: [ { $ref: '#/components/parameters/repo' } ]
+    get:
+      summary: A repository and its scenarios
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Repository' }
+                  - { type: object, properties: { scenarios: { type: array, items: { $ref: '#/components/schemas/Scenario' } } } }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /repositories/{repo}/scenarios:
+    parameters: [ { $ref: '#/components/parameters/repo' } ]
+    get:
+      summary: Scenarios of a repository, baseline first
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Scenario' } } } } }
+
   /repositories/{repo}/folders:
     parameters: [ { $ref: '#/components/parameters/repo' } ]
     get:
@@ -59,6 +94,34 @@ paths:
             application/json:
               schema: { type: array, items: { type: object, properties: { diagramId: { type: string }, diagramName: { type: string }, occurrenceId: { type: string } } } }
 
+  /repositories/{repo}/objects/{id}/relationships:
+    parameters: [ { $ref: '#/components/parameters/repo' }, { $ref: '#/components/parameters/scenario' }, { $ref: '#/components/parameters/id' } ]
+    get:
+      summary: Relationships from and to an object
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Relationship' } } } } }
+
+  /repositories/{repo}/objects/{id}/history:
+    parameters: [ { $ref: '#/components/parameters/repo' }, { $ref: '#/components/parameters/scenario' }, { $ref: '#/components/parameters/id' } ]
+    get:
+      summary: The edits that touched an object, newest first
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { type: object, properties: { seq: { type: integer }, changeId: { type: string }, label: { type: string }, actor: { type: [string, 'null'] }, source: { type: string }, scenarioId: { type: string }, committedAt: { type: string, format: date-time }, edit: { $ref: '#/components/schemas/Edit' } } }
+
+  /repositories/{repo}/relationships/{id}:
+    parameters: [ { $ref: '#/components/parameters/repo' }, { $ref: '#/components/parameters/scenario' }, { $ref: '#/components/parameters/id' } ]
+    get:
+      summary: One relationship
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Relationship' } } } }
+        '404': { $ref: '#/components/responses/Problem' }
+
   /repositories/{repo}/relationships:
     parameters: [ { $ref: '#/components/parameters/repo' }, { $ref: '#/components/parameters/scenario' } ]
     get:
@@ -80,7 +143,8 @@ paths:
         required: true
         content: { application/json: { schema: { $ref: '#/components/schemas/ChangeRequestBody' } } }
       responses:
-        '201': { description: Committed, content: { application/json: { schema: { $ref: '#/components/schemas/ChangeResult' } } } }
+        '200': { description: 'Preview (preview=true): the outcome if committed; nothing is written. seq is null', content: { application/json: { schema: { $ref: '#/components/schemas/ChangeResult' } } } }
+        '201': { description: 'Committed. Resending a change id returns the original outcome', content: { application/json: { schema: { $ref: '#/components/schemas/ChangeResult' } } } }
         '202': { description: Held for review by a governance policy, content: { application/json: { schema: { $ref: '#/components/schemas/ChangeResult' } } } }
         '409': { $ref: '#/components/responses/Problem' }
         '422': { $ref: '#/components/responses/Problem' }
@@ -93,7 +157,10 @@ paths:
   /repositories/{repo}/changes/{changeId}/undo:
     parameters: [ { $ref: '#/components/parameters/repo' }, { name: changeId, in: path, required: true, schema: { type: string } } ]
     post:
-      summary: Undo a change (a new change built from inverse edits)
+      summary: Undo one of your own changes (a new change built from inverse edits). 403 for other people's changes, 422 if already undone
+      requestBody:
+        required: false
+        content: { application/json: { schema: { type: object, properties: { id: { type: string, description: 'Id for the new change, so retries are safe' } } } } }
       responses:
         '201': { description: Undone, content: { application/json: { schema: { $ref: '#/components/schemas/ChangeResult' } } } }
 
@@ -150,11 +217,30 @@ components:
             properties:
               title: { type: string }
               status: { type: integer }
-              code: { type: string, enum: [conflict, ruleViolation, forbidden, notFound, invalid, gone] }
+              code: { type: string, enum: [conflict, ruleViolation, forbidden, notFound, invalid, gone, unauthenticated] }
               details:
                 type: array
-                items: { type: object, properties: { editIndex: { type: integer }, property: { type: string }, rule: { type: string }, message: { type: string } } }
+                items: { type: object, properties: { editIndex: { type: integer }, property: { type: string }, rule: { type: string }, message: { type: string }, itemId: { type: string }, changedBy: { type: string } } }
   schemas:
+    Repository:
+      type: object
+      required: [id, name, seq, baselineScenarioId]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string }
+        metamodelVersion: { type: string }
+        seq: { type: integer, description: Sequence number of the last committed change }
+        baselineScenarioId: { type: string }
+    Scenario:
+      type: object
+      required: [id, name, state]
+      properties:
+        id: { type: string }
+        parentId: { type: [string, 'null'] }
+        name: { type: string }
+        state: { type: string, enum: [baseline, draft, proposed, approved, merged, archived] }
+        branchedAtSeq: { type: [integer, 'null'] }
     Folder:
       type: object
       required: [id, name]
@@ -201,7 +287,8 @@ components:
                  createFolder, renameFolder, moveFolder, deleteFolder,
                  createDiagram, updateDiagram, deleteDiagram,
                  addObjectOccurrence, moveObjectOccurrence, styleOccurrence, removeOccurrence,
-                 addRelationshipOccurrence, routeRelationshipOccurrence, addAnnotation, updateAnnotation]
+                 addRelationshipOccurrence, routeRelationshipOccurrence, addAnnotation, updateAnnotation, removeAnnotation,
+                 setTags]
       additionalProperties: true
     ChangeRequestBody:
       type: object
@@ -214,8 +301,9 @@ components:
     ChangeResult:
       type: object
       properties:
-        seq: { type: integer }
+        seq: { type: [integer, 'null'] }
         changeId: { type: string }
+        preview: { type: boolean }
         versions: { type: object, additionalProperties: { type: integer } }
         heldInChangeRequest: { type: [string, 'null'] }
         findings:
@@ -226,8 +314,9 @@ components:
       properties:
         seq: { type: integer }
         changeId: { type: string }
+        scenarioId: { type: string }
         label: { type: string }
-        actor: { type: string }
+        actor: { type: [string, 'null'] }
         source: { type: string }
         committedAt: { type: string, format: date-time }
         edits: { type: array, items: { $ref: '#/components/schemas/Edit' } }

@@ -8,7 +8,8 @@
     "node": ">=22"
   },
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "apps/*"
   ],
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
@@ -18,7 +19,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm test",
-    "db:migrate": "npm run migrate -w @connectome/db"
+    "db:migrate": "npm run migrate -w @connectome/db",
+    "dev": "npm run dev -w @connectome/server",
+    "seed": "npm run seed -w @connectome/server"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

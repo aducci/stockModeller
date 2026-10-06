@@ -1,5 +1,6 @@
 // Kysely table types for the tables the application reads and writes so far (see migrations/).
 import type { ColumnType, Generated } from "kysely";
+import type { RuleFinding } from "@connectome/model";
 
 /** jsonb: read as parsed JSON, written as a JSON string (so arrays are not sent as PostgreSQL arrays). */
 type Json<T = unknown> = ColumnType<T, string, string>;
@@ -186,6 +187,7 @@ export interface ChangeTable extends Tenant {
   change_request_id: string | null;
   undoes_change_id: string | null;
   committed_at: Generated<Date>;
+  outcome: Json<{ versions?: Record<string, number>; findings?: RuleFinding[] }>;
 }
 
 export interface ChangeLogTable extends Tenant {
