@@ -1,5 +1,6 @@
-// Slices Sem-1 to Sem-3 (design/02-model/semantics.md §11): relationships read by what they mean, every object has
-// a level, containment is the structure the explorer and diagrams show, and interactions carry their messages.
+// Slices Sem-1 to Sem-4 (design/02-model/semantics.md §11): relationships read by what they mean, every object has
+// a level, containment is the structure the explorer and diagrams show, interactions carry their messages, and
+// traces follow meaning.
 import { expect, test, type Page } from "@playwright/test";
 
 test.use({ viewport: { width: 1600, height: 1000 } });
@@ -158,4 +159,31 @@ test("an interaction holds its request and response with their payloads, and del
   const calls = properties(page).locator('.rel-group[data-kind="interaction"]');
   await expect(calls.locator('li[data-role="request"]')).toContainText("Claim Intake");
   await expect(calls.locator('li[data-role="response"]')).toContainText("Handle Claim");
+});
+
+test("traces upstream by meaning, highlights the result on the diagram and shows meaning in the explorer", async ({
+  page,
+}) => {
+  await signIn(page);
+  await explorer(page).getByLabel("Filter the explorer").fill("Claims landscape");
+  await explorer(page).locator(".row", { hasText: "Claims landscape" }).dblclick();
+  await explorer(page).getByLabel("Filter the explorer").fill("");
+  await select(page, "Payments Hub");
+
+  const tracePanel = properties(page).locator(".group.trace");
+  await tracePanel.getByLabel("Trace").selectOption({ label: "Upstream" });
+  await expect(tracePanel.locator('.trace-level[data-level="implementation"]')).toContainText("Claims Manager");
+  await expect(tracePanel.locator('.trace-level[data-level="implementation"]')).toContainText("Legacy CRM");
+  await expect(symbol(page, "Claims Manager").first()).toHaveClass(/traced/);
+  await tracePanel.getByLabel("Trace").selectOption({ label: "Choose a trace…" });
+  await expect(canvas(page).locator(".occ.traced")).toHaveCount(0);
+
+  // In the explorer, Payments Hub opens on demand into its meaning: what it implements, what flows into it.
+  await row(page, "Payments Hub").locator(".icon").click();
+  const upstream = row(page, "Payments Hub")
+    .locator("xpath=..")
+    .locator('li.meaning[data-kind="flow"]', { hasText: "Upstream" });
+  await upstream.locator(".group-row").click();
+  await upstream.locator(".ref-row", { hasText: "Claims Manager" }).click();
+  await expect(properties(page).getByLabel("Name")).toHaveValue("Claims Manager");
 });

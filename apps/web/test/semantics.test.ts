@@ -3,6 +3,7 @@ import { essentials, insuranceGroup } from "@connectome/content";
 import { applyChange, Metamodel, ModelState } from "@connectome/engine";
 import {
   addPayloadPlan,
+  explorerGroups,
   containerOf,
   containPlan,
   contentsOf,
@@ -143,5 +144,15 @@ describe("payloads and messages", () => {
         },
       ],
     });
+  });
+});
+
+describe("explorer groups", () => {
+  it("leaves containment to the tree and groups the rest by meaning", () => {
+    expect(explorerGroups(state, metamodel, "O-CAP-1")).toEqual([]);
+    expect(explorerGroups(state, metamodel, "O-CAP-2").map((g) => g.label)).toEqual(["Implementations"]);
+    expect(explorerGroups(state, metamodel, "O-APP-1", new Set(["R-05"])).map((g) => g.label)).not.toContain(
+      "What this implements",
+    );
   });
 });

@@ -37,6 +37,7 @@ export function DiagramEditor({ id }: { id: Id }) {
   const askDeleteObject = useWorkbench((s) => s.askDeleteObject);
   const notify = useWorkbench((s) => s.notify);
   const workbenchSelection = useWorkbench((s) => s.selection);
+  const traced = useWorkbench((s) => s.trace?.objectIds);
   const [selected, setSelected] = useState<Id | null>(null);
   const [gesture, setGesture] = useState<Gesture | null>(null);
   const [naming, setNaming] = useState<{ type: string; at: Point } | null>(null);
@@ -456,6 +457,7 @@ export function DiagramEditor({ id }: { id: Id }) {
               o.id === selected && "selected",
               siblings.has(o.id) && "sibling",
               flash.has(o.id) && "flash",
+              traced?.has(o.objectId) && "traced",
             ].filter(Boolean);
             return (
               <g

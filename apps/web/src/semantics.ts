@@ -46,6 +46,22 @@ export function relationshipGroups(state: ModelState, metamodel: Metamodel, obje
     }));
 }
 
+/**
+ * The explorer's semantic groups under an object: its relationship groups without containment (the tree already shows
+ * contents and container) and without the relationships shown as group members (`exclude`).
+ */
+export function explorerGroups(
+  state: ModelState,
+  metamodel: Metamodel,
+  objectId: Id,
+  exclude: ReadonlySet<Id> = new Set(),
+): RelationshipGroup[] {
+  return relationshipGroups(state, metamodel, objectId)
+    .filter((g) => g.kind !== "containment")
+    .map((g) => ({ ...g, rows: g.rows.filter((r) => !exclude.has(r.relationship.id)) }))
+    .filter((g) => g.rows.length > 0);
+}
+
 // ------------------------------------------------------------------ containment (semantics.md §3)
 
 const isContainment = (metamodel: Metamodel, type: string) =>

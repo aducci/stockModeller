@@ -827,3 +827,41 @@ ul.messages li {
   flex: 1;
   min-width: 0;
 }
+
+/* Explorer semantic groups (workbench.md, "Explorer: a semantic navigator") */
+.explorer .group-row,
+.explorer .ref-row {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  color: var(--fg-2);
+  cursor: pointer;
+}
+.explorer .group-row {
+  font-size: 12px;
+}
+.explorer .ref-row:hover,
+.explorer .group-row:hover {
+  background: var(--pane-2);
+}
+
+/* Trace (semantics.md §9.3) */
+.trace select {
+  width: 100%;
+}
+.trace-level h4 {
+  margin: 8px 0 2px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.canvas .occ.traced rect {
+  stroke: var(--changed);
+  stroke-width: 3;
+}
