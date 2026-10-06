@@ -144,6 +144,9 @@ export const editSchema = z.discriminatedUnion("edit", [
     properties: properties.optional(),
     tags: tags.optional(),
     externalIds: externalIds.optional(),
+    payload: z.array(id).max(1000).optional(),
+    parentId: id.nullable().optional(),
+    rank: z.number().int().optional(),
   }),
   z.strictObject({
     edit: z.literal("reconnectRelationship"),
@@ -158,6 +161,7 @@ export const editSchema = z.discriminatedUnion("edit", [
     propertyMap: z.record(propertyKey, propertyKey).optional(),
     set: properties.optional(),
   }),
+  z.strictObject({ edit: z.literal("setPayload"), ...onExisting, payload: z.array(id).max(1000) }),
   z.strictObject({ edit: z.literal("deleteRelationship"), ...onExisting }),
   z.strictObject({ edit: z.literal("createFolder"), id, parentId: id.nullable(), name: z.string() }),
   z.strictObject({ edit: z.literal("renameFolder"), id, name: z.string() }),

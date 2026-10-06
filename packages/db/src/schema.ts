@@ -123,6 +123,9 @@ export interface RelationshipTable extends ScenarioRow {
   tags: string[];
   external_ids: Json<Record<string, string>>;
   derived_by: string | null;
+  payload: string[];
+  parent_id: string | null;
+  rank: number;
   version: number;
   field_versions: Json<Record<string, { v: number; by: string }>>;
   base_version: number | null;

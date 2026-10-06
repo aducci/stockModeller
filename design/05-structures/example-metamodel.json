@@ -672,6 +672,21 @@
     },
     {
       "relationshipType": "flowsTo",
+      "sourceType": "applicationBase",
+      "targetType": "interface"
+    },
+    {
+      "relationshipType": "flowsTo",
+      "sourceType": "interface",
+      "targetType": "applicationBase"
+    },
+    {
+      "relationshipType": "flowsTo",
+      "sourceType": "interface",
+      "targetType": "interface"
+    },
+    {
+      "relationshipType": "flowsTo",
       "sourceType": "processStep",
       "targetType": "processStep"
     },

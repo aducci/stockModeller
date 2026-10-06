@@ -139,6 +139,21 @@ paths:
       responses:
         '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Relationship' } } } } }
 
+  /repositories/{repo}/objects/{id}/trace:
+    parameters: [ { $ref: '#/components/parameters/repo' }, { $ref: '#/components/parameters/scenario' }, { $ref: '#/components/parameters/id' } ]
+    get:
+      summary: Objects reached from this one by meaning (02-model/semantics.md §9.3)
+      parameters:
+        - { name: kind, in: query, required: true, schema: { type: string, enum: [levels, flow, payload, dependency] },
+            description: 'levels: realisation and representation; flow: flows and messages; payload: flows carrying it or its representations; dependency: serving, access, interactions and flows' }
+        - { name: direction, in: query, schema: { type: string, enum: [forward, backward], default: forward },
+            description: 'forward: down the levels, downstream, receivers, what it depends on; backward: the opposite' }
+        - { name: depth, in: query, schema: { type: integer, minimum: 1, maximum: 20, default: 6 } }
+        - { name: contents, in: query, schema: { type: boolean, default: false }, description: "flow and dependency: a container's relationships count as its contents'" }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Trace' } } } }
+        '404': { $ref: '#/components/responses/Problem' }
+
   /repositories/{repo}/objects/{id}/history:
     parameters: [ { $ref: '#/components/parameters/repo' }, { $ref: '#/components/parameters/scenario' }, { $ref: '#/components/parameters/id' } ]
     get:
@@ -353,7 +368,32 @@ components:
         name: { type: string }
         properties: { $ref: '#/components/schemas/Properties' }
         derivedBy: { type: [string, 'null'] }
+        payload: { type: array, items: { type: string }, description: 'Objects the relationship carries (semantics §5)' }
+        parentId: { type: [string, 'null'], description: 'The interaction this flow is a message of (semantics §6)' }
+        rank: { type: integer, description: 'Orders the messages of an interaction' }
         version: { type: integer }
+    Trace:
+      type: object
+      required: [kind, direction, startId, steps, truncated]
+      properties:
+        kind: { type: string, enum: [levels, flow, payload, dependency] }
+        direction: { type: string, enum: [forward, backward] }
+        startId: { type: string }
+        truncated: { type: boolean }
+        steps:
+          type: array
+          description: Each object once, nearest first
+          items:
+            type: object
+            required: [objectId, name, type, depth, relationshipId, fromId]
+            properties:
+              objectId: { type: string }
+              name: { type: string }
+              type: { type: string }
+              level: { type: [string, 'null'] }
+              depth: { type: integer, description: Relationships followed from the start }
+              relationshipId: { type: string, description: The relationship that reached it }
+              fromId: { type: string, description: 'The object at its other end (payload: the object carried)' }
     Edit:
       type: object
       required: [edit]
@@ -362,7 +402,7 @@ components:
         edit:
           type: string
           enum: [createObject, setProperties, renameObject, moveToFolder, changeObjectType, deleteObject,
-                 createRelationship, reconnectRelationship, changeRelationshipType, deleteRelationship,
+                 createRelationship, reconnectRelationship, changeRelationshipType, setPayload, deleteRelationship,
                  createFolder, renameFolder, moveFolder, deleteFolder,
                  createDiagram, updateDiagram, deleteDiagram,
                  addObjectOccurrence, moveObjectOccurrence, styleOccurrence, removeOccurrence,

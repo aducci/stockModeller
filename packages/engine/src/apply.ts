@@ -20,7 +20,7 @@ import {
   type StylePatch,
   type TypeKey,
 } from "@connectome/model";
-import type { Metamodel, ResolvedDiagramType, ResolvedObjectType } from "./metamodel";
+import type { Metamodel, ResolvedDiagramType, ResolvedObjectType, ResolvedRelationshipType } from "./metamodel";
 import { checkValue } from "./properties";
 import type {
   AnnotationRow,
@@ -207,6 +207,8 @@ class Transaction {
         return this.reconnectRelationship(edit);
       case "changeRelationshipType":
         return this.changeRelationshipType(edit);
+      case "setPayload":
+        return this.setPayload(edit);
       case "deleteRelationship":
         return this.deleteRelationshipEdit(edit);
       case "createFolder":
@@ -414,8 +416,19 @@ class Transaction {
       const part = this.state.objects.get(rel.targetId);
       if (type?.semantic === "composition" && type.cascadeDelete && part) this.deleteObject(part, contents);
     }
+    // It is no longer carried by anything (semantics.md §5).
+    for (const rel of this.state.relationships.find("byPayload", obj.id)) {
+      this.writePayload(
+        rel,
+        rel.payload.filter((id) => id !== obj.id),
+      );
+    }
     for (const occ of this.state.objectOccurrences.find("byObject", obj.id)) this.removeObjectOccurrence(occ);
-    for (const rel of this.relationshipsOf(obj.id)) this.deleteRelationship(rel);
+    for (const rel of this.relationshipsOf(obj.id)) {
+      // Deleting an interaction has already deleted its messages.
+      const live = this.state.relationships.get(rel.id);
+      if (live) this.deleteRelationship(live);
+    }
     const current = this.state.objects.get(obj.id)!;
     this.write("objects", { ...current, deleted: true });
     this.markChanged("objects", obj.id, ["*"]);
@@ -455,6 +468,16 @@ class Transaction {
     );
     this.checkRelationshipRules(e.type, source.type, target.type, source.id, e.id);
     this.checkNesting(e.type, source.id, target.id, e.id);
+    const payload = this.checkPayload(type, e.payload ?? [], "payload");
+    const parentId = e.parentId ?? null;
+    let rank = e.rank ?? 0;
+    if (parentId !== null) {
+      this.checkMessage(type, parentId, source.id, target.id, "parentId");
+      if (e.rank === undefined) {
+        const ranks = this.messagesOf(parentId).map((m) => m.rank);
+        rank = ranks.length > 0 ? Math.max(...ranks) + 1 : 0;
+      }
+    }
 
     const tombstone = this.state.relationships.getAny(e.id);
     this.write("relationships", {
@@ -467,6 +490,9 @@ class Transaction {
       tags: this.checkTags(e.tags ?? []),
       externalIds: e.externalIds ?? {},
       derivedBy: null,
+      payload,
+      parentId,
+      rank,
       version: tombstone?.version ?? 0,
       fieldVersions: {},
       deleted: false,
@@ -507,6 +533,9 @@ class Transaction {
     if (source.id === target.id) this.invalid("targetId", "A relationship connects two different objects");
     this.checkRelationshipRules(rel.type, source.type, target.type, source.id, rel.id);
     this.checkNesting(rel.type, source.id, target.id, rel.id);
+    if (rel.parentId !== null) {
+      this.checkMessage(this.mm.relationshipType(rel.type)!, rel.parentId, source.id, target.id, "sourceId");
+    }
 
     // Its occurrences joined occurrences of the old objects, so they no longer show it (rule 6).
     for (const ro of this.state.relationshipOccurrences.find("byRelationship", rel.id))
@@ -514,6 +543,18 @@ class Transaction {
     this.write("relationships", { ...rel, sourceId: source.id, targetId: target.id });
     this.unnestUnbacked(rel.sourceId, rel.targetId);
     this.markChanged("relationships", rel.id, fields);
+    // An interaction's messages follow it: requests keep its direction, responses go back (semantics.md §6). The
+    // inverse reconnects the interaction, which moves them back the same way, so they record no steps of their own.
+    for (const message of this.messagesOf(rel.id)) {
+      const request = message.sourceId === rel.sourceId;
+      const [s, t] = request ? [source, target] : [target, source];
+      if (message.sourceId === s.id && message.targetId === t.id) continue;
+      this.checkRelationshipRules(message.type, s.type, t.type, s.id, message.id);
+      for (const ro of this.state.relationshipOccurrences.find("byRelationship", message.id))
+        this.removeRelationshipOccurrence(ro);
+      this.write("relationships", { ...message, sourceId: s.id, targetId: t.id });
+      this.markChanged("relationships", message.id, ["sourceId", "targetId"]);
+    }
     // A re-parented content moves into its new container's folder (semantics.md §3).
     if (this.isContainment(rel.type)) this.relocate(target, source.folderId);
     this.step({ edit: "reconnectRelationship", id: rel.id, baseVersion: PENDING_VERSION, ...previous });
@@ -552,6 +593,11 @@ class Transaction {
 
     this.checkRelationshipRules(e.type, source.type, target.type, source.id, rel.id);
     this.checkNesting(e.type, source.id, target.id, rel.id);
+    if (rel.parentId !== null && type.semantic !== "flow") this.invalid("type", "A message is always a flow");
+    if (type.semantic !== "interaction" && this.messagesOf(rel.id).length > 0)
+      this.invalid("type", `It has messages, so it stays an interaction`);
+    if (rel.payload.length > 0 && type.payload === "none")
+      this.invalid("type", `${type.name} carries no payload; remove the payload first`);
     for (const ro of this.state.relationshipOccurrences.find("byRelationship", rel.id)) {
       const diagram = this.state.diagrams.get(ro.diagramId)!;
       const dt = this.mm.diagramType(diagram.diagramType);
@@ -583,7 +629,23 @@ class Transaction {
     return rel.id;
   }
 
+  private setPayload(e: Extract<ModelEdit, { edit: "setPayload" }>): Id {
+    const rel = this.requireLive("relationships", e.id);
+    this.checkBase("relationships", rel, e.baseVersion, ["payload"]);
+    const payload = this.checkPayload(this.mm.relationshipType(rel.type)!, e.payload, "payload");
+    this.writePayload(rel, payload);
+    return rel.id;
+  }
+
+  private writePayload(rel: RelationshipRow, payload: Id[]): void {
+    this.write("relationships", { ...rel, payload });
+    this.markChanged("relationships", rel.id, ["payload"]);
+    this.step({ edit: "setPayload", id: rel.id, baseVersion: PENDING_VERSION, payload: rel.payload });
+  }
+
+  /** Deleting an interaction deletes its messages first, so undo restores the interaction before them. */
   private deleteRelationship(rel: RelationshipRow): void {
+    for (const message of this.messagesOf(rel.id)) this.deleteRelationship(message);
     for (const ro of this.state.relationshipOccurrences.find("byRelationship", rel.id))
       this.removeRelationshipOccurrence(ro);
     this.write("relationships", { ...rel, deleted: true });
@@ -599,7 +661,45 @@ class Transaction {
       properties: rel.properties,
       tags: rel.tags,
       externalIds: rel.externalIds,
+      ...(rel.payload.length > 0 ? { payload: rel.payload } : {}),
+      ...(rel.parentId !== null ? { parentId: rel.parentId } : {}),
+      ...(rel.parentId !== null || rel.rank !== 0 ? { rank: rel.rank } : {}),
     });
+  }
+
+  /** The messages of an interaction, in order. */
+  private messagesOf(interactionId: Id): RelationshipRow[] {
+    return this.state.relationships
+      .find("byParent", interactionId)
+      .sort((a, b) => a.rank - b.rank || a.id.localeCompare(b.id));
+  }
+
+  /** Semantics §5: only types that carry a payload get one; each entry is a live object, listed once. */
+  private checkPayload(type: ResolvedRelationshipType, payload: Id[], property: string): Id[] {
+    if (payload.length > 0 && type.payload === "none") this.invalid(property, `${type.name} carries no payload`);
+    payload.forEach((id, i) => {
+      this.refLive("objects", id, `${property}.${i}`);
+      if (payload.indexOf(id) !== i) this.invalid(`${property}.${i}`, "An object is listed once in a payload");
+    });
+    return [...payload];
+  }
+
+  /** Semantics §6: a message is a flow between its interaction's two objects, in either direction. */
+  private checkMessage(type: ResolvedRelationshipType, parentId: Id, sourceId: Id, targetId: Id, property: string) {
+    const parent = this.refLive("relationships", parentId, "parentId");
+    if (this.mm.relationshipType(parent.type)?.semantic !== "interaction")
+      this.invalid("parentId", "Only interactions have messages");
+    if (type.semantic !== "flow") this.invalid("type", "A message is a flow");
+    const forward = sourceId === parent.sourceId && targetId === parent.targetId;
+    const back = sourceId === parent.targetId && targetId === parent.sourceId;
+    if (!forward && !back) {
+      this.reject({
+        code: "ruleViolation",
+        editIndex: this.index,
+        rule: "message:endpoints",
+        message: `A message connects its interaction's two objects (${property})`,
+      });
+    }
   }
 
   private relationshipsOf(objectId: Id): RelationshipRow[] {

@@ -16,6 +16,7 @@
     "@connectome/db": "0.0.0",
     "@connectome/engine": "0.0.0",
     "@connectome/model": "0.0.0",
+    "@connectome/semantics": "0.0.0",
     "@fastify/websocket": "^11.3.3",
     "fastify": "^5.12.5",
     "zod": "^4.6.5"

@@ -3,6 +3,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { itemHistory, loadMetamodelPackage } from "@connectome/db";
 import { snapshotRows, type RepositorySnapshot } from "@connectome/engine";
+import { trace, TRACE_KINDS } from "@connectome/semantics";
 import type { Routes } from "../app";
 import { compileQuery } from "../queries";
 import { notFound } from "../problems";
@@ -21,6 +22,13 @@ const relationshipsQuery = scenarioQuery.extend({
   type: z.string().optional(),
   source: z.string().optional(),
   target: z.string().optional(),
+});
+
+const traceQuery = scenarioQuery.extend({
+  kind: z.enum(TRACE_KINDS),
+  direction: z.enum(["forward", "backward"]).default("forward"),
+  depth: z.coerce.number().int().min(1).max(20).default(6),
+  contents: z.enum(["true", "false"]).default("false"),
 });
 
 const encodeCursor = (id: string) => Buffer.from(id).toString("base64url");
@@ -79,6 +87,25 @@ export function modelRoutes(app: FastifyInstance, { service, principal }: Routes
         diagramName: state.diagrams.get(o.diagramId)!.name,
         occurrenceId: o.id,
       }));
+    });
+  });
+
+  // Traces by meaning (design/02-model/semantics.md §9.3): levels, flow, payload and dependency.
+  app.get<ItemParams>("/repositories/:repo/objects/:id/trace", async (req) => {
+    const query = traceQuery.parse(req.query);
+    return service.read(principal(req), req.params.repo, query.scenario, ({ state, metamodel }) => {
+      if (!state.objects.get(req.params.id)) throw notFound(`Object ${req.params.id}`);
+      const result = trace(state, metamodel, req.params.id, query.kind, query.direction, {
+        depth: query.depth,
+        contents: query.contents === "true",
+      });
+      return {
+        ...result,
+        steps: result.steps.map((s) => {
+          const o = state.objects.get(s.objectId)!;
+          return { ...s, name: o.name, type: o.type, level: metamodel.objectLevel(o) ?? null };
+        }),
+      };
     });
   });
 

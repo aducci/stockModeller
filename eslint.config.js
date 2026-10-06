@@ -9,9 +9,10 @@ const allowed = {
   content: ["model"],
   engine: ["model"],
   db: ["model", "engine"],
+  semantics: ["model", "engine"],
   client: ["model", "engine"],
-  web: ["model", "engine", "client"],
-  server: ["model", "engine", "db", "content"],
+  web: ["model", "engine", "client", "semantics"],
+  server: ["model", "engine", "db", "content", "semantics"],
 };
 const packages = Object.keys(allowed);
 const forbidden = (pkg) =>
@@ -59,7 +60,7 @@ export default tseslint.config(
           ],
           // The engine is pure: no I/O, so it runs unchanged in the browser and on the server.
           // The client and the web app run in the browser: no Node modules.
-          ...(pkg === "engine" || pkg === "model" || pkg === "client" || pkg === "web"
+          ...(pkg === "engine" || pkg === "model" || pkg === "semantics" || pkg === "client" || pkg === "web"
             ? { paths: ["pg", "kysely", "fs", "node:fs", "net", "node:net", "http", "node:http"] }
             : {}),
         },

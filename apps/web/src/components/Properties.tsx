@@ -1,10 +1,11 @@
 // The properties panel (design/04-ux/workbench.md): header, property groups with typed editors, relationships,
 // "occurs on" diagrams and tags for the selection. Every edit is one change, shown at once.
 import { useEffect, useState, type KeyboardEvent, type ReactNode } from "react";
-import type { ModelState, ObjectRow, Metamodel } from "@connectome/engine";
+import type { ModelState, ObjectRow, Metamodel, RelationshipRow } from "@connectome/engine";
 import { LEVEL_PROPERTY, type Id, type PropertyType, type PropertyValue } from "@connectome/model";
 import { useModel, useWorkbench } from "../state/workbench";
-import { relationshipGroups } from "../semantics";
+import { trace, traceByLevel, type TraceDirection, type TraceKind } from "@connectome/semantics";
+import { addPayloadPlan, messagePlan, messagesOf, payloadChoices, payloadText, relationshipGroups } from "../semantics";
 import { byName, folderPath } from "../text";
 
 export function Properties() {
@@ -19,6 +20,7 @@ export function Properties() {
       {selection?.kind === "object" && <ObjectProperties id={selection.id} />}
       {selection?.kind === "folder" && <FolderProperties id={selection.id} />}
       {selection?.kind === "diagram" && <DiagramProperties id={selection.id} />}
+      {selection?.kind === "relationship" && <RelationshipProperties id={selection.id} />}
     </aside>
   );
 }
@@ -102,6 +104,7 @@ export function ObjectProperties({ id }: { id: Id }) {
       </section>
 
       <Relationships object={object} state={state} metamodel={metamodel} />
+      <Trace key={object.id} object={object} state={state} metamodel={metamodel} />
       <OccursOn id={id} state={state} />
     </div>
   );
@@ -275,18 +278,247 @@ function Relationships({ object, state, metamodel }: { object: ObjectRow; state:
           <h4>{g.label}</h4>
           <ul className="plain">
             {g.rows.map(({ relationship, verb, other, arrow }) => (
-              <li key={relationship.id}>
-                <span className="muted">
+              <li key={relationship.id} data-relationship={relationship.id}>
+                <button
+                  className="link muted"
+                  title="Show this relationship"
+                  onClick={() => select({ kind: "relationship", id: relationship.id })}
+                >
                   {verb} {arrow}
-                </span>{" "}
+                </button>{" "}
                 <button className="link" onClick={() => select({ kind: "object", id: other })}>
                   {state.objects.get(other)?.name ?? other}
                 </button>
+                {relationship.payload.length > 0 && (
+                  <span className="payload-text"> · {payloadText(state, relationship)}</span>
+                )}
+                {g.kind === "interaction" && <MessageList interaction={relationship} state={state} />}
               </li>
             ))}
           </ul>
         </div>
       ))}
+    </section>
+  );
+}
+
+/** An interaction's messages, each with its direction and payload (semantics.md §6). */
+function MessageList({ interaction, state }: { interaction: RelationshipRow; state: ModelState }) {
+  const select = useWorkbench((s) => s.select);
+  const messages = messagesOf(state, interaction);
+  if (messages.length === 0) return null;
+  return (
+    <ul className="plain messages">
+      {messages.map(({ message, role }) => (
+        <li key={message.id} data-role={role}>
+          <button className="link muted" onClick={() => select({ kind: "relationship", id: message.id })}>
+            {role === "request" ? "Request →" : "Response ←"}
+          </button>
+          {message.payload.length > 0 && <span className="payload-text"> {payloadText(state, message)}</span>}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** A relationship: its two ends, what it carries, an interaction's messages (semantics.md §5–§6). */
+function RelationshipProperties({ id }: { id: Id }) {
+  const { state, metamodel } = useModel();
+  const edit = useWorkbench((s) => s.edit);
+  const select = useWorkbench((s) => s.select);
+  const notify = useWorkbench((s) => s.notify);
+  const relationship = state.relationships.get(id);
+  if (!relationship) return <p className="muted pad">This relationship was deleted.</p>;
+  const type = metamodel.relationshipType(relationship.type);
+  const name = (objectId: Id) => state.objects.get(objectId)?.name ?? "(deleted)";
+  const parent = relationship.parentId ? state.relationships.get(relationship.parentId) : undefined;
+  const messages = type?.semantic === "interaction" ? messagesOf(state, relationship) : [];
+  const run = (plan: ReturnType<typeof messagePlan>) =>
+    "error" in plan ? notify(plan.error, "error") : edit(plan.label, plan.edits);
+  const remove = () => {
+    const label = `Delete ${name(relationship.sourceId)} ${type?.verb ?? relationship.type} ${name(relationship.targetId)}`;
+    if (
+      edit(messages.length > 0 ? `${label} and its ${messages.length} messages` : label, [
+        { edit: "deleteRelationship", id, baseVersion: relationship.version },
+      ])
+    )
+      select(parent ? { kind: "relationship", id: parent.id } : { kind: "object", id: relationship.sourceId });
+  };
+
+  return (
+    <div className="props">
+      <header className="props-header">
+        <h2 className="name">
+          <button className="link" onClick={() => select({ kind: "object", id: relationship.sourceId })}>
+            {name(relationship.sourceId)}
+          </button>{" "}
+          <span className="muted">{type?.verb ?? relationship.type}</span>{" "}
+          <button className="link" onClick={() => select({ kind: "object", id: relationship.targetId })}>
+            {name(relationship.targetId)}
+          </button>
+        </h2>
+        <div className="meta">
+          <span className="chip">{type?.name ?? relationship.type}</span>
+          {parent && (
+            <button className="link" onClick={() => select({ kind: "relationship", id: parent.id })}>
+              {relationship.sourceId === parent.sourceId ? "Request" : "Response"} of{" "}
+              {metamodel.relationshipType(parent.type)?.name ?? parent.type}
+            </button>
+          )}
+        </div>
+      </header>
+
+      {type && type.payload !== "none" && (
+        <section className="group">
+          <h3>Payload</h3>
+          <PayloadEditor relationship={relationship} state={state} metamodel={metamodel} />
+        </section>
+      )}
+
+      {type?.semantic === "interaction" && (
+        <section className="group">
+          <h3>Messages</h3>
+          {messages.length === 0 && <p className="muted">No messages yet.</p>}
+          <ul className="plain messages">
+            {messages.map(({ message, role }) => (
+              <li key={message.id} data-role={role}>
+                <button className="link" onClick={() => select({ kind: "relationship", id: message.id })}>
+                  {role === "request" ? "Request →" : "Response ←"}
+                </button>
+                <PayloadEditor relationship={message} state={state} metamodel={metamodel} />
+              </li>
+            ))}
+          </ul>
+          <div className="actions">
+            <button onClick={() => run(messagePlan(state, metamodel, id, "request"))}>Add request</button>
+            <button onClick={() => run(messagePlan(state, metamodel, id, "response"))}>Add response</button>
+          </div>
+        </section>
+      )}
+
+      <section className="group">
+        <button className="danger" onClick={remove}>
+          Delete relationship
+        </button>
+      </section>
+    </div>
+  );
+}
+
+/** What a relationship carries: one chip per object (× takes it out) and a picker to add one. */
+function PayloadEditor(props: { relationship: RelationshipRow; state: ModelState; metamodel: Metamodel }) {
+  const { relationship, state, metamodel } = props;
+  const edit = useWorkbench((s) => s.edit);
+  const notify = useWorkbench((s) => s.notify);
+  const setPayload = (label: string, payload: Id[]) =>
+    edit(label, [{ edit: "setPayload", id: relationship.id, baseVersion: relationship.version, payload }]);
+  return (
+    <div className="payload" aria-label="Payload">
+      {relationship.payload.map((objectId) => {
+        const name = state.objects.get(objectId)?.name ?? "(deleted)";
+        return (
+          <span key={objectId} className="chip">
+            {name}
+            <button
+              className="link"
+              aria-label={`Remove ${name} from the payload`}
+              onClick={() =>
+                setPayload(
+                  `Stop carrying ${name}`,
+                  relationship.payload.filter((p) => p !== objectId),
+                )
+              }
+            >
+              ×
+            </button>
+          </span>
+        );
+      })}
+      <select
+        aria-label="Add to payload"
+        value=""
+        onChange={(e) => {
+          const plan = addPayloadPlan(state, metamodel, relationship.id, e.target.value);
+          if ("error" in plan) notify(plan.error, "error");
+          else edit(plan.label, plan.edits);
+        }}
+      >
+        <option value="">Add…</option>
+        {payloadChoices(state, metamodel, relationship).map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+/** The traces offered for an object (semantics.md §9.3), in the words of the framework's questions. */
+const TRACES: { key: string; label: string; kind: TraceKind; direction: TraceDirection; contents?: boolean }[] = [
+  { key: "down", label: "Implementations (down the levels)", kind: "levels", direction: "forward" },
+  { key: "up", label: "What this implements (up the levels)", kind: "levels", direction: "backward" },
+  { key: "downstream", label: "Downstream", kind: "flow", direction: "forward", contents: true },
+  { key: "upstream", label: "Upstream", kind: "flow", direction: "backward", contents: true },
+  { key: "receivers", label: "Who receives this information", kind: "payload", direction: "forward" },
+  { key: "senders", label: "Who sends this information", kind: "payload", direction: "backward" },
+  { key: "dependsOn", label: "What this depends on", kind: "dependency", direction: "forward" },
+  { key: "usedBy", label: "What depends on this", kind: "dependency", direction: "backward" },
+];
+
+/** Trace ▸: follows relationships by meaning, lays the result out by level and highlights it on diagrams. */
+function Trace({ object, state, metamodel }: { object: ObjectRow; state: ModelState; metamodel: Metamodel }) {
+  const select = useWorkbench((s) => s.select);
+  const current = useWorkbench((s) => s.trace);
+  const showTrace = useWorkbench((s) => s.showTrace);
+  // Keyed by object, so selecting another object starts afresh; coming back keeps the trace shown.
+  const [chosen, setChosen] = useState(() =>
+    current?.startId === object.id ? (TRACES.find((t) => t.label === current.label)?.key ?? "") : "",
+  );
+  const option = TRACES.find((t) => t.key === chosen);
+  const result = option
+    ? trace(state, metamodel, object.id, option.kind, option.direction, { contents: option.contents ?? false })
+    : undefined;
+  const levels = metamodel.valueList("semanticLevel");
+  const levelName = (level: string | null) =>
+    level ? (levels?.values.find((v) => v.key === level)?.label ?? level) : "No level";
+  const choose = (key: string) => {
+    setChosen(key);
+    const next = TRACES.find((t) => t.key === key);
+    if (!next) return showTrace(null);
+    const ids = trace(state, metamodel, object.id, next.kind, next.direction, {
+      contents: next.contents ?? false,
+    }).steps.map((s) => s.objectId);
+    showTrace({ startId: object.id, label: next.label, objectIds: new Set([object.id, ...ids]) });
+  };
+  return (
+    <section className="group trace">
+      <h3>Trace</h3>
+      <select aria-label="Trace" value={chosen} onChange={(e) => choose(e.target.value)}>
+        <option value="">Choose a trace…</option>
+        {TRACES.map((t) => (
+          <option key={t.key} value={t.key}>
+            {t.label}
+          </option>
+        ))}
+      </select>
+      {result && result.steps.length === 0 && <p className="muted">Nothing found.</p>}
+      {result &&
+        traceByLevel(state, metamodel, result).map((column) => (
+          <div key={column.level ?? "none"} className="trace-level" data-level={column.level ?? "none"}>
+            <h4>{levelName(column.level)}</h4>
+            <ul className="plain">
+              {column.objectIds.map((id) => (
+                <li key={id}>
+                  <button className="link" onClick={() => select({ kind: "object", id })}>
+                    {state.objects.get(id)?.name ?? id}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      {result?.truncated && <p className="muted">Showing the first {result.steps.length}.</p>}
     </section>
   );
 }

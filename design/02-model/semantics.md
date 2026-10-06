@@ -4,7 +4,7 @@ How Connectome implements the [connection framework](../01-product/connection_fr
 
 > **The metamodel defines what users can model; semantic base types define what the modelling engine understands about what has been modelled.**
 
-Status: **accepted** (see [ADR-010](../06-decisions/ADR-010-semantic-base-types.md)); the product owner accepted the defaults of questions S1–S16 in the [decision log](../decision-log.md#semantics-decisions). Built so far: slices **Sem-1** and **Sem-2** (§11): kinds, categories, levels, the [core package](../05-structures/core-metamodel.json), Essentials 1.1.0, containment behaviour, `changeRelationshipType`, `deleteObject.contents` and `cascadeDelete` are in [05-structures](../05-structures/) and `packages/`. The other additions (payloads, messages, `setPayload`) reach `model.ts` and `changes.ts` with the slices that build them; until then this document is their reference.
+Status: **accepted** (see [ADR-010](../06-decisions/ADR-010-semantic-base-types.md)); the product owner accepted the defaults of questions S1–S16 in the [decision log](../decision-log.md#semantics-decisions). Built: slices **Sem-1** to **Sem-4** (§11): kinds, categories, levels, the [core package](../05-structures/core-metamodel.json), Essentials 1.1.0, containment behaviour, payloads, interactions and their messages, the new edits, and traces (`packages/semantics`). Still to come: query paths by kind (with M1's parser), the semantic validation rules (with M3's validation engine) and the workbench items listed in the [build plan](../build-plan.md).
 
 ## 1. The idea in one table
 
@@ -294,6 +294,7 @@ The kinds Essentials would map, and the types it would add so the framework's ex
 | *new* `specialises` | specialisation | `*` → same type |
 | *new* object type `service` | category service | Default level conceptual |
 | *new* object type `interface` | category interface | Default level logical |
+| `flowsTo` rules | | Also application ↔ interface and interface → interface, so an interaction's messages can run both ways. The application landscape diagram type shows interfaces and `calls` |
 
 Exchange mappings can fall back on kinds: an ArchiMate *Composition*, *Aggregation*, *Triggering*, *Influence* or *Specialization* with no type mapping is imported with the package's type of that kind (the first in package order). ArchiMate has no containment relationship; its nested elements in views import as containment only when a nesting rule allows the pair, otherwise as composition.
 
@@ -304,7 +305,7 @@ Exchange mappings can fall back on kinds: an ArchiMate *Composition*, *Aggregati
 | `05-structures` / `packages/model` | `SemanticKind`, `SemanticCategory`, `SemanticLevel`; relationship-type fields (§2.2); object-type `category`, `level`, `levelFixed`; relationship `payload`, `parentId`, `rank`; the edits below |
 | Edits ([changes.ts](../05-structures/changes.ts)) | New `changeRelationshipType { id, baseVersion, type, propertyMap?, set? }` (`set` restores values the change dropped, so its inverse is exact) (like `changeObjectType`; the explorer and diagrams change a connector's type with it). New `setPayload { id, baseVersion, payload }`. `createRelationship` gains `payload?`, `parentId?`, `rank?`. `deleteObject` gains `contents?`. `moveToFolder` gains `rank?` (from the explorer slice) and is refused for a contained object moving folders |
 | `packages/engine` | Kind-aware rule 5 (§2, §3); folder-follows-container cascades; interaction cascades; payload clean-up on delete; containment-aware delete; core package always installed. Every cascade records exact inverses (the inverse property test covers the new edits) |
-| `packages/semantics` *(new, pure)* | Kind lookup with direction normalised, navigation verbs, containment tree, traces. Depends on `model` only |
+| `packages/semantics` *(new, pure)* | Kind lookup with direction normalised, traces (`levels`, `flow`, `payload`, `dependency`). Depends on `model` and `engine` (it reads the engine's rows and compiled metamodel; both are pure) |
 | `packages/db` | Migration: `relationship_type.semantic`; `relationship.payload text[]` with a GIN index, `relationship.parent_id` with an index, `relationship.rank`; object-type `category`/`level` in `definition` |
 | `apps/server` | Relationship fields in reads and the snapshot; `GET …/objects/{id}/trace?kind=…&direction=…&depth=` ; everything added to `openapi.yaml` |
 | `apps/web` | Explorer structure and semantic groups; drag-and-drop containment; properties panel grouped by kind, payload picker, messages; diagram gestures in §9.2 |

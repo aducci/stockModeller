@@ -57,6 +57,12 @@ export type ModelEdit =
       tags?: string[];
       /** build: so that restoring a deleted relationship is exact. */
       externalIds?: Record<string, string>;
+      /** build: what it carries (semantics §5); only types whose `payload` is not "none". */
+      payload?: Id[];
+      /** build: the interaction this flow is a message of (semantics §6). */
+      parentId?: Id | null;
+      /** build: orders an interaction's messages; defaults to after its last message. */
+      rank?: number;
     }
   | ({ edit: "reconnectRelationship"; sourceId?: Id; targetId?: Id } & OnExisting)
   /** build: change a relationship's type (semantics §11); `set` restores values the old type had (used by undo). */
@@ -66,6 +72,9 @@ export type ModelEdit =
       propertyMap?: Record<PropertyKey, PropertyKey>;
       set?: Record<PropertyKey, PropertyValue>;
     } & OnExisting)
+  /** build: replaces what a relationship carries (semantics §5). */
+  | ({ edit: "setPayload"; payload: Id[] } & OnExisting)
+  /** Deleting an interaction deletes its messages too (semantics §6). */
   | ({ edit: "deleteRelationship" } & OnExisting)
   | { edit: "createFolder"; id: Id; parentId: Id | null; name: string }
   | { edit: "renameFolder"; id: Id; name: string }

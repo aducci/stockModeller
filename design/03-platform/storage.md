@@ -93,7 +93,8 @@ Found while building the change engine (M0 slices 0.2–0.4). `schema.sql` stays
 | `change.outcome jsonb` (migration 004) | Resending a change id returns its original outcome (versions and findings), as api.md §1 promises |
 | `change.committed_at` equals the `updatedAt` the change stamps on its rows | The server passes one timestamp to the engine and to the commit, so a browser replaying a committed change (with its `committedAt`) produces exactly the rows the server stored (decision B17) |
 | `change_log.inverse` holds a **list** of edits | One edit can cascade (deleting an object deletes its relationships and occurrences). Undo applies each entry's list, last entry first |
-| Relationship-type `semantic`, `semanticDirection` and `cascadeDelete`, object-type `category`, `level` and `levelFixed` are kept in `definition` (no migration; slice Sem-1) | They are definition fields like `verb` and `symbol`. The core package is never stored: every compile merges it in |
+| `relationship.payload text[]` (GIN index), `relationship.parent_id` (index) and `relationship.rank` (migration 006; slice Sem-3) | Payloads and interaction messages ([semantics §5–§6](../02-model/semantics.md#5-relationships-carry-meaning-payloads)). The engine indexes payloads both ways, so deleting an object finds the relationships that carry it |
+| Relationship-type `semantic`, `semanticDirection`, `cascadeDelete` and `payload`, object-type `category`, `level` and `levelFixed` are kept in `definition` (no migration; slice Sem-1) | They are definition fields like `verb` and `symbol`. The core package is never stored: every compile merges it in |
 | `rank text` on `folder`, `object` and `diagram` (migration 005; slice 0.8b) | The explorer's order. A fractional-index key, so placing an item between two others rewrites one row; `NULL` (absent in the API) sorts after ranked siblings, by name. An object's siblings are its folder's root objects, or its container's contents (semantics §3) |
 
 Edit types added in [changes.ts](../05-structures/changes.ts) (marked `build:`):
@@ -105,8 +106,10 @@ Edit types added in [changes.ts](../05-structures/changes.ts) (marked `build:`):
 | `createRelationship` | Optional `tags`, `externalIds`, so restoring a deleted relationship is exact |
 | `createDiagram` | Optional `description`, for the same reason |
 | `changeRelationshipType` | New (slice Sem-2). Besides `propertyMap` it takes `set`: the inverse puts back the values the change dropped, which `changeObjectType`'s inverse does through a separate `setProperties` |
+| `setPayload` | New (slice Sem-3): replaces what a relationship carries |
+| `createRelationship` | Optional `payload`, `parentId` and `rank` (slice Sem-3); a message's `rank` defaults to after its interaction's last message |
 | `deleteObject` | Optional `contents: "moveUp" \| "deleteContents"` (slice Sem-2). The inverse list restores contents and their containment relationships, deepest first |
 | `setRank` | New (slice 0.8b): places a folder, object or diagram among its siblings. Last writer wins (no base version), like layout. Deleting a ranked item logs a `setRank` after the re-create in its inverse, so restoring it is exact |
 
 
-**Planned:** the semantic layer adds `relationship.payload` (GIN-indexed), `relationship.parent_id` and `relationship.rank`. See [semantics §11](../02-model/semantics.md#11-what-changes-in-the-build); rows move into the table above when a slice builds them.
+
