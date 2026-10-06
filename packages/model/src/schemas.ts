@@ -163,6 +163,12 @@ export const editSchema = z.discriminatedUnion("edit", [
   z.strictObject({ edit: z.literal("renameFolder"), id, name: z.string() }),
   z.strictObject({ edit: z.literal("moveFolder"), id, parentId: id.nullable() }),
   z.strictObject({ edit: z.literal("deleteFolder"), id, contents: z.enum(["refuseIfNotEmpty", "deleteContents"]) }),
+  z.strictObject({
+    edit: z.literal("setRank"),
+    item: z.enum(["folder", "object", "diagram"]),
+    id,
+    rank: z.string().min(1).max(200).nullable(),
+  }),
   // diagram edits
   z.strictObject({
     edit: z.literal("createDiagram"),

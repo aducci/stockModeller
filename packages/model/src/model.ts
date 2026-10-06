@@ -30,6 +30,8 @@ export interface Folder {
   id: Id;
   parentId: Id | null;
   name: string;
+  /** build: place among its siblings in the explorer (edit `setRank`); absent = after the ranked ones, by name. */
+  rank?: string;
 }
 
 // ================================================================ metamodel
@@ -180,6 +182,8 @@ export interface ModelObject extends ModelItem {
   key: string | null;
   folderId: Id;
   description: string;
+  /** build: place among its siblings (in its folder, or its container) in the explorer. */
+  rank?: string;
 }
 
 export interface Relationship extends ModelItem {
@@ -202,6 +206,8 @@ export interface Diagram {
   name: string;
   description: string;
   diagramType: TypeKey;
+  /** build: place among its siblings in the explorer. */
+  rank?: string;
   folderId: Id;
   version: number;
   generatedBy: { rule: string; focusObjectId: Id } | null;

@@ -21,7 +21,7 @@ How we turn this design pack into running software. It follows the spec's own ro
 | Sem-2 Containment | ✅ Done: one container per object across all containment types, folder follows container (moves cascade to contents, a content cannot leave its container's folder alone), re-parenting reconnects the same relationship, `deleteObject.contents` (`moveUp` by default, or `deleteContents`), composition `cascadeDelete`, the `changeRelationshipType` edit; the explorer shows contents under their container and accepts drops onto objects (contain) and folders (take out); drawing a containment line on a nested diagram nests the content; the delete dialog asks what happens to the contents. The Alt+drop type menu waits for the explorer slice |
 | Sem-3 and Sem-4 Semantics | Next: [semantics §11](02-model/semantics.md#11-what-changes-in-the-build) (flows and interactions, navigation and trace) |
 
-Decisions taken on the way: [decision-log.md](decision-log.md#found-while-building-m0) (B1–B20) and [storage.md §7](03-platform/storage.md#7-additions-made-while-building).
+Decisions taken on the way: [decision-log.md](decision-log.md#found-while-building-m0) (B1–B22) and [storage.md §7](03-platform/storage.md#7-additions-made-while-building).
 
 The original 3D demo in this repository was removed; the repository now holds only Connectome.
 

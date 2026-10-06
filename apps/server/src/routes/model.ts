@@ -31,7 +31,7 @@ export function modelRoutes(app: FastifyInstance, { service, principal }: Routes
     const { scenario } = scenarioQuery.parse(req.query);
     return service.read(principal(req), req.params.repo, scenario, ({ state }) =>
       [...state.folders.live()]
-        .map((f) => ({ id: f.id, parentId: f.parentId, name: f.name }))
+        .map((f) => ({ id: f.id, parentId: f.parentId, name: f.name, ...(f.rank ? { rank: f.rank } : {}) }))
         .sort((a, b) => a.name.localeCompare(b.name)),
     );
   });
