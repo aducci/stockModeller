@@ -10,6 +10,7 @@ import {
   useState,
   type DragEvent,
   type FormEvent,
+  type ReactNode,
   type KeyboardEvent,
   type MouseEvent,
 } from "react";
@@ -18,6 +19,7 @@ import { useAuth } from "../state/auth";
 import { useModel, useWorkbench, type Selection } from "../state/workbench";
 import { byName } from "../text";
 import { folderChain, targetFolder } from "../explorer";
+import { notationFor } from "../notation";
 import {
   childrenOf,
   containAsPlan,
@@ -36,6 +38,7 @@ import {
   type Position,
 } from "../dragdrop";
 import { DRAG_OBJECT } from "./DiagramEditor";
+import { Glyph } from "./Glyph";
 import { ContextMenu, type MenuEntry } from "./Menu";
 import { backgroundMenu, deleteItem, itemMenu, marksMenu, memberMenu, openItem, renameItem, runPlan } from "./commands";
 
@@ -242,8 +245,14 @@ function ObjectNode({ id, depth }: { id: Id; depth: number }) {
   const group = isGroup(state, metamodel, id);
   const members = group ? groupMembers(state, id) : [];
   const hasChildren = contents.length + members.length > 0;
-  const shape = group ? "⬚" : "▭";
-  const icon = !hasChildren ? shape : open ? `▾ ${shape}` : `▸ ${shape}`;
+  const shape = <ObjectGlyph type={object.type} group={group} />;
+  const icon = !hasChildren ? (
+    shape
+  ) : (
+    <>
+      {open ? "▾" : "▸"} {shape}
+    </>
+  );
   return (
     <li role="treeitem" aria-expanded={hasChildren ? open : undefined}>
       <Row
@@ -262,7 +271,11 @@ function ObjectNode({ id, depth }: { id: Id; depth: number }) {
               <Row
                 item={{ kind: "object", id: member.id }}
                 depth={depth + 1}
-                icon="↗"
+                icon={
+                  <>
+                    ↗ <ObjectGlyph type={member.type} />
+                  </>
+                }
                 label={member.name}
                 memberOf={relationship.id}
               />
@@ -274,6 +287,13 @@ function ObjectNode({ id, depth }: { id: Id; depth: number }) {
   );
 }
 
+/** An object's glyph: its type's, from the semantic category (notation-and-metamodel-admin.md §2). */
+function ObjectGlyph({ type, group }: { type: string; group?: boolean }) {
+  const { metamodel } = useModel();
+  const notation = notationFor(metamodel.objectType(type));
+  return <Glyph glyph={group ? "group" : notation.glyph} colour={notation.ink} />;
+}
+
 function FilterResults({ query }: { query: string }) {
   const { state } = useModel();
   const match = (name: string) => name.toLocaleLowerCase().includes(query);
@@ -283,12 +303,16 @@ function FilterResults({ query }: { query: string }) {
     ...[...state.objects.live()].filter((o) => match(o.name)).map((o) => ({ kind: "object" as const, ...o })),
   ].sort(byName);
   if (rows.length === 0) return <li className="muted empty">Nothing matches.</li>;
-  const icon = { folder: "📁", diagram: "⧉", object: "▭" };
   return (
     <>
       {rows.map((r) => (
         <li key={r.id} role="treeitem">
-          <Row item={{ kind: r.kind, id: r.id }} depth={0} icon={icon[r.kind]} label={r.name} />
+          <Row
+            item={{ kind: r.kind, id: r.id }}
+            depth={0}
+            icon={r.kind === "object" ? <ObjectGlyph type={r.type} /> : r.kind === "folder" ? "📁" : "⧉"}
+            label={r.name}
+          />
         </li>
       ))}
     </>
@@ -298,7 +322,7 @@ function FilterResults({ query }: { query: string }) {
 function Row(props: {
   item: Selection;
   depth: number;
-  icon: string;
+  icon: ReactNode;
   label: string;
   onToggle?: () => void;
   /** Opens a closed folder or container (hovering over it while dragging). */
@@ -518,7 +542,7 @@ function Row(props: {
   );
 }
 
-function RenameBox({ item, depth, icon, name }: { item: Selection; depth: number; icon: string; name: string }) {
+function RenameBox({ item, depth, icon, name }: { item: Selection; depth: number; icon: ReactNode; name: string }) {
   const { state } = useModel();
   const edit = useWorkbench((s) => s.edit);
   const setTask = useWorkbench((s) => s.setExplorerTask);

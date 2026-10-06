@@ -1,6 +1,6 @@
 {
   "name": "Essentials",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "layers": [
     {
       "key": "strategy",
@@ -250,7 +250,6 @@
       ],
       "symbol": {
         "shape": "roundRect",
-        "fill": "#f3e3c7",
         "width": 160,
         "height": 60
       }
@@ -269,7 +268,6 @@
       ],
       "symbol": {
         "shape": "roundRect",
-        "fill": "#fbf2c4",
         "width": 140,
         "height": 60
       }
@@ -283,7 +281,6 @@
       "defaultFolder": "Business/Processes",
       "symbol": {
         "shape": "roundRect",
-        "fill": "#fff8dc",
         "width": 120,
         "height": 50
       }
@@ -302,7 +299,6 @@
       ],
       "symbol": {
         "shape": "roundRect",
-        "fill": "#fbf2c4",
         "icon": "service",
         "width": 140,
         "height": 50
@@ -319,7 +315,6 @@
       ],
       "symbol": {
         "shape": "rect",
-        "fill": "#fbf2c4",
         "icon": "people"
       }
     },
@@ -345,7 +340,6 @@
       ],
       "symbol": {
         "shape": "rect",
-        "fill": "#d7e8f8",
         "icon": "app",
         "width": 140,
         "height": 60
@@ -371,7 +365,6 @@
       "defaultFolder": "Applications",
       "symbol": {
         "shape": "rect",
-        "fill": "#d7e8f8",
         "icon": "cloud"
       }
     },
@@ -389,7 +382,6 @@
       ],
       "symbol": {
         "shape": "ellipse",
-        "fill": "#d7e8f8",
         "icon": "interface",
         "width": 120,
         "height": 50
@@ -404,7 +396,6 @@
       "defaultFolder": "Data",
       "symbol": {
         "shape": "rect",
-        "fill": "#e3dcf4",
         "icon": "data"
       }
     },
@@ -421,7 +412,6 @@
       ],
       "symbol": {
         "shape": "rect",
-        "fill": "#dcefdc",
         "icon": "server"
       }
     },
@@ -433,7 +423,6 @@
       "defaultFolder": "Technology/Locations",
       "symbol": {
         "shape": "rect",
-        "fill": "#eef6ee",
         "icon": "pin"
       }
     },
@@ -444,7 +433,6 @@
       "category": "other",
       "symbol": {
         "shape": "rect",
-        "fill": "#f3f4f6",
         "stroke": "#8a96a3",
         "icon": "group"
       }
@@ -458,11 +446,7 @@
       "inverseVerb": "is part of",
       "semantic": "containment",
       "nesting": true,
-      "singleParent": true,
-      "line": {
-        "style": "solid",
-        "startArrow": "diamond"
-      }
+      "singleParent": true
     },
     {
       "key": "composedOf",
@@ -471,34 +455,21 @@
       "inverseVerb": "is a component of",
       "semantic": "composition",
       "nesting": true,
-      "singleParent": true,
-      "line": {
-        "style": "solid",
-        "startArrow": "diamond",
-        "color": "#5a5a5a"
-      }
+      "singleParent": true
     },
     {
       "key": "realizes",
       "name": "Realizes",
       "verb": "realizes",
       "inverseVerb": "is realized by",
-      "semantic": "realisation",
-      "line": {
-        "style": "dashed",
-        "endArrow": "arrow"
-      }
+      "semantic": "realisation"
     },
     {
       "key": "serves",
       "name": "Serves",
       "verb": "serves",
       "inverseVerb": "is served by",
-      "semantic": "serving",
-      "line": {
-        "style": "solid",
-        "endArrow": "arrow"
-      }
+      "semantic": "serving"
     },
     {
       "key": "flowsTo",
@@ -509,71 +480,42 @@
       "properties": [
         "flow.frequency",
         "flow.protocol"
-      ],
-      "line": {
-        "style": "solid",
-        "endArrow": "arrow",
-        "color": "#2c5d98"
-      }
+      ]
     },
     {
       "key": "accesses",
       "name": "Accesses",
       "verb": "accesses",
       "inverseVerb": "is accessed by",
-      "semantic": "access",
-      "line": {
-        "style": "dotted",
-        "endArrow": "arrow"
-      }
+      "semantic": "access"
     },
     {
       "key": "represents",
       "name": "Represents",
       "verb": "represents",
       "inverseVerb": "is represented by",
-      "semantic": "representation",
-      "line": {
-        "style": "dashed",
-        "endArrow": "arrow",
-        "color": "#6b4fa0"
-      }
+      "semantic": "representation"
     },
     {
       "key": "calls",
       "name": "Calls",
       "verb": "calls",
       "inverseVerb": "is called by",
-      "semantic": "interaction",
-      "line": {
-        "style": "solid",
-        "endArrow": "arrow",
-        "color": "#1f6f8b"
-      }
+      "semantic": "interaction"
     },
     {
       "key": "triggers",
       "name": "Triggers",
       "verb": "triggers",
       "inverseVerb": "is triggered by",
-      "semantic": "trigger",
-      "line": {
-        "style": "solid",
-        "endArrow": "arrow",
-        "color": "#a05a2c"
-      }
+      "semantic": "trigger"
     },
     {
       "key": "specialises",
       "name": "Specialises",
       "verb": "specialises",
       "inverseVerb": "is specialised by",
-      "semantic": "specialisation",
-      "line": {
-        "style": "solid",
-        "endArrow": "arrow",
-        "color": "#5a5a5a"
-      }
+      "semantic": "specialisation"
     },
     {
       "key": "hostedOn",
@@ -581,46 +523,28 @@
       "verb": "is hosted on",
       "inverseVerb": "hosts",
       "semantic": "assignment",
-      "semanticDirection": "reverse",
-      "line": {
-        "style": "solid",
-        "endArrow": "arrow"
-      }
+      "semanticDirection": "reverse"
     },
     {
       "key": "owns",
       "name": "Owns",
       "verb": "owns",
       "inverseVerb": "is owned by",
-      "semantic": "assignment",
-      "line": {
-        "style": "solid",
-        "startArrow": "circle"
-      }
+      "semantic": "assignment"
     },
     {
       "key": "supports",
       "name": "Supports (derived)",
       "verb": "supports",
       "inverseVerb": "is supported by",
-      "semantic": "association",
-      "line": {
-        "style": "dashed",
-        "endArrow": "arrow",
-        "color": "#8a9bb0"
-      }
+      "semantic": "association"
     },
     {
       "key": "groups",
       "name": "Groups",
       "verb": "groups",
       "inverseVerb": "is grouped in",
-      "semantic": "aggregation",
-      "line": {
-        "style": "dashed",
-        "startArrow": "diamond",
-        "color": "#8a96a3"
-      }
+      "semantic": "aggregation"
     }
   ],
   "relationshipRules": [

@@ -5,6 +5,8 @@ import { useEffect, useRef, useState, type DragEvent, type KeyboardEvent, type P
 import { ulid, type Edit, type Id } from "@connectome/model";
 import type { DiagramRow, ObjectOccurrenceRow } from "@connectome/engine";
 import { useModel, useWorkbench } from "../state/workbench";
+import { lineFor, notationFor } from "../notation";
+import { Glyph, GlyphUse } from "./Glyph";
 import {
   connectChoices,
   defaultFolderFor,
@@ -20,6 +22,39 @@ import {
 /** Drag-and-drop payloads: an object type from the palette, or an existing object from the explorer. */
 export const DRAG_TYPE = "application/x-connectome-type";
 export const DRAG_OBJECT = "application/x-connectome-object";
+
+/**
+ * Arrowheads for the semantic kinds (design/02-model/notation-and-metamodel-admin.md §3). Open heads are filled
+ * with the canvas colour so a line never shows through them.
+ */
+const ARROW_MARKERS = (
+  <>
+    <marker id="a-arrowOpen" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M1,1 L9,5 L1,9" fill="none" stroke="currentColor" strokeWidth={1.5} />
+    </marker>
+    <marker id="a-arrowSmall" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+    </marker>
+    <marker id="a-triangleOpen" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="10" markerHeight="10" orient="auto">
+      <path d="M1,1 L11,6 L1,11 z" fill="var(--canvas)" stroke="currentColor" strokeWidth={1.2} />
+    </marker>
+    <marker id="a-diamond" viewBox="0 0 14 8" refX="1" refY="4" markerWidth="12" markerHeight="7" orient="auto">
+      <path d="M1,4 L7,1 L13,4 L7,7 z" fill="currentColor" />
+    </marker>
+    <marker id="a-diamondOpen" viewBox="0 0 14 8" refX="1" refY="4" markerWidth="12" markerHeight="7" orient="auto">
+      <path d="M1,4 L7,1 L13,4 L7,7 z" fill="var(--canvas)" stroke="currentColor" strokeWidth={1.2} />
+    </marker>
+    <marker id="a-dot" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+      <circle cx={4} cy={4} r={3} fill="currentColor" />
+    </marker>
+  </>
+);
+
+/** `arrow` keeps the existing marker, so a pending connection and a flow look the same. */
+function markerUrl(head: string) {
+  if (head === "none") return undefined;
+  return head === "arrow" ? "url(#arrow)" : `url(#a-${head})`;
+}
 
 /** Room around the drawing, so there is always space to drop something new. */
 const MARGIN = 200;
@@ -356,12 +391,14 @@ export function DiagramEditor({ id }: { id: Id }) {
             <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto">
               <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
             </marker>
+            {ARROW_MARKERS}
           </defs>
           <rect width={width} height={height} fill="url(#grid)" pointerEvents="none" />
           {ordered.map((o) => {
             const b = boxes.get(o.id)!;
             const object = state.objects.get(o.objectId);
             const symbol = symbolFor(metamodel, diagram, object?.type ?? "", o.style);
+            const notation = notationFor(object ? metamodel.objectType(object.type) : undefined);
             const container = state.objectOccurrences.count("byParent", o.id) > 0;
             const count = repeats.get(o.objectId) ?? 1;
             const classes = [
@@ -385,9 +422,10 @@ export function DiagramEditor({ id }: { id: Id }) {
                   width={b.w}
                   height={b.h}
                   rx={symbol.shape === "rect" ? 0 : 4}
-                  fill={symbol.fill ?? "#ffffff"}
-                  stroke={symbol.stroke ?? "#5b6b7c"}
+                  fill={symbol.fill ?? notation.fill}
+                  stroke={symbol.stroke ?? notation.stroke}
                 />
+                <GlyphUse glyph={notation.glyph} x={b.x + b.w - 20} y={b.y + 5} colour={notation.ink} />
                 <text
                   x={b.x + 6}
                   y={b.y + (container ? 16 : b.h / 2 + 4)}
@@ -417,17 +455,31 @@ export function DiagramEditor({ id }: { id: Id }) {
             const p = edgePoint(a, centre(b));
             const q = edgePoint(b, centre(a));
             const rel = state.relationships.get(l.relationshipId);
+            const line = lineFor(metamodel, rel?.type);
             return (
-              <line
-                key={l.id}
-                className="line"
-                data-relationship={rel ? metamodel.relationshipType(rel.type)?.verb : undefined}
-                x1={p.x}
-                y1={p.y}
-                x2={q.x}
-                y2={q.y}
-                markerEnd="url(#arrow)"
-              />
+              <g key={l.id}>
+                <line
+                  className="line"
+                  data-relationship={rel ? metamodel.relationshipType(rel.type)?.verb : undefined}
+                  x1={p.x}
+                  y1={p.y}
+                  x2={q.x}
+                  y2={q.y}
+                  strokeWidth={line.width}
+                  strokeDasharray={line.dash}
+                  markerStart={markerUrl(line.start)}
+                  markerEnd={markerUrl(line.end)}
+                />
+                {line.mid && (
+                  <GlyphUse
+                    glyph={line.mid}
+                    x={(p.x + q.x) / 2 - 8}
+                    y={(p.y + q.y) / 2 - 8}
+                    size={16}
+                    colour="var(--fg-2)"
+                  />
+                )}
+              </g>
             );
           })}
           {handleBox && (
@@ -498,6 +550,7 @@ function Palette({ diagram }: { diagram: DiagramRow }) {
     <div className="palette" aria-label="Palette" role="toolbar">
       {types.map((t) => {
         const symbol = symbolFor(metamodel, diagram, t.definition.key);
+        const notation = notationFor(t);
         return (
           <div
             key={t.definition.key}
@@ -509,7 +562,9 @@ function Palette({ diagram }: { diagram: DiagramRow }) {
               e.dataTransfer.effectAllowed = "copy";
             }}
           >
-            <span className="swatch" style={{ background: symbol.fill ?? "#ffffff" }} />
+            <span className="swatch" style={{ background: symbol.fill ?? notation.fill, color: notation.ink }}>
+              <Glyph glyph={notation.glyph} size={12} />
+            </span>
             {t.definition.name}
           </div>
         );

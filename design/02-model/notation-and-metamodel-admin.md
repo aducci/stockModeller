@@ -2,7 +2,7 @@
 
 How an object looks, and how a model owner sets the rules behind the tool. Builds on the [metamodel](metamodel.md), [diagrams](diagrams-and-catalogues.md) and the [semantic layer](semantics.md) ([ADR-010](../06-decisions/ADR-010-semantic-base-types.md)).
 
-Status: **proposed**. Open questions N1–N12 are in the [decision log](../decision-log.md#notation-decisions-proposed). Example package section: [example-notation.json](../05-structures/example-notation.json). Rendered icon set and admin mockups: [Notation Studio](https://claude.ai/artifact/VGwsxvR79zbkJbuDGsKcfS).
+Status: **proposed**; slice N-1 (the default glyph set and lines from kinds) is **built**. Open questions N1–N12 are in the [decision log](../decision-log.md#notation-decisions-proposed). Example package section: [example-notation.json](../05-structures/example-notation.json). Rendered icon set and admin mockups: [Notation Studio](https://claude.ai/artifact/VGwsxvR79zbkJbuDGsKcfS).
 
 ## 1. The idea in one table
 
@@ -42,6 +42,8 @@ A glyph is **one SVG path string** drawn on a 16×16 grid:
 | Path data only, characters `MmLlHhVvCcSsQqTtAaZz`, digits, `.`, `-`, `,`, space; at most **256 bytes** | Nothing to sanitise beyond a regular expression; no `<script>`, `<foreignObject>` or external references can ever reach the page |
 | A dot is `Mx yh.01` (round caps draw it) | Dots without fills |
 | Uploaded SVG is **converted**, not stored: shapes are flattened to one path, scaled to the grid, rounded to 0.1 and rejected if over budget | Keeps the format closed while letting people bring icons from elsewhere |
+
+**Where the default set lives.** The glyph paths, the category defaults and the kind line defaults ship with the product (`packages/model/src/notation.ts`), because they are part of what the semantic layer means, not of any one package. A package overrides them in its own `notation` section from slice N-3; Essentials carries none, so it draws entirely from its kinds and categories (**1.3.0**: the hand-set `line` on every relationship type and the hex `fill` on every object type are gone, since both fought the semantics and neither followed the theme).
 
 **Rendering.** The page holds one hidden `<svg>` sprite with a `<symbol id="g-component" viewBox="0 0 16 16">` per glyph in use; an occurrence draws `<use href="#g-component">`. One DOM node per icon, whatever the number of occurrences. The same sprite serves the explorer, tabs, catalogues, chips and the palette, so the glyph is the object type's identity everywhere, not only on diagrams.
 
@@ -423,7 +425,7 @@ The engine stays pure: style rules, markers, decorations, compartment queries an
 
 | Slice | Delivers | Needs |
 |---|---|---|
-| **N-1** | Glyph sprite and the default set by category; line notation from kinds; glyphs in explorer, tabs and palette | Nothing new |
+| **N-1** ✅ | Glyph sprite and the default set by category; line notation from kinds; glyphs in the explorer, the palette and on symbols; Essentials 1.3.0 draws from its semantics | Nothing new |
 | **N-2** | Renditions (box, card, glyph, chip, container); per-occurrence switch; semantic zoom | N-1 |
 | **N-2a** | Anchors (`sides`, `sides:n`, `ring`), anchor-aware orthogonal routing, pinned and user-added anchors; stretch rules (`grow`, `minSize`, nine-slice) and label zones | N-2 |
 | **N-2b** | Compartments: `properties` and `related` sources, overflow, collapse; editing rows in place | N-2a, query paths (M1) |

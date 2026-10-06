@@ -73,6 +73,7 @@ From [notation and metamodel administration](02-model/notation-and-metamodel-adm
 | N16 | Labels | **Label zones** per rendition (`centre`, `header`, `below`, `inlineGlyph`, `edge`) with wrap, shrink and max lines; text never silently clips | One label position for every shape |
 | N17 | "A class has attributes": are those related elements? | **Compartments**, with three sources: `properties`, `related` (a path query, so attributes and operations are ordinary objects) and `payload`. Rows are live and editable in place; nothing is duplicated | Attributes as a special storage on the object |
 | N18 | Rendering a property onto a shape | **Decorations**: `swatch`, `dot`, `pips`, `gauge`, `ring`, `icon`, `text`, `bars`, plus fill and stroke, in the marker slots and on compartment rows, with a per-rendition budget | Only colour-by-property, as the diagram types do today |
+| N20 | Where does the default notation live, and what does Essentials carry? | With the product (the core notation), because it is what the semantic layer means; **Essentials 1.3.0** drops its hand-set lines and fills so every type draws from its kind and category | Keep the defaults in the Essentials package (then every package repeats them, and two packages disagree) |
 | N19 | Where do a decoration's colours, icons and ranges come from? | The value list (its `glyph` and colours) and the property type (its `scale` with bands), so one definition serves chips, cells, legends and diagrams | Per diagram type, as part of the style rule |
 
 ## Found while building (M0)
