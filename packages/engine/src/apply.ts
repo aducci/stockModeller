@@ -139,12 +139,15 @@ class Transaction {
   /** Versioned items touched by this change: their row when the change started (undefined if new). */
   private readonly startRows = new Map<string, Rows[VersionedCollection] | undefined>();
   private readonly changedFields = new Map<string, Set<string>>();
+  /** One commit time for the whole change, so audit stamps and confirmations agree. */
+  private readonly now: string;
 
   constructor(
     private readonly state: ModelState,
     private readonly ctx: ApplyContext,
   ) {
     this.mm = ctx.metamodel;
+    this.now = ctx.now ?? new Date().toISOString();
   }
 
   apply(edit: Edit, index: number): void {
@@ -158,7 +161,7 @@ class Transaction {
 
   finish(): { log: LogEntry[]; versions: Record<Id, number>; findings: RuleFinding[] } {
     const versions: Record<Id, number> = {};
-    const now = this.ctx.now ?? new Date().toISOString();
+    const now = this.now;
     for (const [key, start] of this.startRows) {
       const [collection, id] = splitKey(key);
       const row = this.state.collection(collection).getAny(id)!;
@@ -351,7 +354,7 @@ class Transaction {
       e.baseVersion,
       keys.map((k) => `properties.${k}`),
     );
-    const stamp = { by: this.ctx.actor.id, at: this.ctx.now ?? new Date().toISOString() };
+    const stamp = { by: this.ctx.actor.id, at: this.now };
     const before = obj.confirmations ?? {};
     this.write("objects", withConfirmations(obj, { ...before, ...Object.fromEntries(keys.map((k) => [k, stamp])) }));
     this.markChanged(
