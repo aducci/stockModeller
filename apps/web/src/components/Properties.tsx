@@ -4,6 +4,7 @@ import { useEffect, useState, type KeyboardEvent, type ReactNode } from "react";
 import type { ModelState, ObjectRow, Metamodel, RelationshipRow } from "@connectome/engine";
 import { LEVEL_PROPERTY, type Id, type PropertyType, type PropertyValue } from "@connectome/model";
 import { useModel, useWorkbench } from "../state/workbench";
+import { trace, traceByLevel, type TraceDirection, type TraceKind } from "@connectome/semantics";
 import { addPayloadPlan, messagePlan, messagesOf, payloadChoices, payloadText, relationshipGroups } from "../semantics";
 import { byName, folderPath } from "../text";
 
@@ -103,6 +104,7 @@ export function ObjectProperties({ id }: { id: Id }) {
       </section>
 
       <Relationships object={object} state={state} metamodel={metamodel} />
+      <Trace key={object.id} object={object} state={state} metamodel={metamodel} />
       <OccursOn id={id} state={state} />
     </div>
   );
@@ -449,6 +451,75 @@ function PayloadEditor(props: { relationship: RelationshipRow; state: ModelState
         ))}
       </select>
     </div>
+  );
+}
+
+/** The traces offered for an object (semantics.md §9.3), in the words of the framework's questions. */
+const TRACES: { key: string; label: string; kind: TraceKind; direction: TraceDirection; contents?: boolean }[] = [
+  { key: "down", label: "Implementations (down the levels)", kind: "levels", direction: "forward" },
+  { key: "up", label: "What this implements (up the levels)", kind: "levels", direction: "backward" },
+  { key: "downstream", label: "Downstream", kind: "flow", direction: "forward", contents: true },
+  { key: "upstream", label: "Upstream", kind: "flow", direction: "backward", contents: true },
+  { key: "receivers", label: "Who receives this information", kind: "payload", direction: "forward" },
+  { key: "senders", label: "Who sends this information", kind: "payload", direction: "backward" },
+  { key: "dependsOn", label: "What this depends on", kind: "dependency", direction: "forward" },
+  { key: "usedBy", label: "What depends on this", kind: "dependency", direction: "backward" },
+];
+
+/** Trace ▸: follows relationships by meaning, lays the result out by level and highlights it on diagrams. */
+function Trace({ object, state, metamodel }: { object: ObjectRow; state: ModelState; metamodel: Metamodel }) {
+  const select = useWorkbench((s) => s.select);
+  const current = useWorkbench((s) => s.trace);
+  const showTrace = useWorkbench((s) => s.showTrace);
+  // Keyed by object, so selecting another object starts afresh; coming back keeps the trace shown.
+  const [chosen, setChosen] = useState(() =>
+    current?.startId === object.id ? (TRACES.find((t) => t.label === current.label)?.key ?? "") : "",
+  );
+  const option = TRACES.find((t) => t.key === chosen);
+  const result = option
+    ? trace(state, metamodel, object.id, option.kind, option.direction, { contents: option.contents ?? false })
+    : undefined;
+  const levels = metamodel.valueList("semanticLevel");
+  const levelName = (level: string | null) =>
+    level ? (levels?.values.find((v) => v.key === level)?.label ?? level) : "No level";
+  const choose = (key: string) => {
+    setChosen(key);
+    const next = TRACES.find((t) => t.key === key);
+    if (!next) return showTrace(null);
+    const ids = trace(state, metamodel, object.id, next.kind, next.direction, {
+      contents: next.contents ?? false,
+    }).steps.map((s) => s.objectId);
+    showTrace({ startId: object.id, label: next.label, objectIds: new Set([object.id, ...ids]) });
+  };
+  return (
+    <section className="group trace">
+      <h3>Trace</h3>
+      <select aria-label="Trace" value={chosen} onChange={(e) => choose(e.target.value)}>
+        <option value="">Choose a trace…</option>
+        {TRACES.map((t) => (
+          <option key={t.key} value={t.key}>
+            {t.label}
+          </option>
+        ))}
+      </select>
+      {result && result.steps.length === 0 && <p className="muted">Nothing found.</p>}
+      {result &&
+        traceByLevel(state, metamodel, result).map((column) => (
+          <div key={column.level ?? "none"} className="trace-level" data-level={column.level ?? "none"}>
+            <h4>{levelName(column.level)}</h4>
+            <ul className="plain">
+              {column.objectIds.map((id) => (
+                <li key={id}>
+                  <button className="link" onClick={() => select({ kind: "object", id })}>
+                    {state.objects.get(id)?.name ?? id}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      {result?.truncated && <p className="muted">Showing the first {result.steps.length}.</p>}
+    </section>
   );
 }
 

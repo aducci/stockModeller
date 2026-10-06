@@ -174,6 +174,33 @@ describeDb("API", () => {
     ]);
   });
 
+  it("traces by meaning and filters objects by category and level", async () => {
+    const upstream = await api.get(`/repositories/${REPO}/objects/O-APP-3/trace?kind=flow&direction=backward`);
+    expect(upstream.status).toBe(200);
+    expectContract(upstream.body, schema("Trace"));
+    expect((upstream.body as { steps: { name: string; depth: number }[] }).steps).toMatchObject([
+      { name: "Claims Manager", depth: 1, relationshipId: "R-08" },
+      { name: "Legacy CRM", depth: 2, relationshipId: "R-09" },
+    ]);
+    const down = await api.get(`/repositories/${REPO}/objects/O-CAP-2/trace?kind=levels&depth=1`);
+    expect((down.body as { steps: { objectId: string; level: string }[] }).steps).toEqual([
+      expect.objectContaining({ objectId: "O-APP-1", level: "implementation" }),
+    ]);
+    expect((await api.get(`/repositories/${REPO}/objects/O-APP-3/trace?kind=sideways`)).status).toBe(422);
+    expect((await api.get(`/repositories/${REPO}/objects/NOPE/trace?kind=flow`)).status).toBe(404);
+
+    const components = await api.get(`/repositories/${REPO}/objects?q=${encodeURIComponent("category:component")}`);
+    expect((components.body as { items: { id: string }[] }).items.map((o) => o.id)).toEqual([
+      "O-APP-1",
+      "O-APP-2",
+      "O-APP-3",
+    ]);
+    const conceptual = await api.get(
+      `/repositories/${REPO}/objects?q=${encodeURIComponent("level:conceptual AND type:process")}`,
+    );
+    expect((conceptual.body as { items: { id: string }[] }).items.map((o) => o.id)).toEqual(["O-PRC-1"]);
+  });
+
   it("reads a diagram with its occurrences and annotations", async () => {
     const res = await api.get(`/repositories/${REPO}/diagrams/D-01`);
     expect(res.status).toBe(200);

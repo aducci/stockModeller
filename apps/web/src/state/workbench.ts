@@ -50,6 +50,8 @@ interface WorkbenchState {
   toasts: Toast[];
   /** The object the "Delete object" dialog asks about (Shift+Delete). */
   confirmDelete: Id | null;
+  /** The trace shown in the properties panel and highlighted on diagrams (semantics.md §9.3). */
+  trace: { startId: Id; label: string; objectIds: ReadonlySet<Id> } | null;
 
   open(options: OpenOptions): Promise<void>;
   close(): void;
@@ -64,6 +66,7 @@ interface WorkbenchState {
   askDeleteObject(id: Id | null): void;
   /** A toast that reports no change (e.g. why a gesture did nothing). */
   notify(text: string, tone?: Toast["tone"]): void;
+  showTrace(trace: WorkbenchState["trace"]): void;
 }
 
 let unsubscribe: (() => void) | undefined;
@@ -96,6 +99,7 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
     changedTabs: new Set(),
     toasts: [],
     confirmDelete: null,
+    trace: null,
 
     async open(options) {
       get().close();
@@ -167,7 +171,11 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
       unsubscribe?.();
       unsubscribe = undefined;
       get().session?.close();
-      set({ session: null, presence: [], toasts: [] });
+      set({ session: null, presence: [], toasts: [], trace: null });
+    },
+
+    showTrace(trace) {
+      set({ trace });
     },
 
     select(selection) {
