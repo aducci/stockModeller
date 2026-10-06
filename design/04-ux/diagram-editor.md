@@ -71,7 +71,7 @@ Every gesture has a clear effect on the model, and the editor always says what i
 
 ## 8. Semantic gestures
 
-Proposed with [semantics](../02-model/semantics.md). What a gesture does depends on the **kind** of the relationship type involved, never on its name.
+From [semantics](../02-model/semantics.md); built in slices Sem-2 to Sem-4. What a gesture does depends on the **kind** of the relationship type involved, never on its name.
 
 ### Hierarchies on the canvas
 

@@ -93,6 +93,7 @@ Found while building the change engine (M0 slices 0.2–0.4). `schema.sql` stays
 | `change.outcome jsonb` (migration 004) | Resending a change id returns its original outcome (versions and findings), as api.md §1 promises |
 | `change.committed_at` equals the `updatedAt` the change stamps on its rows | The server passes one timestamp to the engine and to the commit, so a browser replaying a committed change (with its `committedAt`) produces exactly the rows the server stored (decision B17) |
 | `change_log.inverse` holds a **list** of edits | One edit can cascade (deleting an object deletes its relationships and occurrences). Undo applies each entry's list, last entry first |
+| Relationship-type `semantic` and `semanticDirection`, object-type `category`, `level` and `levelFixed` are kept in `definition` (no migration; slice Sem-1) | They are definition fields like `verb` and `symbol`. The core package is never stored: every compile merges it in |
 
 Edit types added in [changes.ts](../05-structures/changes.ts) (marked `build:`):
 
@@ -103,4 +104,5 @@ Edit types added in [changes.ts](../05-structures/changes.ts) (marked `build:`):
 | `createRelationship` | Optional `tags`, `externalIds`, so restoring a deleted relationship is exact |
 | `createDiagram` | Optional `description`, for the same reason |
 
-**Planned (proposed, not built):** the semantic layer adds `relationship_type.semantic`, `relationship.payload` (GIN-indexed), `relationship.parent_id` and `relationship.rank`, and keeps object-type `category` and `level` in `definition`. See [semantics §11](../02-model/semantics.md#11-what-changes-in-the-build); rows move into the table above when a slice builds them.
+
+**Planned:** the semantic layer adds `relationship.payload` (GIN-indexed), `relationship.parent_id` and `relationship.rank`. See [semantics §11](../02-model/semantics.md#11-what-changes-in-the-build); rows move into the table above when a slice builds them.

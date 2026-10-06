@@ -56,7 +56,7 @@ op       := "=" | "!=" | ">" | ">=" | "<" | "<=" | "~" | "in"
 { "query": "type:application", "groupBy": "assessment.criticality", "measure": { "sum": "cost.runCost" } }
 ```
 
-## 5. Semantic paths (proposed)
+## 5. Semantic paths
 
 From [semantics §9.4](../02-model/semantics.md#94-queries). Additions to the grammar, compiled like other paths:
 

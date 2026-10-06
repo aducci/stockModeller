@@ -40,7 +40,7 @@ Everything opens in place.
 
 ## Explorer: a semantic navigator
 
-From the [connection framework](../01-product/connection_framework.md) §15 and [semantics](../02-model/semantics.md) (proposed). The explorer shows **structure** (folders and containment) and, on demand, **meaning** (relationships grouped by semantic kind).
+From the [connection framework](../01-product/connection_framework.md) §15 and [semantics](../02-model/semantics.md) (built in slices Sem-2 and Sem-4). The explorer shows **structure** (folders and containment) and, on demand, **meaning** (relationships grouped by semantic kind).
 
 ```
 ▾ 📁 Platforms

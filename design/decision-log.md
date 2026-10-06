@@ -26,11 +26,11 @@
 | O3 | First markup format | Mermaid (widest adoption), then PlantUML |
 | O4 | Second package after Essentials | ArchiMate 3.2 (most requested in EA); BPMN follows with the BPMN adapter |
 
-## Semantics: proposed defaults awaiting the product owner
+## Semantics decisions
 
-From the [connection framework](01-product/connection_framework.md), designed in [semantics.md](02-model/semantics.md) and [ADR-010](06-decisions/ADR-010-semantic-base-types.md). The design already uses each default; answering differently changes the named section.
+From the [connection framework](01-product/connection_framework.md), designed in [semantics.md](02-model/semantics.md) and [ADR-010](06-decisions/ADR-010-semantic-base-types.md). The product owner accepted every default on 2026-10-06 ("continue" after the design was posted). Changing one later changes the named section.
 
-| # | Question | Proposed default | Alternative |
+| # | Question | Decision | Alternative not taken |
 |---|---|---|---|
 | S1 | Does a contained object have to live in its container's folder? | **Yes** ("folder follows container", semantics §3): the explorer tree is unambiguous and folder permissions cover whole subtrees | Each object keeps its own folder and shows under its container anyway; permissions then come from a folder the object is not shown in |
 | S2 | Is the semantic level set per object type or per object? | Per object (`semantic.level` property), with the type's default; a type can fix it | Per type only (simpler, but *Payment* at four levels needs four types) |

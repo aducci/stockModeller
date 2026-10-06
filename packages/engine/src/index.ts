@@ -5,6 +5,7 @@ export {
   type CompiledRule,
   type ResolvedDiagramType,
   type ResolvedObjectType,
+  type ResolvedRelationshipType,
 } from "./metamodel";
 export { checkValue } from "./properties";
 export { Collection, ModelState, type TouchedRow } from "./state";

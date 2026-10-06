@@ -49,7 +49,7 @@ flowchart LR
 | **Relationship type** | A kind of link, e.g. *serves*, *flows to*, *contains*. Defines which object types it may connect |
 | **Relationship** | One directed link between two objects: *Claims Manager serves Handle Claim* |
 | **Nesting relationship** | A relationship whose type is marked *nesting* (e.g. *contains*, *composed of*). It forms hierarchies, and on diagrams it can be shown by placing one symbol inside another |
-| **Semantic kind** | What the engine understands a relationship type to mean: one of 14 built-in kinds (containment, composition, flow, realisation, interaction…). Custom types keep their names and map onto a kind ([semantics](semantics.md), proposed) |
+| **Semantic kind** | What the engine understands a relationship type to mean: one of 14 built-in kinds (containment, composition, flow, realisation, interaction…). Custom types keep their names and map onto a kind ([semantics](semantics.md)) |
 | **Containment** | The semantic kind that is the repository's structure: an object has at most one container and lives in its container's folder. Distinct from **composition** (an intrinsic part) |
 | **Category, level** | What kind of thing an object type is (service, information, component…), and how concrete an object is (conceptual, logical, physical, implementation) |
 | **Payload** | The objects a flow carries, e.g. *Payment Information* |
@@ -78,7 +78,7 @@ flowchart LR
 2. Properties can only use property types assigned to the object or relationship type. Values must match the data type.
 3. A relationship always connects two existing objects, and its type must allow that pair (or the relationship is flagged, if the rule only warns).
 4. Every object is in exactly one folder.
-5. Nesting relationships never form a cycle. If a nesting type is marked *single parent*, an object can have at most one parent of that type. *Proposed:* an object has at most one container across all containment types, and a contained object lives in its container's folder ([semantics §3](semantics.md#3-containment-is-the-repositorys-structure)).
+5. Nesting relationships never form a cycle. If a nesting type is marked *single parent*, an object can have at most one parent of that type. *From slice Sem-2:* an object has at most one container across all containment types, and a contained object lives in its container's folder ([semantics §3](semantics.md#3-containment-is-the-repositorys-structure)).
 6. An occurrence always points to an existing object or relationship; it holds nothing of its own except layout. A relationship occurrence joins two object occurrences on the same diagram that show the relationship's source and target objects.
 7. Deleting an object deletes its relationships and removes all its occurrences. The user sees this impact before confirming.
 8. Removing an occurrence from a diagram never deletes the object.
@@ -101,4 +101,4 @@ flowchart LR
 | Diagrams, occurrences, catalogues and other views | [diagrams-and-catalogues.md](diagrams-and-catalogues.md) |
 | Scenarios and lifecycle | [scenarios-and-time.md](scenarios-and-time.md) |
 | Validation, calculations, derived relationships | [rules-and-calculations.md](rules-and-calculations.md) |
-| Semantic kinds, containment, payloads, interactions, tracing (proposed) | [semantics.md](semantics.md) |
+| Semantic kinds, containment, payloads, interactions, tracing | [semantics.md](semantics.md) |

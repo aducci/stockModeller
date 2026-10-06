@@ -24,8 +24,8 @@
 | `sourceId`, `targetId` | Both required; directed. The type gives the reading: *source* **serves** *target*; *target* **is served by** *source* |
 | `name` | Optional (the type's verb is shown when empty) |
 | `properties`, `tags`, `externalIds`, `version` | As for objects (e.g. an interface's frequency and protocol) |
-| `payload` | *Proposed.* Ordered object ids the relationship carries (flows, triggers): *Payment Information* ([semantics §5](semantics.md#5-relationships-carry-meaning-payloads)) |
-| `parentId` | *Proposed.* The interaction a message belongs to ([semantics §6](semantics.md#6-interactions-and-their-messages)) |
+| `payload` | *Slice Sem-3.* Ordered object ids the relationship carries (flows, triggers): *Payment Information* ([semantics §5](semantics.md#5-relationships-carry-meaning-payloads)) |
+| `parentId` | *Slice Sem-3.* The interaction a message belongs to ([semantics §6](semantics.md#6-interactions-and-their-messages)) |
 
 Any number of relationships, of the same or different types and in either direction, may connect the same two objects: three flows with three payloads are three relationships.
 
@@ -43,7 +43,7 @@ Hierarchies are ordinary relationships whose type is marked `nesting: true`. Exa
 
 Because hierarchy is just a relationship, there is one concept to learn, one way to query it, and as many hierarchies as the metamodel defines: a capability tree and an organisation tree can exist side by side.
 
-*Proposed* ([semantics §3](semantics.md#3-containment-is-the-repositorys-structure)): every nesting type has a semantic kind. **Containment** is the one structural hierarchy: an object has at most one container (across all containment types), it lives in its container's folder, and the explorer shows it inside its container. **Composition** and **aggregation** are hierarchies that move nothing.
+*From slice Sem-2* ([semantics §3](semantics.md#3-containment-is-the-repositorys-structure)): every nesting type has a semantic kind. **Containment** is the one structural hierarchy: an object has at most one container (across all containment types), it lives in its container's folder, and the explorer shows it inside its container. **Composition** and **aggregation** are hierarchies that move nothing.
 
 ## 4. Properties
 
@@ -77,15 +77,15 @@ Writing a property the type doesn't have is an **error**, never silently ignored
 - Folders carry **permissions** (inherited by subfolders) and are the main way to organise ownership.
 - Moving an object between folders changes nothing else: its relationships and occurrences stay.
 - The explorer also offers **virtual views** that are not folders: *by object type*, *by hierarchy* (nesting relationships) and *saved queries*.
-- *Proposed:* a **contained** object moves with its container and cannot be moved to another folder on its own; moving it out of the folder takes it out of its container ([semantics §3](semantics.md#3-containment-is-the-repositorys-structure)).
+- *From slice Sem-2:* a **contained** object moves with its container and cannot be moved to another folder on its own; moving it out of the folder takes it out of its container ([semantics §3](semantics.md#3-containment-is-the-repositorys-structure)).
 
 ## 6. Deleting
 
 | Action | Effect |
 |---|---|
 | Delete an object | Deletes its relationships and removes all its occurrences. A dialog first shows counts and the affected diagrams |
-| Delete a container *(proposed)* | Asks whether to keep its contents (they move up a level) or delete them too |
-| Delete a whole whose composition type cascades *(proposed)* | Deletes its parts too, listed first |
+| Delete a container *(Sem-2)* | Asks whether to keep its contents (they move up a level) or delete them too |
+| Delete a whole whose composition type cascades *(Sem-2)* | Deletes its parts too, listed first |
 | Delete a relationship | Removes its occurrences (and, for an interaction, its messages) |
 | Delete a folder | Only allowed when empty, or with "delete contents" (shows the impact) |
 | Restore | Anything deleted can be restored from history |

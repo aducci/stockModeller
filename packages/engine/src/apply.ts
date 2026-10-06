@@ -2,6 +2,7 @@
 // and the per-property concurrency rules of design/03-platform/collaboration-and-changes.md §2.
 // Pure: no I/O. The same code runs on the server (inside a database transaction) and in the browser (optimistically).
 import {
+  LEVEL_PROPERTY,
   MAX_EDITS_PER_CHANGE,
   type Actor,
   type Annotation,
@@ -19,7 +20,7 @@ import {
   type StylePatch,
   type TypeKey,
 } from "@connectome/model";
-import type { Metamodel, ResolvedDiagramType } from "./metamodel";
+import type { Metamodel, ResolvedDiagramType, ResolvedObjectType } from "./metamodel";
 import { checkValue } from "./properties";
 import type {
   AnnotationRow,
@@ -250,6 +251,7 @@ class Transaction {
     this.refLive("folders", e.folderId, "folderId");
     this.checkUniqueName(e.type, e.name, e.folderId, e.id);
     const properties = this.checkProperties(type.properties, {}, e.properties ?? {}, "properties");
+    this.checkLevel(type, e.properties ?? {});
     const key = e.key ?? this.nextKey(e.type, type.keyPattern);
     if (key !== null) this.checkUniqueKey(e.type, key, e.id);
 
@@ -282,6 +284,8 @@ class Transaction {
     this.checkBase("objects", obj, e.baseVersion, fields);
     const allowed = this.mm.objectType(obj.type)?.properties ?? new Set<string>();
     const properties = this.checkProperties(allowed, obj.properties, e.set, "properties");
+    const type = this.mm.objectType(obj.type);
+    if (type) this.checkLevel(type, e.set);
     const previous = Object.fromEntries(Object.keys(e.set).map((k) => [k, obj.properties[k] ?? null]));
     this.write("objects", { ...obj, properties });
     this.markChanged("objects", obj.id, fields);
@@ -332,7 +336,9 @@ class Transaction {
     const dropped: Record<string, PropertyValue> = {};
     for (const [from, value] of Object.entries(obj.properties)) {
       const to = e.propertyMap?.[from] ?? from;
-      if (type.properties.has(to) && !(to in properties)) {
+      // A fixed level is the type's, never a carried-over value.
+      const fixedLevel = to === LEVEL_PROPERTY && type.levelFixed;
+      if (type.properties.has(to) && !(to in properties) && !fixedLevel) {
         const pt = this.mm.propertyType(to)!;
         const problem = pt.dataType === "calculated" ? null : checkValue(pt, value, this.valueContext());
         if (problem) this.invalid(`properties.${to}`, `${pt.name} ${problem} (from ${from})`);
@@ -412,7 +418,12 @@ class Transaction {
     if (source.id === target.id) this.invalid("targetId", "A relationship connects two different objects");
     if (e.name !== undefined && e.name.length > MAX_NAME)
       this.invalid("name", `Names have at most ${MAX_NAME} characters`);
-    const properties = this.checkProperties(new Set(type.properties ?? []), {}, e.properties ?? {}, "properties");
+    const properties = this.checkProperties(
+      this.mm.relationshipTypeProperties(e.type),
+      {},
+      e.properties ?? {},
+      "properties",
+    );
     this.checkRelationshipRules(e.type, source.type, target.type, source.id, e.id);
     this.checkNesting(e.type, source.id, target.id, e.id);
 
@@ -1153,6 +1164,13 @@ class Transaction {
       if (n) max = Math.max(max, Number(n[1]));
     }
     return `${prefix}${String(max + 1).padStart(zeros.length, "0")}${suffix}`;
+  }
+
+  /** A type with a fixed level only accepts its own level (design/02-model/semantics.md §4.2). */
+  private checkLevel(type: ResolvedObjectType, set: Record<string, PropertyValue>): void {
+    const value = set[LEVEL_PROPERTY];
+    if (type.levelFixed && value != null && value !== type.level)
+      this.invalid(`properties.${LEVEL_PROPERTY}`, `${type.definition.name} is always ${type.level}`);
   }
 
   /** Rule 2: only assigned property types, with values of the right data type. `null` clears a value. */

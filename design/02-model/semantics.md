@@ -4,7 +4,7 @@ How Connectome implements the [connection framework](../01-product/connection_fr
 
 > **The metamodel defines what users can model; semantic base types define what the modelling engine understands about what has been modelled.**
 
-Status: **proposed** (see [ADR-010](../06-decisions/ADR-010-semantic-base-types.md)). The machine-checked files in [05-structures](../05-structures/) (`model.ts`, `changes.ts`, the schemas and the Essentials example) change in the build slices that implement this (§11), together with their drift-tested copies in `packages/`. Until then, this document is the reference for the additions. Open questions are in the [decision log](../decision-log.md#semantics-proposed-defaults-awaiting-the-product-owner) (S1–S14). Each has a default this document already uses.
+Status: **accepted** (see [ADR-010](../06-decisions/ADR-010-semantic-base-types.md)); the product owner accepted the defaults of questions S1–S16 in the [decision log](../decision-log.md#semantics-decisions). Built so far: slice **Sem-1** (§11): kinds, categories, levels, the [core package](../05-structures/core-metamodel.json) and Essentials 1.1.0 are in [05-structures](../05-structures/) and `packages/`. The other additions (payloads, messages, the new edits) reach `model.ts` and `changes.ts` with the slices that build them; until then this document is their reference.
 
 ## 1. The idea in one table
 
@@ -29,8 +29,8 @@ Fourteen kinds: the framework's thirteen relationships plus *interaction* (§6).
 | Kind | Source | Target | Reads as | Hierarchy | Shown nested on diagrams | Parents per object | Payload |
 |---|---|---|---|---|---|---|---|
 | `containment` | container | content | A contains B | ✅ structural (§3) | always allowed | **one**, across all containment types | — |
-| `composition` | whole | part | B is an intrinsic part of A | ✅ | allowed (default on) | one per type by default | — |
-| `aggregation` | whole | part | B belongs to A | ✅ | allowed (default off) | many | — |
+| `composition` | whole | part | B is an intrinsic part of A | ✅ | allowed (set per type) | one, when the type is `singleParent` | — |
+| `aggregation` | whole | part | B belongs to A | ✅ | allowed (set per type) | many | — |
 | `association` | — | — | A is related to B | | | | — |
 | `realisation` | concrete | abstract | B is realised by A | trace | | | — |
 | `representation` | representation | information | A represents B | trace | | | — |
@@ -66,8 +66,8 @@ A relationship type without a kind behaves as `association`. Existing repositori
 |---|---|---|
 | `semantic` | one of the 14 kinds | Optional; default `association` |
 | `semanticDirection` | `forward` (default) or `reverse` | `reverse` lets a type read the other way round. *Realised by* (concept → concrete) is `realisation` with `reverse`: the engine swaps source and target when it applies the kind's meaning. Rules, diagrams and the API keep the type's own direction |
-| `nesting` | boolean | Unchanged meaning (can be shown by placement). Defaults from the kind; must be `true` for `containment` and may only be `true` for `containment`, `composition` and `aggregation` |
-| `singleParent` | boolean | Defaults from the kind; always `true` for `containment` (enforced across all containment types, not per type) |
+| `nesting` | boolean | Unchanged meaning (can be shown by placement). Always `true` for `containment` (filled in when omitted); otherwise default `false`, and only `containment`, `composition` and `aggregation` (or a type without a kind) may set it. Defaults never depend on other kinds, so a package stored and loaded again compiles to the same thing |
+| `singleParent` | boolean | Always `true` for `containment` (enforced across all containment types, not per type); otherwise default `false`. Essentials sets it on its composition type (S5) |
 | `payload` | `none`, `optional`, `expected` | `flow` and `trigger` default to `optional`; every other kind to `none`. `expected` adds the "flow without payload" finding |
 | `cascadeDelete` | boolean | `composition` only: deleting the whole deletes its parts (§7). Default `false` |
 
@@ -238,12 +238,14 @@ Every kind gives two navigation verbs, one per direction, using the types' own v
 | Kind | Outgoing (from the source) | Incoming (from the target) |
 |---|---|---|
 | containment | Contents | Container |
-| composition, aggregation | Parts | Part of |
+| composition | Parts | Part of |
+| aggregation | Members | Member of |
 | realisation | What this implements | Implementations |
 | representation | What this represents | Representations |
 | serving | Consumers | Providers |
 | access | Information used | Used by |
-| flow, interaction | Downstream | Upstream |
+| flow | Downstream | Upstream |
+| interaction | Interacts with | Interacted with by |
 | trigger | Triggers | Triggered by |
 | assignment | Performs | Performed by |
 | influence | Influences | Influenced by |
@@ -269,7 +271,7 @@ The trace view lays results out in columns by level (conceptual → logical → 
 
 ### 9.4 Queries
 
-The [query language](../03-platform/queries.md#5-semantic-paths-proposed) gains paths by kind (`-@flow->`, `<-@realisation-`), relationship filters in paths (`-@access[access.mode = write]->`, `<-@flow[payload: id:01J…]-`) and the filters `category:` and `level:`. Paths by kind work for any custom type mapped to that kind, so rules and catalogues written against kinds keep working when a repository renames its types.
+The [query language](../03-platform/queries.md#5-semantic-paths) gains paths by kind (`-@flow->`, `<-@realisation-`), relationship filters in paths (`-@access[access.mode = write]->`, `<-@flow[payload: id:01J…]-`) and the filters `category:` and `level:`. Paths by kind work for any custom type mapped to that kind, so rules and catalogues written against kinds keep working when a repository renames its types.
 
 ## 10. Essentials 1.1.0
 
@@ -307,7 +309,7 @@ Exchange mappings can fall back on kinds: an ArchiMate *Composition*, *Aggregati
 | `apps/server` | Relationship fields in reads and the snapshot; `GET …/objects/{id}/trace?kind=…&direction=…&depth=` ; everything added to `openapi.yaml` |
 | `apps/web` | Explorer structure and semantic groups; drag-and-drop containment; properties panel grouped by kind, payload picker, messages; diagram gestures in §9.2 |
 
-Proposed slices, after the explorer slice and before or alongside M1's metamodel stream:
+Slices, after the explorer slice and before or alongside M1's metamodel stream:
 
 | Slice | Scope | Done when |
 |---|---|---|

@@ -86,6 +86,38 @@ export interface LineStyle {
   endArrow: "none" | "arrow" | "diamond" | "circle";
 }
 
+/** The built-in semantic vocabulary (02-model/semantics.md). Custom types map onto it. */
+export type SemanticKind =
+  | "containment"
+  | "composition"
+  | "aggregation"
+  | "association"
+  | "realisation"
+  | "representation"
+  | "serving"
+  | "access"
+  | "flow"
+  | "trigger"
+  | "assignment"
+  | "influence"
+  | "specialisation"
+  | "interaction";
+
+export type SemanticCategory =
+  | "actor"
+  | "capability"
+  | "behaviour"
+  | "service"
+  | "interface"
+  | "component"
+  | "information"
+  | "technology"
+  | "location"
+  | "motivation"
+  | "other";
+
+export type SemanticLevel = "conceptual" | "logical" | "physical" | "implementation";
+
 export interface ObjectType {
   key: TypeKey;
   name: string;
@@ -98,6 +130,9 @@ export interface ObjectType {
   uniqueName?: "repository" | "folder" | "none";
   keyPattern?: string; // "APP-{0000}"
   defaultFolder?: string; // folder path
+  category?: SemanticCategory; // design/02-model/semantics.md §4.1; inherited through extends
+  level?: SemanticLevel; // default semantic.level of its objects
+  levelFixed?: boolean; // objects always have the type's level
 }
 
 export interface RelationshipType {
@@ -107,6 +142,8 @@ export interface RelationshipType {
   inverseVerb: string;
   nesting?: boolean; // can be shown by placing one symbol inside another; forms hierarchies
   singleParent?: boolean; // at most one parent through this type
+  semantic?: SemanticKind; // what the engine understands it to mean (default "association")
+  semanticDirection?: "forward" | "reverse"; // reverse: the source plays the kind's target role
   properties?: PropertyKey[];
   line?: Partial<LineStyle>;
 }

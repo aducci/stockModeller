@@ -1,6 +1,6 @@
 # ADR-010 — Semantic base types under a free metamodel
 
-**Status.** Proposed (2026-10-06), from the [connection framework](../01-product/connection_framework.md). Amends [ADR-005](ADR-005-folders-and-nesting-relationships.md).
+**Status.** Accepted (2026-10-06), from the [connection framework](../01-product/connection_framework.md). Amends [ADR-005](ADR-005-folders-and-nesting-relationships.md).
 
 **Context.** The metamodel is fully configurable ([ADR-009](ADR-009-frameworks-as-packages.md)), so the engine knows nothing about what *serves*, *calls* or *implements* mean. Only the `nesting` flag carries behaviour. Explorer structure, moves, deletes, tracing, impact analysis and validation all need more meaning than that, without a fixed framework such as ArchiMate.
 

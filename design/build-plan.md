@@ -17,7 +17,8 @@ How we turn this design pack into running software. It follows the spec's own ro
 | 0.8 Diagram editor | ✅ Done: the read-only view became an editor (SVG): palette of the types the diagram shows (drop, name, Enter; Esc creates nothing), drag an object from the explorer for another occurrence (repeats flash, ×N marker, sibling outline), connect from a handle with the relationship types the rules allow (existing relationships first, then most used), move on an 8 px grid, `Delete` removes from the diagram (toast offers Delete object), `Shift+Delete` deletes the object after a dialog listing what goes with it, `F2` / double-click renames. Exit test: Playwright with two browsers, one renames while the other is dragging, both changes survive a reload |
 | 0.8b Explorer menus, drag and drop, groups | Planned (plan awaiting OK) |
 | 0.9 History panel | Next |
-| Sem-1 to Sem-4 Semantics | Proposed: [semantics §11](02-model/semantics.md#11-what-changes-in-the-build) (semantic metamodel, containment, flows and interactions, navigation and trace) |
+| Sem-1 Semantic metamodel | ✅ Done: 14 semantic kinds on relationship types (`semantic`, `semanticDirection`), categories and levels on object types, the core package (`semantic.level`, `access.mode`, `influence.effect`, `interaction.*`) merged into every metamodel with its keys reserved, Essentials 1.1.0 (every type classified; `service`, `interface`, `composedOf`, `represents`, `calls`, `triggers`, `specialises`), kind checks when a metamodel compiles, fixed levels enforced, and the properties panel grouping relationships by kind |
+| Sem-2 to Sem-4 Semantics | Next: [semantics §11](02-model/semantics.md#11-what-changes-in-the-build) (containment, flows and interactions, navigation and trace) |
 
 Decisions taken on the way: [decision-log.md](decision-log.md#found-while-building-m0) (B1–B20) and [storage.md §7](03-platform/storage.md#7-additions-made-while-building).
 

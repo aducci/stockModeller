@@ -11,4 +11,4 @@
 - ✅ Moving an object between folders never changes its meaning.
 - ⚠️ Roll-ups and trees must name the nesting type they follow (e.g. `-contains->`); the Essentials package uses *contains* everywhere to keep this simple.
 
-**Amended by [ADR-010](ADR-010-semantic-base-types.md)** (proposed): nesting types now have a semantic kind. A *containment* type is the repository's structure, so a contained object lives in its container's folder and moves with it. Composition and aggregation keep the behaviour above.
+**Amended by [ADR-010](ADR-010-semantic-base-types.md)**: nesting types now have a semantic kind. A *containment* type is the repository's structure, so a contained object lives in its container's folder and moves with it. Composition and aggregation keep the behaviour above.

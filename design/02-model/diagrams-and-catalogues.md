@@ -26,7 +26,7 @@ A diagram belongs to a folder, is based on a **diagram type**, and contains thre
 | `Delete` | Removes the occurrence only |
 | `Shift+Delete` | Deletes the object from the model (impact shown first) |
 
-*Proposed:* which of these happen depends on the relationship type's semantic kind: drawing a containment line nests the content, dropping inside offers containment types first, and moving a nested symbol into another container reconnects the same relationship ([diagram editor §8](../04-ux/diagram-editor.md#8-semantic-gestures)).
+*From slice Sem-2:* which of these happen depends on the relationship type's semantic kind: drawing a containment line nests the content, dropping inside offers containment types first, and moving a nested symbol into another container reconnects the same relationship ([diagram editor §8](../04-ux/diagram-editor.md#8-semantic-gestures)).
 
 **Nested occurrences** store their position relative to the parent occurrence. A diagram type can choose to show nesting relationships as lines instead of nesting (`nesting: "lines"`).
 
