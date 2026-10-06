@@ -2,7 +2,7 @@
 // the relationship types the rules allow, move, remove from the diagram vs delete the object, rename. Every
 // gesture is one change; layout edits are last-writer-wins, so moving never conflicts with someone's rename.
 import { useEffect, useRef, useState, type DragEvent, type KeyboardEvent, type PointerEvent } from "react";
-import { ulid, type Id } from "@connectome/model";
+import { ulid, type Edit, type Id } from "@connectome/model";
 import type { DiagramRow, ObjectOccurrenceRow } from "@connectome/engine";
 import { useModel, useWorkbench } from "../state/workbench";
 import {
@@ -222,6 +222,12 @@ export function DiagramEditor({ id }: { id: Id }) {
     if (!a || !b) return;
     const relationshipId = choice.existingId ?? ulid();
     const label = `${nameOf(a.objectId)} ${choice.type.verb} ${nameOf(b.objectId)}`;
+    // A containment nests the content inside its container (design/04-ux/diagram-editor.md §8).
+    const nest =
+      choice.type.semantic === "containment" &&
+      metamodel.diagramType(diagram.diagramType)?.nesting === "nested" &&
+      b.parentOccurrenceId === null &&
+      !isAncestor(b.id, a.id);
     edit(choice.existingId ? `Show ${label}` : label, [
       ...(choice.existingId
         ? []
@@ -234,6 +240,7 @@ export function DiagramEditor({ id }: { id: Id }) {
               targetId: b.objectId,
             },
           ]),
+      ...(nest ? nestEdits(a, b) : []),
       {
         edit: "addRelationshipOccurrence",
         diagramId: id,
@@ -242,13 +249,44 @@ export function DiagramEditor({ id }: { id: Id }) {
           relationshipId,
           sourceOccurrenceId: a.id,
           targetOccurrenceId: b.id,
-          shownAs: "line",
+          shownAs: nest ? "nesting" : "line",
           route: { mode: "auto" },
           labelPosition: 0.5,
           style: {},
         },
       },
     ]);
+  };
+
+  /** Whether occurrence `ancestor` is `occ` or contains it on this diagram. */
+  const isAncestor = (ancestor: Id, occ: Id): boolean => {
+    for (
+      let o = state.objectOccurrences.get(occ);
+      o;
+      o = o.parentOccurrenceId ? state.objectOccurrences.get(o.parentOccurrenceId) : undefined
+    ) {
+      if (o.id === ancestor) return true;
+    }
+    return false;
+  };
+
+  /** Moves `child` inside `parent`, below its other nested symbols, and grows `parent` to fit. */
+  const nestEdits = (parent: ObjectOccurrenceRow, child: ObjectOccurrenceRow): Edit[] => {
+    const pad = 16;
+    const siblings = state.objectOccurrences.find("byDiagram", id).filter((o) => o.parentOccurrenceId === parent.id);
+    const y = Math.max(36, ...siblings.map((o) => o.y + o.h + 12));
+    return [
+      {
+        edit: "moveObjectOccurrence",
+        diagramId: id,
+        occurrenceId: parent.id,
+        x: parent.x,
+        y: parent.y,
+        w: Math.max(parent.w, pad + child.w + pad),
+        h: Math.max(parent.h, y + child.h + pad),
+      },
+      { edit: "moveObjectOccurrence", diagramId: id, occurrenceId: child.id, x: pad, y, parentOccurrenceId: parent.id },
+    ];
   };
 
   // ---------------------------------------------------------------- keyboard

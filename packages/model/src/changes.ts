@@ -40,7 +40,11 @@ export type ModelEdit =
   | ({ edit: "setTags"; tags: string[] } & OnExisting)
   | ({ edit: "moveToFolder"; folderId: Id } & OnExisting)
   | ({ edit: "changeObjectType"; type: TypeKey; propertyMap?: Record<PropertyKey, PropertyKey> } & OnExisting)
-  | ({ edit: "deleteObject" } & OnExisting) // also deletes its relationships and occurrences
+  /**
+   * Also deletes its relationships and occurrences. build: `contents` says what happens to the objects it contains
+   * (semantics §7): "moveUp" (default) puts them in its own container, "deleteContents" deletes them too.
+   */
+  | ({ edit: "deleteObject"; contents?: "moveUp" | "deleteContents" } & OnExisting)
   | {
       edit: "createRelationship";
       id: Id;
@@ -55,11 +59,23 @@ export type ModelEdit =
       externalIds?: Record<string, string>;
     }
   | ({ edit: "reconnectRelationship"; sourceId?: Id; targetId?: Id } & OnExisting)
+  /** build: change a relationship's type (semantics §11); `set` restores values the old type had (used by undo). */
+  | ({
+      edit: "changeRelationshipType";
+      type: TypeKey;
+      propertyMap?: Record<PropertyKey, PropertyKey>;
+      set?: Record<PropertyKey, PropertyValue>;
+    } & OnExisting)
   | ({ edit: "deleteRelationship" } & OnExisting)
   | { edit: "createFolder"; id: Id; parentId: Id | null; name: string }
   | { edit: "renameFolder"; id: Id; name: string }
   | { edit: "moveFolder"; id: Id; parentId: Id | null }
-  | { edit: "deleteFolder"; id: Id; contents: "refuseIfNotEmpty" | "deleteContents" };
+  | { edit: "deleteFolder"; id: Id; contents: "refuseIfNotEmpty" | "deleteContents" }
+  /**
+   * build: place an item among its siblings in the explorer (its folder, or its container for a contained object).
+   * `rank` is a fractional-index key; `null` drops it (unranked items follow ranked ones, by name). Last writer wins.
+   */
+  | { edit: "setRank"; item: "folder" | "object" | "diagram"; id: Id; rank: string | null };
 
 // ================================================================ diagram edits (layout: last writer wins)
 export type DiagramEdit =

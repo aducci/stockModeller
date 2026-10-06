@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import type { changeSchema, editSchema } from "../src";
 import {
   clientMessageSchema,
+  corePackage,
   parseChange,
   validateDiagramType,
   validatePackage,
@@ -22,6 +23,11 @@ describe("JSON Schemas", () => {
   it("accepts the Essentials example package", () => {
     const result = validatePackage(readDesignJson("05-structures/example-metamodel.json"));
     expect(result).toMatchObject({ ok: true });
+  });
+
+  it("has the design pack's core package, valid against the schema", () => {
+    expect(corePackage).toEqual(readDesignJson("05-structures/core-metamodel.json"));
+    expect(validatePackage(corePackage)).toMatchObject({ ok: true });
   });
 
   it("accepts the example diagram type", () => {

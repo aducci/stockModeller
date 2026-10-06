@@ -26,6 +26,11 @@ export interface Toast {
   action?: { label: string; run(): void };
 }
 
+/** What the explorer is asked to show inline: a form for a new item, or a rename box on a row. Menus set it. */
+export type ExplorerTask =
+  | { kind: "create"; what: "folder" | "object" | "diagram" | "group"; folderId: Id | null; members?: Id[] }
+  | { kind: "rename"; item: Selection };
+
 interface OpenOptions {
   authorization: string;
   userId: string;
@@ -50,18 +55,25 @@ interface WorkbenchState {
   toasts: Toast[];
   /** The object the "Delete object" dialog asks about (Shift+Delete). */
   confirmDelete: Id | null;
+  explorerTask: ExplorerTask | null;
+  /** Rows Ctrl/⌘-clicked in the explorer: they are dragged, grouped or moved together. */
+  marked: Selection[];
 
   open(options: OpenOptions): Promise<void>;
   close(): void;
   select(selection: Selection | null): void;
   openTab(tab: Tab): void;
   closeTab(id: Id): void;
+  closeAllTabs(): void;
   activateTab(id: Id): void;
   /** Applies a change at once and sends it. Returns false (and shows why) when it is refused. */
   edit(label: string, edits: Edit[], action?: Toast["action"]): boolean;
   undo(changeId: Id): Promise<void>;
   dismiss(toastId: string): void;
   askDeleteObject(id: Id | null): void;
+  setExplorerTask(task: ExplorerTask | null): void;
+  /** Adds an explorer row to the marked set, or takes it out; null clears the set. */
+  toggleMark(item: Selection | null): void;
   /** A toast that reports no change (e.g. why a gesture did nothing). */
   notify(text: string, tone?: Toast["tone"]): void;
 }
@@ -96,6 +108,8 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
     changedTabs: new Set(),
     toasts: [],
     confirmDelete: null,
+    explorerTask: null,
+    marked: [],
 
     async open(options) {
       get().close();
@@ -155,6 +169,8 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
           activeTab: null,
           changedTabs: new Set(),
           confirmDelete: null,
+          explorerTask: null,
+          marked: [],
         });
       } catch (error) {
         if (mine !== generation) return;
@@ -193,6 +209,10 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
       });
     },
 
+    closeAllTabs() {
+      set({ tabs: [], activeTab: null, changedTabs: new Set() });
+    },
+
     activateTab(id) {
       set((s) => ({ activeTab: id, changedTabs: without(s.changedTabs, id) }));
     },
@@ -228,6 +248,17 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
 
     askDeleteObject(id) {
       set({ confirmDelete: id });
+    },
+
+    setExplorerTask(task) {
+      set({ explorerTask: task });
+    },
+
+    toggleMark(item) {
+      if (!item) return set({ marked: [] });
+      set((s) => ({
+        marked: s.marked.some((m) => m.id === item.id) ? s.marked.filter((m) => m.id !== item.id) : [...s.marked, item],
+      }));
     },
 
     notify(text, tone = "info") {

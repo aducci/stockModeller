@@ -136,6 +136,15 @@ export function checkInvariants(state: ModelState): void {
       fail(`${r.targetId} has two parents through ${r.type}`);
     }
   }
+  // Containment (design/02-model/semantics.md §3): one container, and the content lives in its folder.
+  for (const o of state.objects.live()) {
+    const containers = state.relationships
+      .find("byTarget", o.id)
+      .filter((r) => metamodel.relationshipType(r.type)!.semantic === "containment");
+    if (containers.length > 1) fail(`${o.id} has ${containers.length} containers`);
+    const container = containers[0] && state.objects.get(containers[0].sourceId);
+    if (container && container.folderId !== o.folderId) fail(`${o.id} is not in its container's folder`);
+  }
   for (const occ of state.objectOccurrences.live()) {
     if (!state.diagrams.get(occ.diagramId)) fail(`occurrence ${occ.id} is on a missing diagram`);
     if (!state.objects.get(occ.objectId)) fail(`occurrence ${occ.id} shows a missing object`);

@@ -38,7 +38,7 @@ export type RelationshipRow = Omit<Relationship, "updatedAt" | "updatedBy"> &
   Versioned & { updatedAt: string | null; updatedBy: Id | null };
 export type DiagramRow = Omit<Diagram, "objectOccurrences" | "relationshipOccurrences" | "annotations" | "version"> &
   Versioned;
-export type FolderRow = { id: Id; parentId: Id | null; name: string } & RowMeta;
+export type FolderRow = { id: Id; parentId: Id | null; name: string; rank?: string } & RowMeta;
 export type ObjectOccurrenceRow = ObjectOccurrence & { diagramId: Id } & RowMeta;
 export type RelationshipOccurrenceRow = RelationshipOccurrence & { diagramId: Id } & RowMeta;
 export type AnnotationRow = Annotation & { diagramId: Id } & RowMeta;

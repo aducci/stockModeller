@@ -1,14 +1,20 @@
 // A metamodel compiled for fast lookups: resolved inheritance, rule matching and diagram types.
-import type {
-  DiagramType,
-  MetamodelPackage,
-  ObjectType,
-  PropertyType,
-  RelationshipRule,
-  RelationshipType,
-  SymbolStyle,
-  TypeKey,
-  ValueList,
+import {
+  LEVEL_PROPERTY,
+  corePackage,
+  semanticKindInfo,
+  type DiagramType,
+  type MetamodelPackage,
+  type ObjectType,
+  type PropertyType,
+  type RelationshipRule,
+  type RelationshipType,
+  type SemanticCategory,
+  type SemanticKind,
+  type SemanticLevel,
+  type SymbolStyle,
+  type TypeKey,
+  type ValueList,
 } from "@connectome/model";
 
 export class MetamodelError extends Error {
@@ -27,6 +33,18 @@ export interface ResolvedObjectType {
   uniqueName: "repository" | "folder" | "none";
   keyPattern: string | undefined;
   symbol: Partial<SymbolStyle>;
+  /** Semantic category and default level (design/02-model/semantics.md §4), inherited through `extends`. */
+  category: SemanticCategory;
+  level: SemanticLevel | undefined;
+  levelFixed: boolean;
+}
+
+/** A relationship type with its semantic defaults filled in (semantics.md §2.2). */
+export interface ResolvedRelationshipType extends RelationshipType {
+  semantic: SemanticKind;
+  semanticDirection: "forward" | "reverse";
+  nesting: boolean;
+  singleParent: boolean;
 }
 
 export interface CompiledRule extends RelationshipRule {
@@ -40,7 +58,8 @@ export interface ResolvedDiagramType {
 
 export class Metamodel {
   private readonly objectTypes = new Map<TypeKey, ResolvedObjectType>();
-  private readonly relationshipTypes = new Map<TypeKey, RelationshipType>();
+  private readonly relationshipTypes = new Map<TypeKey, ResolvedRelationshipType>();
+  private readonly relationshipProperties = new Map<TypeKey, ReadonlySet<string>>();
   private readonly propertyTypes = new Map<string, PropertyType>();
   private readonly valueLists = new Map<string, ValueList>();
   private readonly diagramTypes = new Map<TypeKey, ResolvedDiagramType>();
@@ -60,8 +79,33 @@ export class Metamodel {
     return [...this.objectTypes.values()];
   }
 
-  relationshipType(key: TypeKey): RelationshipType | undefined {
+  relationshipType(key: TypeKey): ResolvedRelationshipType | undefined {
     return this.relationshipTypes.get(key);
+  }
+
+  /** Every relationship type, in the package's order. */
+  allRelationshipTypes(): ResolvedRelationshipType[] {
+    return [...this.relationshipTypes.values()];
+  }
+
+  /** Property types a relationship of this type may have: its own and its kind's core properties. */
+  relationshipTypeProperties(key: TypeKey): ReadonlySet<string> {
+    return this.relationshipProperties.get(key) ?? new Set();
+  }
+
+  /**
+   * How a relationship reads from one of its ends, in the kind's terms (semantics.md §9.1): from the source it is
+   * "outgoing", from the target "incoming"; a `reverse` type swaps them.
+   */
+  semanticDirection(key: TypeKey, end: "source" | "target"): "outgoing" | "incoming" {
+    const reverse = this.relationshipTypes.get(key)?.semanticDirection === "reverse";
+    return (end === "source") !== reverse ? "outgoing" : "incoming";
+  }
+
+  /** An object's semantic level: its own `semantic.level`, or its type's default. */
+  objectLevel(object: { type: TypeKey; properties: Record<string, unknown> }): SemanticLevel | undefined {
+    const own = object.properties[LEVEL_PROPERTY];
+    return typeof own === "string" ? (own as SemanticLevel) : this.objectTypes.get(object.type)?.level;
   }
 
   propertyType(key: string): PropertyType | undefined {
@@ -74,6 +118,11 @@ export class Metamodel {
 
   diagramType(key: TypeKey): ResolvedDiagramType | undefined {
     return this.diagramTypes.get(key);
+  }
+
+  /** Every diagram type, in the package's order (offered by "New diagram"). */
+  allDiagramTypes(): ResolvedDiagramType[] {
+    return [...this.diagramTypes.values()];
   }
 
   /** True when `type` is `ancestor` or inherits from it. `"*"` matches every type. */
@@ -90,7 +139,7 @@ export class Metamodel {
   }
 
   /** Relationship types the rules allow from one object type to another (drives the connection picker). */
-  allowedRelationshipTypes(sourceType: TypeKey, targetType: TypeKey): RelationshipType[] {
+  allowedRelationshipTypes(sourceType: TypeKey, targetType: TypeKey): ResolvedRelationshipType[] {
     return [...this.relationshipTypes.values()].filter(
       (t) => this.matchingRules(t.key, sourceType, targetType).length > 0,
     );
@@ -113,13 +162,21 @@ export class Metamodel {
     const problems: string[] = [];
     const duplicate = (kind: string, key: string) => problems.push(`${kind} "${key}" is defined twice`);
 
+    // The core package comes first and its keys are reserved (semantics.md §4.3).
+    for (const list of corePackage.valueLists ?? []) mm.valueLists.set(list.key, list);
+    for (const pt of corePackage.propertyTypes ?? []) mm.propertyTypes.set(pt.key, pt);
+    const reserved = (kind: string, key: string) =>
+      problems.push(`${kind} "${key}" is reserved by the core package and cannot be redefined`);
+
     for (const list of pkg.valueLists ?? []) {
-      if (mm.valueLists.has(list.key)) duplicate("Value list", list.key);
+      if (corePackage.valueLists?.some((l) => l.key === list.key)) reserved("Value list", list.key);
+      else if (mm.valueLists.has(list.key)) duplicate("Value list", list.key);
       mm.valueLists.set(list.key, list);
     }
 
     for (const pt of pkg.propertyTypes ?? []) {
-      if (mm.propertyTypes.has(pt.key)) duplicate("Property type", pt.key);
+      if (corePackage.propertyTypes?.some((p) => p.key === pt.key)) reserved("Property type", pt.key);
+      else if (mm.propertyTypes.has(pt.key)) duplicate("Property type", pt.key);
       mm.propertyTypes.set(pt.key, pt);
       if ((pt.dataType === "list" || pt.dataType === "multiList") && !pt.valueList) {
         problems.push(`Property type "${pt.key}" is a ${pt.dataType} but names no value list`);
@@ -151,7 +208,7 @@ export class Metamodel {
         current = parent;
       }
       const chain = lineage.map((k) => definitions.get(k)!).filter(Boolean);
-      const properties = new Set(chain.flatMap((t) => t.properties ?? []));
+      const properties = new Set([...chain.flatMap((t) => t.properties ?? []), LEVEL_PROPERTY]);
       for (const p of ot.properties ?? []) {
         if (!mm.propertyTypes.has(p)) problems.push(`Object type "${ot.key}" uses unknown property type "${p}"`);
       }
@@ -163,16 +220,39 @@ export class Metamodel {
         uniqueName: inherited("uniqueName") ?? "none",
         keyPattern: inherited("keyPattern"),
         symbol: Object.assign({}, ...[...chain].reverse().map((t) => t.symbol ?? {})),
+        category: inherited("category") ?? "other",
+        level: inherited("level"),
+        levelFixed: inherited("levelFixed") ?? false,
       });
+      if (inherited("levelFixed") && !inherited("level"))
+        problems.push(`Object type "${ot.key}" fixes its level but names none`);
     }
 
     for (const rt of pkg.relationshipTypes) {
       if (mm.relationshipTypes.has(rt.key)) duplicate("Relationship type", rt.key);
-      mm.relationshipTypes.set(rt.key, rt);
+      const semantic = rt.semantic ?? "association";
+      const kind = semanticKindInfo(semantic);
+      // Containment is the repository's structure: always nesting, always one parent (semantics.md §3).
+      const containment = semantic === "containment";
+      if (containment && (rt.nesting === false || rt.singleParent === false))
+        problems.push(`Relationship type "${rt.key}" is a containment, which always nests with a single parent`);
+      // Types without a kind keep the nesting they had before kinds existed.
+      if (rt.cascadeDelete && semantic !== "composition")
+        problems.push(`Relationship type "${rt.key}" cascades deletes but is not a composition`);
+      if (rt.nesting && rt.semantic !== undefined && !kind.nestable)
+        problems.push(`Relationship type "${rt.key}" is a ${semantic}, which cannot be shown by nesting`);
+      mm.relationshipTypes.set(rt.key, {
+        ...rt,
+        semantic,
+        semanticDirection: rt.semanticDirection ?? "forward",
+        nesting: containment || (rt.nesting ?? false),
+        singleParent: containment || (rt.singleParent ?? false),
+      });
+      mm.relationshipProperties.set(rt.key, new Set([...(rt.properties ?? []), ...kind.properties]));
       for (const p of rt.properties ?? []) {
         if (!mm.propertyTypes.has(p)) problems.push(`Relationship type "${rt.key}" uses unknown property type "${p}"`);
       }
-      if (rt.singleParent && !rt.nesting)
+      if (rt.singleParent && !rt.nesting && !containment)
         problems.push(`Relationship type "${rt.key}" is singleParent but not nesting`);
     }
 

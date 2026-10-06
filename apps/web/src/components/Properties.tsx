@@ -2,8 +2,9 @@
 // "occurs on" diagrams and tags for the selection. Every edit is one change, shown at once.
 import { useEffect, useState, type KeyboardEvent, type ReactNode } from "react";
 import type { ModelState, ObjectRow, Metamodel } from "@connectome/engine";
-import type { Id, PropertyType, PropertyValue } from "@connectome/model";
+import { LEVEL_PROPERTY, type Id, type PropertyType, type PropertyValue } from "@connectome/model";
 import { useModel, useWorkbench } from "../state/workbench";
+import { relationshipGroups } from "../semantics";
 import { byName, folderPath } from "../text";
 
 export function Properties() {
@@ -107,6 +108,7 @@ export function ObjectProperties({ id }: { id: Id }) {
 }
 
 function groupName(key: string): string {
+  if (key === "semantic") return "Semantics";
   return key.charAt(0).toUpperCase() + key.slice(1);
 }
 
@@ -127,13 +129,17 @@ function PropertyRow(props: {
       break;
     case "list": {
       const list = metamodel.valueList(pt.valueList ?? "");
+      // The level falls back to the type's default, and a type can fix it (semantics.md §4.2).
+      const type = pt.key === LEVEL_PROPERTY ? metamodel.objectType(object.type) : undefined;
+      const fallback = type?.level && list?.values.find((v) => v.key === type.level)?.label;
       editor = (
         <select
           id={id}
           value={typeof value === "string" ? value : ""}
+          disabled={type?.levelFixed}
           onChange={(e) => onCommit(e.target.value || null)}
         >
-          <option value="">—</option>
+          <option value="">{fallback ? `${fallback} (type default)` : "—"}</option>
           {list?.values.map((v) => (
             <option key={v.key} value={v.key}>
               {v.label}
@@ -256,38 +262,31 @@ function formatValue(value: PropertyValue): string {
   return Array.isArray(value) ? value.join(", ") : String(value);
 }
 
+/** Relationships grouped by what they mean (design/02-model/semantics.md §9.1), each row in the type's own words. */
 function Relationships({ object, state, metamodel }: { object: ObjectRow; state: ModelState; metamodel: Metamodel }) {
   const select = useWorkbench((s) => s.select);
-  const rows = [
-    ...state.relationships.find("bySource", object.id).map((r) => ({
-      r,
-      verb: metamodel.relationshipType(r.type)?.verb ?? r.type,
-      other: r.targetId,
-      arrow: "→",
-    })),
-    ...state.relationships.find("byTarget", object.id).map((r) => ({
-      r,
-      verb: metamodel.relationshipType(r.type)?.inverseVerb ?? r.type,
-      other: r.sourceId,
-      arrow: "←",
-    })),
-  ].sort((a, b) => a.verb.localeCompare(b.verb));
+  const groups = relationshipGroups(state, metamodel, object.id);
   return (
     <section className="group">
       <h3>Relationships</h3>
-      {rows.length === 0 && <p className="muted">None yet.</p>}
-      <ul className="plain">
-        {rows.map(({ r, verb, other, arrow }) => (
-          <li key={r.id}>
-            <span className="muted">
-              {verb} {arrow}
-            </span>{" "}
-            <button className="link" onClick={() => select({ kind: "object", id: other })}>
-              {state.objects.get(other)?.name ?? other}
-            </button>
-          </li>
-        ))}
-      </ul>
+      {groups.length === 0 && <p className="muted">None yet.</p>}
+      {groups.map((g) => (
+        <div key={`${g.kind}:${g.direction}`} className="rel-group" data-kind={g.kind}>
+          <h4>{g.label}</h4>
+          <ul className="plain">
+            {g.rows.map(({ relationship, verb, other, arrow }) => (
+              <li key={relationship.id}>
+                <span className="muted">
+                  {verb} {arrow}
+                </span>{" "}
+                <button className="link" onClick={() => select({ kind: "object", id: other })}>
+                  {state.objects.get(other)?.name ?? other}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
     </section>
   );
 }
