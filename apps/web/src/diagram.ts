@@ -156,5 +156,10 @@ export function deletionImpact(state: ModelState, metamodel: Metamodel, objectId
   const diagrams = [...new Set(state.objectOccurrences.find("byObject", objectId).map((o) => o.diagramId))]
     .filter((d) => d !== diagramId)
     .flatMap((d) => state.diagrams.get(d) ?? []);
-  return { relationships, children, diagrams };
+  // Contents (containment) can be kept, moving up a level, or deleted too (semantics.md §7).
+  const contents = state.relationships
+    .find("bySource", objectId)
+    .filter((r) => metamodel.relationshipType(r.type)?.semantic === "containment")
+    .map((r) => r.targetId);
+  return { relationships, children, contents, diagrams };
 }

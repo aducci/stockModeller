@@ -1,0 +1,131 @@
+{
+  "name": "Core",
+  "version": "1.0.0",
+  "valueLists": [
+    {
+      "key": "semanticLevel",
+      "values": [
+        {
+          "key": "conceptual",
+          "label": "Conceptual",
+          "order": 1
+        },
+        {
+          "key": "logical",
+          "label": "Logical",
+          "order": 2
+        },
+        {
+          "key": "physical",
+          "label": "Physical",
+          "order": 3
+        },
+        {
+          "key": "implementation",
+          "label": "Implementation",
+          "order": 4
+        }
+      ]
+    },
+    {
+      "key": "accessMode",
+      "values": [
+        {
+          "key": "read",
+          "label": "Read"
+        },
+        {
+          "key": "write",
+          "label": "Write"
+        },
+        {
+          "key": "readWrite",
+          "label": "Read/write"
+        }
+      ]
+    },
+    {
+      "key": "influenceEffect",
+      "values": [
+        {
+          "key": "positive",
+          "label": "Positive",
+          "color": "#7fd1a2"
+        },
+        {
+          "key": "negative",
+          "label": "Negative",
+          "color": "#e57373"
+        },
+        {
+          "key": "neutral",
+          "label": "Neutral",
+          "color": "#c7c7c7"
+        }
+      ]
+    },
+    {
+      "key": "interactionPattern",
+      "values": [
+        {
+          "key": "synchronous",
+          "label": "Synchronous"
+        },
+        {
+          "key": "asynchronous",
+          "label": "Asynchronous"
+        },
+        {
+          "key": "fireAndForget",
+          "label": "Fire and forget"
+        }
+      ]
+    }
+  ],
+  "propertyTypes": [
+    {
+      "key": "semantic.level",
+      "name": "Level",
+      "group": "semantic",
+      "dataType": "list",
+      "valueList": "semanticLevel",
+      "role": "semantic.level",
+      "help": "How concrete this is: conceptual, logical, physical or implementation"
+    },
+    {
+      "key": "access.mode",
+      "name": "Access",
+      "group": "access",
+      "dataType": "list",
+      "valueList": "accessMode"
+    },
+    {
+      "key": "influence.effect",
+      "name": "Effect",
+      "group": "influence",
+      "dataType": "list",
+      "valueList": "influenceEffect"
+    },
+    {
+      "key": "interaction.pattern",
+      "name": "Pattern",
+      "group": "interaction",
+      "dataType": "list",
+      "valueList": "interactionPattern"
+    },
+    {
+      "key": "interaction.protocol",
+      "name": "Protocol",
+      "group": "interaction",
+      "dataType": "text"
+    },
+    {
+      "key": "interaction.operation",
+      "name": "Operation",
+      "group": "interaction",
+      "dataType": "text"
+    }
+  ],
+  "objectTypes": [],
+  "relationshipTypes": []
+}

@@ -1,6 +1,6 @@
 // Shift+Delete (design/04-ux/diagram-editor.md §3): deleting an object from the model says first what goes with
 // it: its relationships, its children and the other diagrams it occurs on.
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useModel, useWorkbench } from "../state/workbench";
 import { deletionImpact } from "../diagram";
 
@@ -12,6 +12,7 @@ export function DeleteObjectDialog() {
   const select = useWorkbench((s) => s.select);
   const activeTab = useWorkbench((s) => s.activeTab);
   const cancel = useRef<HTMLButtonElement>(null);
+  const [contentsChoice, setContentsChoice] = useState<"moveUp" | "deleteContents">("moveUp");
   const object = id ? state.objects.get(id) : undefined;
   useEffect(() => cancel.current?.focus(), [id]);
   // Closes by itself if the object is deleted meanwhile.
@@ -20,11 +21,14 @@ export function DeleteObjectDialog() {
   }, [id, object, ask]);
   if (!object) return null;
 
-  const { relationships, children, diagrams } = deletionImpact(state, metamodel, object.id, activeTab);
+  const { relationships, children, contents, diagrams } = deletionImpact(state, metamodel, object.id, activeTab);
   const name = (objectId: string) => state.objects.get(objectId)?.name ?? objectId;
   const confirm = () => {
     ask(null);
-    if (edit(`Delete ${object.name}`, [{ edit: "deleteObject", id: object.id, baseVersion: object.version }])) {
+    const deleteContents = contents.length > 0 && contentsChoice === "deleteContents";
+    const label = deleteContents ? `Delete ${object.name} and its contents` : `Delete ${object.name}`;
+    const contentsEdit = deleteContents ? { contents: "deleteContents" as const } : {};
+    if (edit(label, [{ edit: "deleteObject", id: object.id, baseVersion: object.version, ...contentsEdit }])) {
       select(null);
     }
   };
@@ -53,6 +57,29 @@ export function DeleteObjectDialog() {
             <li key={c}>{name(c)}</li>
           ))}
         </Section>
+        {contents.length > 0 && (
+          <fieldset className="choice">
+            <legend>Its contents ({contents.length})</legend>
+            <label>
+              <input
+                type="radio"
+                name="contents"
+                checked={contentsChoice === "moveUp"}
+                onChange={() => setContentsChoice("moveUp")}
+              />
+              Keep them, one level up
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="contents"
+                checked={contentsChoice === "deleteContents"}
+                onChange={() => setContentsChoice("deleteContents")}
+              />
+              Delete them too
+            </label>
+          </fieldset>
+        )}
         <Section title={`Also on ${diagrams.length} other diagram${diagrams.length === 1 ? "" : "s"}`}>
           {diagrams.map((d) => (
             <li key={d.id}>⧉ {d.name}</li>

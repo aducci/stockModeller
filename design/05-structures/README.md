@@ -13,7 +13,8 @@ The machine-checkable version of [02-model](../02-model/overview.md). Everything
 | [sdk.d.ts](sdk.d.ts) | SDK: `connect()` for scripts anywhere (launch), `runAutomation()`, the automation module contract, panels (later) |
 | [example-automation.ts](example-automation.ts) | "Retire application" automation |
 | [metamodel.schema.json](metamodel.schema.json) | Schema for a metamodel or package |
-| [example-metamodel.json](example-metamodel.json) | "Essentials" package: 10 object types (one abstract), 8 relationship types (*contains* is the nesting type), property types, value lists, rules, and an ArchiMate exchange mapping |
+| [core-metamodel.json](core-metamodel.json) | The core package every repository has: the semantic property types (`semantic.level`, `access.mode`, `influence.effect`, `interaction.*`) and their value lists ([semantics §4.3](../02-model/semantics.md#43-the-core-package)) |
+| [example-metamodel.json](example-metamodel.json) | "Essentials" package 1.1.0: 12 object types (one abstract), 13 relationship types, each mapped to a semantic kind (*contains* is the containment), property types, value lists, rules, and an ArchiMate exchange mapping |
 | [diagram-type.schema.json](diagram-type.schema.json) | Schema for diagram types |
 | [example-diagram-type.json](example-diagram-type.json) | "Application landscape", including a generation rule |
 | [example-repository.json](example-repository.json) | A small repository: folders, objects, relationships, a Target 2027 scenario, one diagram (Claims Manager occurs twice on it), one catalogue |

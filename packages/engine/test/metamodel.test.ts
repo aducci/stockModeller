@@ -25,7 +25,7 @@ describe("compiled Essentials metamodel", () => {
 
   it("lists the relationship types allowed between two object types", () => {
     const keys = metamodel.allowedRelationshipTypes("application", "applicationBase").map((t) => t.key);
-    expect(keys.sort()).toEqual(["contains", "flowsTo"]);
+    expect(keys.sort()).toEqual(["composedOf", "contains", "flowsTo", "specialises"]);
   });
 
   it("lets diagram types admit subtypes of listed types", () => {

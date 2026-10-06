@@ -2,6 +2,7 @@
 // and the per-property concurrency rules of design/03-platform/collaboration-and-changes.md §2.
 // Pure: no I/O. The same code runs on the server (inside a database transaction) and in the browser (optimistically).
 import {
+  LEVEL_PROPERTY,
   MAX_EDITS_PER_CHANGE,
   type Actor,
   type Annotation,
@@ -19,7 +20,7 @@ import {
   type StylePatch,
   type TypeKey,
 } from "@connectome/model";
-import type { Metamodel, ResolvedDiagramType } from "./metamodel";
+import type { Metamodel, ResolvedDiagramType, ResolvedObjectType } from "./metamodel";
 import { checkValue } from "./properties";
 import type {
   AnnotationRow,
@@ -204,6 +205,8 @@ class Transaction {
         return this.createRelationship(edit);
       case "reconnectRelationship":
         return this.reconnectRelationship(edit);
+      case "changeRelationshipType":
+        return this.changeRelationshipType(edit);
       case "deleteRelationship":
         return this.deleteRelationshipEdit(edit);
       case "createFolder":
@@ -250,6 +253,7 @@ class Transaction {
     this.refLive("folders", e.folderId, "folderId");
     this.checkUniqueName(e.type, e.name, e.folderId, e.id);
     const properties = this.checkProperties(type.properties, {}, e.properties ?? {}, "properties");
+    this.checkLevel(type, e.properties ?? {});
     const key = e.key ?? this.nextKey(e.type, type.keyPattern);
     if (key !== null) this.checkUniqueKey(e.type, key, e.id);
 
@@ -282,6 +286,8 @@ class Transaction {
     this.checkBase("objects", obj, e.baseVersion, fields);
     const allowed = this.mm.objectType(obj.type)?.properties ?? new Set<string>();
     const properties = this.checkProperties(allowed, obj.properties, e.set, "properties");
+    const type = this.mm.objectType(obj.type);
+    if (type) this.checkLevel(type, e.set);
     const previous = Object.fromEntries(Object.keys(e.set).map((k) => [k, obj.properties[k] ?? null]));
     this.write("objects", { ...obj, properties });
     this.markChanged("objects", obj.id, fields);
@@ -313,10 +319,13 @@ class Transaction {
     const obj = this.requireLive("objects", e.id);
     this.checkBase("objects", obj, e.baseVersion, ["folderId"]);
     this.refLive("folders", e.folderId, "folderId");
-    this.checkUniqueName(obj.type, obj.name, e.folderId, obj.id);
-    this.write("objects", { ...obj, folderId: e.folderId });
-    this.markChanged("objects", obj.id, ["folderId"]);
-    this.step({ edit: "moveToFolder", id: obj.id, baseVersion: PENDING_VERSION, folderId: obj.folderId });
+    // Folder follows container (design/02-model/semantics.md §3): contents move with their container only.
+    const container = this.containerRelationship(obj.id);
+    const parent = container && this.state.objects.get(container.sourceId)!;
+    if (parent && parent.folderId !== e.folderId) {
+      this.invalid("folderId", `${obj.name} is part of ${parent.name}, so it stays in its folder; take it out first`);
+    }
+    this.relocate(obj, e.folderId, true);
     return obj.id;
   }
 
@@ -332,7 +341,9 @@ class Transaction {
     const dropped: Record<string, PropertyValue> = {};
     for (const [from, value] of Object.entries(obj.properties)) {
       const to = e.propertyMap?.[from] ?? from;
-      if (type.properties.has(to) && !(to in properties)) {
+      // A fixed level is the type's, never a carried-over value.
+      const fixedLevel = to === LEVEL_PROPERTY && type.levelFixed;
+      if (type.properties.has(to) && !(to in properties) && !fixedLevel) {
         const pt = this.mm.propertyType(to)!;
         const problem = pt.dataType === "calculated" ? null : checkValue(pt, value, this.valueContext());
         if (problem) this.invalid(`properties.${to}`, `${pt.name} ${problem} (from ${from})`);
@@ -376,12 +387,31 @@ class Transaction {
   private deleteObjectEdit(e: Extract<ModelEdit, { edit: "deleteObject" }>): Id {
     const obj = this.requireLive("objects", e.id);
     this.checkBase("objects", obj, e.baseVersion, ["*"]);
-    this.deleteObject(obj);
+    this.deleteObject(obj, e.contents ?? "moveUp");
     return obj.id;
   }
 
-  /** Deletes an object, its relationships and all its occurrences (rule 7). */
-  private deleteObject(obj: ObjectRow): void {
+  /**
+   * Deletes an object, its relationships and all its occurrences (rule 7). Its contents move up to its own container
+   * (when the rules allow) or are deleted too; parts through a cascading composition are deleted (semantics.md §7).
+   */
+  private deleteObject(obj: ObjectRow, contents: "moveUp" | "deleteContents"): void {
+    const container = this.containerRelationship(obj.id);
+    const grandparent = container && this.state.objects.get(container.sourceId)!;
+    for (const rel of this.contentRelationships(obj.id)) {
+      const child = this.state.objects.get(rel.targetId);
+      if (!child) continue;
+      if (contents === "deleteContents") this.deleteObject(child, contents);
+      else if (grandparent && this.mm.matchingRules(rel.type, grandparent.type, child.type).length > 0) {
+        this.reconnect(rel, grandparent.id, rel.targetId, ["sourceId"], { sourceId: rel.sourceId });
+      }
+      // Otherwise the relationship goes with the object below and the child stays at the top of its folder.
+    }
+    for (const rel of this.state.relationships.find("bySource", obj.id)) {
+      const type = this.mm.relationshipType(rel.type);
+      const part = this.state.objects.get(rel.targetId);
+      if (type?.semantic === "composition" && type.cascadeDelete && part) this.deleteObject(part, contents);
+    }
     for (const occ of this.state.objectOccurrences.find("byObject", obj.id)) this.removeObjectOccurrence(occ);
     for (const rel of this.relationshipsOf(obj.id)) this.deleteRelationship(rel);
     const current = this.state.objects.get(obj.id)!;
@@ -412,7 +442,12 @@ class Transaction {
     if (source.id === target.id) this.invalid("targetId", "A relationship connects two different objects");
     if (e.name !== undefined && e.name.length > MAX_NAME)
       this.invalid("name", `Names have at most ${MAX_NAME} characters`);
-    const properties = this.checkProperties(new Set(type.properties ?? []), {}, e.properties ?? {}, "properties");
+    const properties = this.checkProperties(
+      this.mm.relationshipTypeProperties(e.type),
+      {},
+      e.properties ?? {},
+      "properties",
+    );
     this.checkRelationshipRules(e.type, source.type, target.type, source.id, e.id);
     this.checkNesting(e.type, source.id, target.id, e.id);
 
@@ -435,6 +470,7 @@ class Transaction {
       ...this.meta(tombstone),
     });
     this.markChanged("relationships", e.id, ["*"]);
+    if (type.semantic === "containment") this.relocate(target, source.folderId);
     this.step({ edit: "deleteRelationship", id: e.id, baseVersion: PENDING_VERSION });
     return e.id;
   }
@@ -447,8 +483,22 @@ class Transaction {
     ];
     if (fields.length === 0) this.invalid("sourceId", "Give a new source, a new target or both");
     this.checkBase("relationships", rel, e.baseVersion, fields);
-    const source = this.refLive("objects", e.sourceId ?? rel.sourceId, "sourceId");
-    const target = this.refLive("objects", e.targetId ?? rel.targetId, "targetId");
+    this.reconnect(rel, e.sourceId ?? rel.sourceId, e.targetId ?? rel.targetId, fields, {
+      ...(e.sourceId !== undefined ? { sourceId: rel.sourceId } : {}),
+      ...(e.targetId !== undefined ? { targetId: rel.targetId } : {}),
+    });
+    return rel.id;
+  }
+
+  private reconnect(
+    rel: RelationshipRow,
+    sourceId: Id,
+    targetId: Id,
+    fields: string[],
+    previous: { sourceId?: Id; targetId?: Id },
+  ): void {
+    const source = this.refLive("objects", sourceId, "sourceId");
+    const target = this.refLive("objects", targetId, "targetId");
     if (source.id === target.id) this.invalid("targetId", "A relationship connects two different objects");
     this.checkRelationshipRules(rel.type, source.type, target.type, source.id, rel.id);
     this.checkNesting(rel.type, source.id, target.id, rel.id);
@@ -459,12 +509,64 @@ class Transaction {
     this.write("relationships", { ...rel, sourceId: source.id, targetId: target.id });
     this.unnestUnbacked(rel.sourceId, rel.targetId);
     this.markChanged("relationships", rel.id, fields);
+    // A re-parented content moves into its new container's folder (semantics.md §3).
+    if (this.isContainment(rel.type)) this.relocate(target, source.folderId);
+    this.step({ edit: "reconnectRelationship", id: rel.id, baseVersion: PENDING_VERSION, ...previous });
+  }
+
+  private changeRelationshipType(e: Extract<ModelEdit, { edit: "changeRelationshipType" }>): Id {
+    const rel = this.requireLive("relationships", e.id);
+    const fields = ["type", ...Object.keys(rel.properties).map((k) => `properties.${k}`)];
+    this.checkBase("relationships", rel, e.baseVersion, fields);
+    const type = this.mm.relationshipType(e.type);
+    if (!type) this.invalid("type", `Unknown relationship type "${e.type}"`);
+    const source = this.state.objects.get(rel.sourceId)!;
+    const target = this.state.objects.get(rel.targetId)!;
+
+    // Carry values over (renamed through propertyMap); values the new type cannot hold are dropped.
+    const allowed = this.mm.relationshipTypeProperties(e.type);
+    const carried: Record<string, PropertyValue> = {};
+    const reverseMap: Record<string, string> = {};
+    const dropped: Record<string, PropertyValue> = {};
+    for (const [from, value] of Object.entries(rel.properties)) {
+      const to = e.propertyMap?.[from] ?? from;
+      if (allowed.has(to) && !(to in carried)) {
+        const pt = this.mm.propertyType(to)!;
+        const problem = checkValue(pt, value, this.valueContext());
+        if (problem) this.invalid(`properties.${to}`, `${pt.name} ${problem} (from ${from})`);
+        carried[to] = value;
+        if (to !== from) reverseMap[to] = from;
+      } else {
+        dropped[from] = value;
+      }
+    }
+    for (const key of Object.keys(e.set ?? {})) {
+      if (key in carried) this.invalid(`set.${key}`, `"${key}" is already carried over from the old type`);
+    }
+    const properties = this.checkProperties(allowed, carried, e.set ?? {}, "set");
+
+    this.checkRelationshipRules(e.type, source.type, target.type, source.id, rel.id);
+    this.checkNesting(e.type, source.id, target.id, rel.id);
+    for (const ro of this.state.relationshipOccurrences.find("byRelationship", rel.id)) {
+      const diagram = this.state.diagrams.get(ro.diagramId)!;
+      const dt = this.mm.diagramType(diagram.diagramType);
+      if (dt && !this.mm.diagramAllowsRelationshipType(dt, e.type)) {
+        this.invalid("type", `This relationship is shown on "${diagram.name}", which does not show ${type.name}`);
+      }
+      if (ro.shownAs === "nesting" && !type.nesting) this.removeRelationshipOccurrence(ro);
+    }
+
+    this.write("relationships", { ...rel, type: e.type, properties });
+    this.markChanged("relationships", rel.id, [...fields, ...Object.keys(properties).map((k) => `properties.${k}`)]);
+    this.unnestUnbacked(rel.sourceId, rel.targetId);
+    if (type.semantic === "containment") this.relocate(target, source.folderId);
     this.step({
-      edit: "reconnectRelationship",
+      edit: "changeRelationshipType",
       id: rel.id,
       baseVersion: PENDING_VERSION,
-      ...(e.sourceId !== undefined ? { sourceId: rel.sourceId } : {}),
-      ...(e.targetId !== undefined ? { targetId: rel.targetId } : {}),
+      type: rel.type,
+      ...(Object.keys(reverseMap).length > 0 ? { propertyMap: reverseMap } : {}),
+      ...(Object.keys(dropped).length > 0 ? { set: dropped } : {}),
     });
     return rel.id;
   }
@@ -545,10 +647,13 @@ class Transaction {
   private checkNesting(type: TypeKey, sourceId: Id, targetId: Id, relId: Id): void {
     const rt = this.mm.relationshipType(type);
     if (!rt?.nesting) return;
+    // Containment is one hierarchy whatever the type (semantics.md §3); other nesting types are one each (B1).
+    const sameHierarchy = (r: RelationshipRow) =>
+      rt.semantic === "containment" ? this.isContainment(r.type) : r.type === type;
     if (rt.singleParent) {
       const parents = this.state.relationships
         .find("byTarget", targetId)
-        .filter((r) => r.type === type && r.id !== relId);
+        .filter((r) => sameHierarchy(r) && r.id !== relId);
       if (parents.length > 0) {
         const parent = this.state.objects.get(parents[0]!.sourceId)!;
         this.reject({
@@ -575,8 +680,43 @@ class Transaction {
       if (seen.has(current)) continue;
       seen.add(current);
       for (const r of this.state.relationships.find("byTarget", current)) {
-        if (r.type === type && r.id !== relId) queue.push(r.sourceId);
+        if (sameHierarchy(r) && r.id !== relId) queue.push(r.sourceId);
       }
+    }
+  }
+
+  private isContainment(type: TypeKey): boolean {
+    return this.mm.relationshipType(type)?.semantic === "containment";
+  }
+
+  /** The containment relationship that holds an object, if any (there is at most one). */
+  private containerRelationship(objectId: Id): RelationshipRow | undefined {
+    return this.state.relationships.find("byTarget", objectId).find((r) => this.isContainment(r.type));
+  }
+
+  private contentRelationships(objectId: Id): RelationshipRow[] {
+    return this.state.relationships.find("bySource", objectId).filter((r) => this.isContainment(r.type));
+  }
+
+  /**
+   * Moves an object and everything it contains into a folder (folder follows container, semantics.md §3). The
+   * deepest contents are stepped first, so undo moves the root first and its contents follow it.
+   */
+  private relocate(root: ObjectRow, folderId: Id, includeRoot = false): void {
+    const subtree: Id[] = [];
+    const visit = (id: Id) => {
+      if (subtree.includes(id)) return;
+      subtree.push(id);
+      for (const r of this.contentRelationships(id)) visit(r.targetId);
+    };
+    visit(root.id);
+    for (const id of subtree.reverse()) {
+      const obj = this.state.objects.get(id)!;
+      if (obj.folderId === folderId && !(includeRoot && id === root.id)) continue;
+      this.checkUniqueName(obj.type, obj.name, folderId, obj.id);
+      this.write("objects", { ...obj, folderId });
+      this.markChanged("objects", obj.id, ["folderId"]);
+      this.step({ edit: "moveToFolder", id: obj.id, baseVersion: PENDING_VERSION, folderId: obj.folderId });
     }
   }
 
@@ -647,7 +787,10 @@ class Transaction {
   private deleteFolder(folder: FolderRow): void {
     for (const sub of this.state.folders.find("byParent", folder.id)) this.deleteFolder(sub);
     for (const diagram of this.state.diagrams.find("byFolder", folder.id)) this.deleteDiagram(diagram);
-    for (const obj of this.state.objects.find("byFolder", folder.id)) this.deleteObject(obj);
+    for (const { id } of this.state.objects.find("byFolder", folder.id)) {
+      const obj = this.state.objects.get(id); // an earlier delete may have taken it with it
+      if (obj) this.deleteObject(obj, "deleteContents");
+    }
     this.write("folders", { ...folder, deleted: true });
     this.step({ edit: "createFolder", id: folder.id, parentId: folder.parentId, name: folder.name });
   }
@@ -1153,6 +1296,13 @@ class Transaction {
       if (n) max = Math.max(max, Number(n[1]));
     }
     return `${prefix}${String(max + 1).padStart(zeros.length, "0")}${suffix}`;
+  }
+
+  /** A type with a fixed level only accepts its own level (design/02-model/semantics.md §4.2). */
+  private checkLevel(type: ResolvedObjectType, set: Record<string, PropertyValue>): void {
+    const value = set[LEVEL_PROPERTY];
+    if (type.levelFixed && value != null && value !== type.level)
+      this.invalid(`properties.${LEVEL_PROPERTY}`, `${type.definition.name} is always ${type.level}`);
   }
 
   /** Rule 2: only assigned property types, with values of the right data type. `null` clears a value. */

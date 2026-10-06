@@ -55,3 +55,26 @@ op       := "=" | "!=" | ">" | ">=" | "<" | "<=" | "~" | "in"
 ```json
 { "query": "type:application", "groupBy": "assessment.criticality", "measure": { "sum": "cost.runCost" } }
 ```
+
+## 5. Semantic paths
+
+From [semantics §9.4](../02-model/semantics.md#94-queries). Additions to the grammar, compiled like other paths:
+
+```
+path     := ( "-" relSel? "->" | "<-" relSel? "-" | "-*-" ) steps? term?
+relSel   := (relType | "@" kind) ("[" relFilter ("AND" relFilter)* "]")?
+relFilter := propertyKey op value | "payload:" term
+filter   := … | "category:" category | "level:" level
+```
+
+| Question | Query |
+|---|---|
+| What implements this logical service, at any depth? | `<-@realisation-{1,6} id:01J…` |
+| What flows into this application? | `type:applicationBase AND -@flow-> name:"Claims Manager"` |
+| What systems consume Payment Information (or a representation of it)? | `exists(<-@flow[payload: (name:"Payment Information" OR -@representation-> name:"Payment Information")]-)` |
+| Who writes to customer data? | `-@access[access.mode in (write, readWrite)]-> name:"Customer"` |
+| Conceptual services nothing realises | `category:service AND level:conceptual AND NOT exists(<-@realisation-)` |
+
+- `@kind` matches every relationship type of that kind, with `semanticDirection: reverse` types turned round, so `-@realisation->` always goes from the concrete to the abstract.
+- Interaction messages are flows, so `-@flow->` follows requests and responses; `-@interaction->` follows the interaction itself.
+

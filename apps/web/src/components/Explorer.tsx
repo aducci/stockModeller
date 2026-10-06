@@ -1,12 +1,14 @@
 // The explorer's Folders tab (design/04-ux/workbench.md): everything as stored, with a filter, a right-click
-// menu on every row (and on the empty space) and inline create and rename. The Types, Hierarchies and Queries
-// tabs arrive in M1.
+// menu on every row (and on the empty space) and inline create and rename. Contained objects show inside their
+// container, and dropping an object onto another puts it there (semantics.md §3). The Types, Hierarchies and
+// Queries tabs arrive in M1.
 import {
   createContext,
   useContext,
   useEffect,
   useRef,
   useState,
+  type DragEvent,
   type FormEvent,
   type KeyboardEvent,
   type MouseEvent,
@@ -14,6 +16,7 @@ import {
 import { ulid, type Id } from "@connectome/model";
 import { useAuth } from "../state/auth";
 import { useModel, useWorkbench, type Selection } from "../state/workbench";
+import { containerOf, containPlan, contentsOf, moveToFolderPlan, type Plan } from "../semantics";
 import { byName } from "../text";
 import { folderChain, targetFolder } from "../explorer";
 import { DRAG_OBJECT } from "./DiagramEditor";
@@ -107,7 +110,12 @@ function FolderNode({ id, depth }: { id: Id; depth: number }) {
   }, [holdsSelection, selection?.id]);
   if (!folder) return null;
   const folders = state.folders.find("byParent", id).sort(byName);
-  const objects = state.objects.find("byFolder", id).sort(byName);
+  const { metamodel } = useModel();
+  // Contents show inside their container, not at the folder's top level.
+  const objects = state.objects
+    .find("byFolder", id)
+    .filter((o) => !containerOf(state, metamodel, o.id))
+    .sort(byName);
   const diagrams = state.diagrams.find("byFolder", id).sort(byName);
   const empty = folders.length + objects.length + diagrams.length === 0;
   return (
@@ -130,9 +138,34 @@ function FolderNode({ id, depth }: { id: Id; depth: number }) {
             </li>
           ))}
           {objects.map((o) => (
-            <li key={o.id} role="treeitem">
-              <Row item={{ kind: "object", id: o.id }} depth={depth + 1} icon="▭" label={o.name} />
-            </li>
+            <ObjectNode key={o.id} id={o.id} depth={depth + 1} />
+          ))}
+        </ul>
+      )}
+    </li>
+  );
+}
+
+function ObjectNode({ id, depth }: { id: Id; depth: number }) {
+  const { state, metamodel } = useModel();
+  const [open, setOpen] = useState(true);
+  const object = state.objects.get(id);
+  if (!object) return null;
+  const contents = contentsOf(state, metamodel, id);
+  const icon = contents.length === 0 ? "▭" : open ? "▾ ▭" : "▸ ▭";
+  return (
+    <li role="treeitem" aria-expanded={contents.length > 0 ? open : undefined}>
+      <Row
+        item={{ kind: "object", id }}
+        depth={depth}
+        icon={icon}
+        label={object.name}
+        onToggle={() => setOpen(!open)}
+      />
+      {open && contents.length > 0 && (
+        <ul role="group">
+          {contents.map((c) => (
+            <ObjectNode key={c.id} id={c.id} depth={depth + 1} />
           ))}
         </ul>
       )}
@@ -163,7 +196,24 @@ function FilterResults({ query }: { query: string }) {
 
 function Row(props: { item: Selection; depth: number; icon: string; label: string; onToggle?: () => void }) {
   const { item, depth, icon, label, onToggle } = props;
-  const { state } = useModel();
+  const { state, metamodel } = useModel();
+  const edit = useWorkbench((s) => s.edit);
+  const notify = useWorkbench((s) => s.notify);
+  const [dropping, setDropping] = useState(false);
+  // An object dropped onto a folder moves there; onto an object, it goes inside it.
+  const droppable = item.kind === "folder" || item.kind === "object";
+  const onDrop = (e: DragEvent) => {
+    setDropping(false);
+    const dragged = e.dataTransfer.getData(DRAG_OBJECT);
+    if (!dragged || !droppable) return;
+    e.preventDefault();
+    const plan: Plan =
+      item.kind === "folder"
+        ? moveToFolderPlan(state, metamodel, dragged, item.id)
+        : containPlan(state, metamodel, dragged, item.id);
+    if ("error" in plan) notify(plan.error, "error");
+    else edit(plan.label, plan.edits);
+  };
   const selected = useWorkbench((s) => s.selection?.id === item.id);
   const renaming = useWorkbench((s) => s.explorerTask?.kind === "rename" && s.explorerTask.item.id === item.id);
   const select = useWorkbench((s) => s.select);
@@ -192,7 +242,7 @@ function Row(props: { item: Selection; depth: number; icon: string; label: strin
   if (renaming) return <RenameBox item={item} depth={depth} icon={icon} name={label} />;
   return (
     <div
-      className={`row${selected ? " selected" : ""}`}
+      className={`row${selected ? " selected" : ""}${dropping ? " drop-target" : ""}`}
       style={{ paddingLeft: 8 + depth * 14 }}
       tabIndex={0}
       aria-selected={selected}
@@ -202,8 +252,16 @@ function Row(props: { item: Selection; depth: number; icon: string; label: strin
       onDragStart={(e) => {
         if (item.kind !== "object") return;
         e.dataTransfer.setData(DRAG_OBJECT, item.id);
-        e.dataTransfer.effectAllowed = "copy";
+        e.dataTransfer.effectAllowed = "copyMove";
       }}
+      onDragOver={(e) => {
+        if (!droppable || !e.dataTransfer.types.includes(DRAG_OBJECT)) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        setDropping(true);
+      }}
+      onDragLeave={() => setDropping(false)}
+      onDrop={onDrop}
       onClick={() => {
         select(item);
         if (item.kind === "folder") onToggle?.();
@@ -215,7 +273,16 @@ function Row(props: { item: Selection; depth: number; icon: string; label: strin
         showMenu(e.clientX, e.clientY);
       }}
     >
-      <span className="icon" aria-hidden>
+      <span
+        className="icon"
+        aria-hidden
+        onClick={(e) => {
+          // Objects open on double-click, so their contents toggle from the icon.
+          if (item.kind !== "object" || !onToggle) return;
+          e.stopPropagation();
+          onToggle();
+        }}
+      >
         {icon}
       </span>
       <span className="label">{label}</span>

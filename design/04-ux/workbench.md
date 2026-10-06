@@ -32,11 +32,51 @@ Everything opens in place.
 | Region | Contents |
 |---|---|
 | **Top bar** | Repository, scenario and "as of" pickers (they apply to every open tab), search and commands (⌘K), who is here, notifications, settings |
-| **Explorer** | Four tabs: **Folders** (everything, as stored), **Types** (objects grouped by object type), **Hierarchies** (trees built from nesting relationships), **Queries** (saved queries). Filter box; drag items onto a diagram |
+| **Explorer** | Four tabs: **Folders** (everything, as stored), **Types** (objects grouped by object type), **Hierarchies** (trees built from nesting relationships), **Queries** (saved queries). Filter box; drag items onto a diagram. Objects show their contents and their relationships by kind ([below](#explorer-a-semantic-navigator)) |
 | **Centre** | Tabs for diagrams, catalogues and other views; split left/right or top/bottom; a dot on a tab when others changed it |
-| **Properties** | Header (name, type, key, folder, badges), then property groups, Relationships (grouped by type and direction, with inline add), "Occurs on" diagrams, tags, external IDs. Footer tabs: History, Comments |
+| **Properties** | Header (name, type, key, folder, badges), then property groups, Relationships (grouped by semantic kind, then type and direction, with inline add; flows show payloads, interactions their messages), "Occurs on" diagrams, tags, external IDs. Footer tabs: History, Comments |
 | **Bottom panel** | Problems (rule findings), Changes (yours, scenario differences; later: pending review), Comments, History (activity, including API and webhook-driven changes) |
 | **Panels** | Extension panels dock like built-in ones |
+
+## Explorer: a semantic navigator
+
+From the [connection framework](../01-product/connection_framework.md) §15 and [semantics](../02-model/semantics.md) (built in slices Sem-2 and Sem-4). The explorer shows **structure** (folders and containment) and, on demand, **meaning** (relationships grouped by semantic kind).
+
+```
+▾ 📁 Platforms
+  ▾ ▭ Payments Platform                ← root object in the folder
+      ▭ Payment API                    ← contents (containment): real tree rows
+    ▸ ▭ Payment Service
+      ▭ Payment Database
+    ▸ ⋯ Realises (1)                   ← semantic groups: collapsed, dimmed, after the contents
+    ▾ ⋯ Serves (2)
+        ↗ Mobile Application           ← references: open and select, but are stored elsewhere
+        ↗ Web Application
+    ▸ ⋯ Accesses (1)
+    ▸ ⋯ Flows (2)                      ← flows show their payloads: "→ Ledger · Settlement Information"
+  ⧉ Payments overview
+```
+
+| Row | Shows | Drag and drop |
+|---|---|---|
+| Folder | Subfolders, root objects and diagrams, ordered by `rank` | Drop into it: move there. A contained object dropped on a folder leaves its container (one change: delete the containment, move) |
+| Object | Its **contents** first (containment, ordered by `rank`), then one **semantic group** per kind and direction that has relationships | Drop an object **onto** it: make it a content (table below). Drop **between** contents: re-parent and place |
+| Semantic group | *Contents* is never a group: contents are the tree. Groups are labelled with the types' own verbs (*Serves*, *Is realised by*), grouped and ordered by kind (§9.1 of semantics), with counts | Not a drop target |
+| Reference (↗) | An object reached through a semantic group | Dragging it out copies a reference (e.g. onto a diagram), never moves it |
+
+**Dropping an object onto an object** creates or changes a **containment**:
+
+| Situation | Result (one change, one Undo) |
+|---|---|
+| The pair is allowed by one containment type | New containment relationship; the object (and its contents) moves into the container's folder |
+| Several containment types allow the pair | The one the object already uses, if allowed; otherwise the first in package order. **Alt+drop** opens a menu to choose |
+| The object already has a container | The **same** relationship is reconnected to the new container (id, properties and history kept); its type changes with `changeRelationshipType` only if the old type does not allow the new pair |
+| No containment rule allows the pair, the drop would create a loop, or a name clashes in the target folder | Refused: "not allowed" cursor, and a toast with the reason (naming the rule) |
+| Alt+drop menu | *Contain as ▸ (containment types)*, plus *Add as part ▸ (composition and aggregation types)*, which link without moving |
+
+The object's context menu adds **Change container type ▸** (switches the containment relationship to another allowed containment type), **Take out of *container*** (detaches; it stays in the folder) and **Trace ▸** (§9 of semantics).
+
+The **Hierarchies** tab picks any hierarchy (containment, a composition or aggregation type, specialisation) and shows it as a tree; drops there create or reconnect relationships of that type, and move nothing.
 
 ## Selection
 

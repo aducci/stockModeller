@@ -81,6 +81,22 @@ function candidates(state: ModelState, next: () => number, n: number): Edit[] {
       : null,
     r && o ? { edit: "reconnectRelationship", id: r.id, baseVersion: r.version, targetId: o.id } : null,
     r ? { edit: "deleteRelationship", id: r.id, baseVersion: r.version } : null,
+    r && o ? { edit: "reconnectRelationship", id: r.id, baseVersion: r.version, sourceId: o.id } : null,
+    r
+      ? {
+          edit: "changeRelationshipType",
+          id: r.id,
+          baseVersion: r.version,
+          type:
+            pick(
+              metamodel.allowedRelationshipTypes(
+                state.objects.get(r.sourceId)!.type,
+                state.objects.get(r.targetId)!.type,
+              ),
+            )?.key ?? r.type,
+        }
+      : null,
+    o ? { edit: "deleteObject", id: o.id, baseVersion: o.version, contents: "deleteContents" } : null,
     { edit: "createFolder", id, parentId: f?.id ?? null, name: `Folder ${n}` },
     f ? { edit: "renameFolder", id: f.id, name: `${f.name}'` } : null,
     f ? { edit: "deleteFolder", id: f.id, contents: "deleteContents" } : null,

@@ -320,6 +320,17 @@
         },
         "defaultFolder": {
           "type": "string"
+        },
+        "category": {
+          "$ref": "#/$defs/semanticCategory"
+        },
+        "level": {
+          "$ref": "#/$defs/semanticLevel",
+          "description": "Default semantic.level of objects of this type"
+        },
+        "levelFixed": {
+          "type": "boolean",
+          "description": "Objects of this type always have the type's level"
         }
       }
     },
@@ -339,6 +350,18 @@
         },
         "inverseVerb": {
           "type": "string"
+        },
+        "semantic": {
+          "$ref": "#/$defs/semanticKind",
+          "description": "Default: association"
+        },
+        "semanticDirection": {
+          "enum": ["forward", "reverse"],
+          "description": "reverse: the type's source plays the kind's target role (e.g. 'realised by')"
+        },
+        "cascadeDelete": {
+          "type": "boolean",
+          "description": "composition only: deleting the whole deletes its parts"
         },
         "nesting": {
           "type": "boolean",
@@ -455,6 +478,45 @@
           "description": "Format property name → property type key"
         }
       }
+    },
+    "semanticKind": {
+      "enum": [
+        "containment",
+        "composition",
+        "aggregation",
+        "association",
+        "realisation",
+        "representation",
+        "serving",
+        "access",
+        "flow",
+        "trigger",
+        "assignment",
+        "influence",
+        "specialisation",
+        "interaction"
+      ],
+      "description": "What the engine understands a relationship type to mean (02-model/semantics.md §2)"
+    },
+    "semanticCategory": {
+      "enum": [
+        "actor",
+        "capability",
+        "behaviour",
+        "service",
+        "interface",
+        "component",
+        "information",
+        "technology",
+        "location",
+        "motivation",
+        "other"
+      ],
+      "description": "What kind of thing an object type is (02-model/semantics.md §4.1)"
+    },
+    "semanticLevel": {
+      "enum": ["conceptual", "logical", "physical", "implementation"],
+      "description": "How concrete an object is (02-model/semantics.md §4.2)"
     }
   }
 }

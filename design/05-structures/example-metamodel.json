@@ -1,6 +1,6 @@
 {
   "name": "Essentials",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "layers": [
     {
       "key": "strategy",
@@ -239,6 +239,8 @@
       "name": "Capability",
       "plural": "Capabilities",
       "layer": "strategy",
+      "category": "capability",
+      "level": "conceptual",
       "uniqueName": "folder",
       "defaultFolder": "Business/Capabilities",
       "properties": [
@@ -258,6 +260,8 @@
       "name": "Process",
       "plural": "Processes",
       "layer": "business",
+      "category": "behaviour",
+      "level": "conceptual",
       "defaultFolder": "Business/Processes",
       "properties": [
         "ownership.businessOwner",
@@ -274,6 +278,8 @@
       "key": "processStep",
       "name": "Process step",
       "layer": "business",
+      "category": "behaviour",
+      "level": "logical",
       "defaultFolder": "Business/Processes",
       "symbol": {
         "shape": "roundRect",
@@ -283,9 +289,30 @@
       }
     },
     {
+      "key": "service",
+      "name": "Service",
+      "plural": "Services",
+      "layer": "business",
+      "category": "service",
+      "level": "conceptual",
+      "defaultFolder": "Business/Services",
+      "properties": [
+        "lifecycle.status",
+        "ownership.businessOwner"
+      ],
+      "symbol": {
+        "shape": "roundRect",
+        "fill": "#fbf2c4",
+        "icon": "service",
+        "width": 140,
+        "height": 50
+      }
+    },
+    {
       "key": "organisationUnit",
       "name": "Organisation unit",
       "layer": "business",
+      "category": "actor",
       "defaultFolder": "Business/Organisation",
       "properties": [
         "ownership.businessOwner"
@@ -301,6 +328,8 @@
       "name": "Application (any)",
       "abstract": true,
       "layer": "application",
+      "category": "component",
+      "level": "implementation",
       "properties": [
         "lifecycle.status",
         "lifecycle.activeFrom",
@@ -347,9 +376,31 @@
       }
     },
     {
+      "key": "interface",
+      "name": "Interface",
+      "plural": "Interfaces",
+      "layer": "application",
+      "category": "interface",
+      "level": "logical",
+      "defaultFolder": "Applications/Interfaces",
+      "properties": [
+        "lifecycle.status",
+        "ownership.technicalOwner"
+      ],
+      "symbol": {
+        "shape": "ellipse",
+        "fill": "#d7e8f8",
+        "icon": "interface",
+        "width": 120,
+        "height": 50
+      }
+    },
+    {
       "key": "dataObject",
       "name": "Data object",
       "layer": "data",
+      "category": "information",
+      "level": "logical",
       "defaultFolder": "Data",
       "symbol": {
         "shape": "rect",
@@ -361,6 +412,8 @@
       "key": "server",
       "name": "Server",
       "layer": "technology",
+      "category": "technology",
+      "level": "implementation",
       "defaultFolder": "Technology/Servers",
       "properties": [
         "lifecycle.status",
@@ -376,6 +429,7 @@
       "key": "location",
       "name": "Location",
       "layer": "technology",
+      "category": "location",
       "defaultFolder": "Technology/Locations",
       "symbol": {
         "shape": "rect",
@@ -390,6 +444,7 @@
       "name": "Contains",
       "verb": "contains",
       "inverseVerb": "is part of",
+      "semantic": "containment",
       "nesting": true,
       "singleParent": true,
       "line": {
@@ -398,10 +453,25 @@
       }
     },
     {
+      "key": "composedOf",
+      "name": "Composed of",
+      "verb": "is composed of",
+      "inverseVerb": "is a component of",
+      "semantic": "composition",
+      "nesting": true,
+      "singleParent": true,
+      "line": {
+        "style": "solid",
+        "startArrow": "diamond",
+        "color": "#5a5a5a"
+      }
+    },
+    {
       "key": "realizes",
       "name": "Realizes",
       "verb": "realizes",
       "inverseVerb": "is realized by",
+      "semantic": "realisation",
       "line": {
         "style": "dashed",
         "endArrow": "arrow"
@@ -412,6 +482,7 @@
       "name": "Serves",
       "verb": "serves",
       "inverseVerb": "is served by",
+      "semantic": "serving",
       "line": {
         "style": "solid",
         "endArrow": "arrow"
@@ -422,6 +493,7 @@
       "name": "Flows to",
       "verb": "flows to",
       "inverseVerb": "receives from",
+      "semantic": "flow",
       "properties": [
         "flow.frequency",
         "flow.protocol"
@@ -437,9 +509,58 @@
       "name": "Accesses",
       "verb": "accesses",
       "inverseVerb": "is accessed by",
+      "semantic": "access",
       "line": {
         "style": "dotted",
         "endArrow": "arrow"
+      }
+    },
+    {
+      "key": "represents",
+      "name": "Represents",
+      "verb": "represents",
+      "inverseVerb": "is represented by",
+      "semantic": "representation",
+      "line": {
+        "style": "dashed",
+        "endArrow": "arrow",
+        "color": "#6b4fa0"
+      }
+    },
+    {
+      "key": "calls",
+      "name": "Calls",
+      "verb": "calls",
+      "inverseVerb": "is called by",
+      "semantic": "interaction",
+      "line": {
+        "style": "solid",
+        "endArrow": "arrow",
+        "color": "#1f6f8b"
+      }
+    },
+    {
+      "key": "triggers",
+      "name": "Triggers",
+      "verb": "triggers",
+      "inverseVerb": "is triggered by",
+      "semantic": "trigger",
+      "line": {
+        "style": "solid",
+        "endArrow": "arrow",
+        "color": "#a05a2c"
+      }
+    },
+    {
+      "key": "specialises",
+      "name": "Specialises",
+      "verb": "specialises",
+      "inverseVerb": "is specialised by",
+      "semantic": "specialisation",
+      "line": {
+        "style": "solid",
+        "endArrow": "arrow",
+        "color": "#5a5a5a"
       }
     },
     {
@@ -447,6 +568,8 @@
       "name": "Hosted on",
       "verb": "is hosted on",
       "inverseVerb": "hosts",
+      "semantic": "assignment",
+      "semanticDirection": "reverse",
       "line": {
         "style": "solid",
         "endArrow": "arrow"
@@ -457,6 +580,7 @@
       "name": "Owns",
       "verb": "owns",
       "inverseVerb": "is owned by",
+      "semantic": "assignment",
       "line": {
         "style": "solid",
         "startArrow": "circle"
@@ -467,6 +591,7 @@
       "name": "Supports (derived)",
       "verb": "supports",
       "inverseVerb": "is supported by",
+      "semantic": "association",
       "line": {
         "style": "dashed",
         "endArrow": "arrow",
@@ -540,6 +665,106 @@
       "relationshipType": "owns",
       "sourceType": "organisationUnit",
       "targetType": "*"
+    },
+    {
+      "relationshipType": "contains",
+      "sourceType": "interface",
+      "targetType": "interface"
+    },
+    {
+      "relationshipType": "composedOf",
+      "sourceType": "applicationBase",
+      "targetType": "applicationBase"
+    },
+    {
+      "relationshipType": "composedOf",
+      "sourceType": "applicationBase",
+      "targetType": "interface"
+    },
+    {
+      "relationshipType": "composedOf",
+      "sourceType": "process",
+      "targetType": "processStep"
+    },
+    {
+      "relationshipType": "realizes",
+      "sourceType": "interface",
+      "targetType": "service"
+    },
+    {
+      "relationshipType": "realizes",
+      "sourceType": "applicationBase",
+      "targetType": "service"
+    },
+    {
+      "relationshipType": "realizes",
+      "sourceType": "applicationBase",
+      "targetType": "interface"
+    },
+    {
+      "relationshipType": "serves",
+      "sourceType": "service",
+      "targetType": "process"
+    },
+    {
+      "relationshipType": "serves",
+      "sourceType": "interface",
+      "targetType": "applicationBase"
+    },
+    {
+      "relationshipType": "represents",
+      "sourceType": "dataObject",
+      "targetType": "dataObject"
+    },
+    {
+      "relationshipType": "calls",
+      "sourceType": "applicationBase",
+      "targetType": "interface"
+    },
+    {
+      "relationshipType": "calls",
+      "sourceType": "interface",
+      "targetType": "interface"
+    },
+    {
+      "relationshipType": "triggers",
+      "sourceType": "process",
+      "targetType": "process"
+    },
+    {
+      "relationshipType": "triggers",
+      "sourceType": "processStep",
+      "targetType": "processStep"
+    },
+    {
+      "relationshipType": "specialises",
+      "sourceType": "capability",
+      "targetType": "capability"
+    },
+    {
+      "relationshipType": "specialises",
+      "sourceType": "process",
+      "targetType": "process"
+    },
+    {
+      "relationshipType": "specialises",
+      "sourceType": "service",
+      "targetType": "service"
+    },
+    {
+      "relationshipType": "specialises",
+      "sourceType": "interface",
+      "targetType": "interface"
+    },
+    {
+      "relationshipType": "specialises",
+      "sourceType": "applicationBase",
+      "targetType": "applicationBase"
+    },
+    {
+      "relationshipType": "specialises",
+      "sourceType": "dataObject",
+      "targetType": "dataObject"
     }
   ],
   "validationRules": [
@@ -583,15 +808,20 @@
         "ApplicationComponent": "application",
         "DataObject": "dataObject",
         "Node": "server",
-        "Location": "location"
+        "Location": "location",
+        "BusinessService": "service",
+        "ApplicationService": "service",
+        "ApplicationInterface": "interface"
       },
       "relationshipTypes": {
-        "Composition": "contains",
+        "Composition": "composedOf",
         "Realization": "realizes",
         "Serving": "serves",
         "Flow": "flowsTo",
         "Access": "accesses",
-        "Assignment": "hostedOn"
+        "Assignment": "hostedOn",
+        "Triggering": "triggers",
+        "Specialization": "specialises"
       },
       "properties": {
         "Lifecycle status": "lifecycle.status",
