@@ -123,6 +123,19 @@ test("connects two symbols with a relationship type the rules allow", async ({ p
   await saved(page);
 });
 
+test("does not offer an existing relationship already drawn between the two symbols", async ({ page }) => {
+  await signIn(page);
+  await openDiagram(page);
+  // The lower Claims Manager already has a "flows to" line to Payments Hub.
+  const lower = canvas(page).locator('.occ[data-name="Claims Manager"]:has(rect[y="320"])');
+  await lower.click();
+  const from = (await canvas(page).getByLabel("Connect").boundingBox())!;
+  await drag(page, { x: from.x + from.width / 2, y: from.y + from.height / 2 }, await centre(page, "Payments Hub"));
+  const menu = canvas(page).getByRole("menu", { name: "Relationship type" });
+  await expect(menu.getByRole("menuitem")).toHaveText(["contains", "flows to"]);
+  await page.keyboard.press("Escape");
+});
+
 test("moves a symbol on the grid, and the move survives a reload", async ({ page }) => {
   await signIn(page);
   await openDiagram(page);
