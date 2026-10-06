@@ -4,7 +4,7 @@ How Connectome implements the [connection framework](../01-product/connection_fr
 
 > **The metamodel defines what users can model; semantic base types define what the modelling engine understands about what has been modelled.**
 
-Status: **accepted** (see [ADR-010](../06-decisions/ADR-010-semantic-base-types.md)); the product owner accepted the defaults of questions S1–S16 in the [decision log](../decision-log.md#semantics-decisions). Built so far: slices **Sem-1** and **Sem-2** (§11): kinds, categories, levels, the [core package](../05-structures/core-metamodel.json), Essentials 1.1.0, containment behaviour, `changeRelationshipType`, `deleteObject.contents` and `cascadeDelete` are in [05-structures](../05-structures/) and `packages/`. The other additions (payloads, messages, `setPayload`) reach `model.ts` and `changes.ts` with the slices that build them; until then this document is their reference.
+Status: **accepted** (see [ADR-010](../06-decisions/ADR-010-semantic-base-types.md)); the product owner accepted the defaults of questions S1–S16 in the [decision log](../decision-log.md#semantics-decisions). Built so far: slices **Sem-1** to **Sem-3** (§11): kinds, categories, levels, the [core package](../05-structures/core-metamodel.json), Essentials 1.1.0, containment behaviour, payloads, interactions and their messages, and the new edits are in [05-structures](../05-structures/) and `packages/`. Sem-4 (navigation and trace) is next; until it is built this document is its reference.
 
 ## 1. The idea in one table
 
@@ -294,6 +294,7 @@ The kinds Essentials would map, and the types it would add so the framework's ex
 | *new* `specialises` | specialisation | `*` → same type |
 | *new* object type `service` | category service | Default level conceptual |
 | *new* object type `interface` | category interface | Default level logical |
+| `flowsTo` rules | | Also application ↔ interface and interface → interface, so an interaction's messages can run both ways. The application landscape diagram type shows interfaces and `calls` |
 
 Exchange mappings can fall back on kinds: an ArchiMate *Composition*, *Aggregation*, *Triggering*, *Influence* or *Specialization* with no type mapping is imported with the package's type of that kind (the first in package order). ArchiMate has no containment relationship; its nested elements in views import as containment only when a nesting rule allows the pair, otherwise as composition.
 

@@ -1,5 +1,5 @@
-// Slices Sem-1 and Sem-2 (design/02-model/semantics.md §11): relationships read by what they mean, every object has
-// a level, and containment is the structure the explorer and diagrams show.
+// Slices Sem-1 to Sem-3 (design/02-model/semantics.md §11): relationships read by what they mean, every object has
+// a level, containment is the structure the explorer and diagrams show, and interactions carry their messages.
 import { expect, test, type Page } from "@playwright/test";
 
 test.use({ viewport: { width: 1600, height: 1000 } });
@@ -105,4 +105,57 @@ test("drawing a containment nests the content; the explorer shows it inside and 
   await page.reload();
   await saved(page);
   await expect(contentsRow(page, "Core Banking", "Card Feed")).toHaveCount(1);
+});
+
+async function connect(page: Page, from: string, to: string, verb: string) {
+  await symbol(page, from).click();
+  const handle = (await canvas(page).getByLabel("Connect").boundingBox())!;
+  const target = await box(page, to);
+  await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 8 });
+  await page.mouse.up();
+  await canvas(page).getByRole("menu", { name: "Relationship type" }).getByRole("menuitem", { name: verb }).click();
+}
+
+test("an interaction holds its request and response with their payloads, and deleting it is undone in one step", async ({
+  page,
+}) => {
+  await signIn(page);
+  await explorer(page).getByLabel("Filter the explorer").fill("Claims landscape");
+  await explorer(page).locator(".row", { hasText: "Claims landscape" }).dblclick();
+  await explorer(page).getByLabel("Filter the explorer").fill("");
+  await addFromPalette(page, "Application", "Quote Engine", 100, 760);
+  await addFromPalette(page, "Interface", "Rating API", 520, 760);
+
+  // Connecting with an interaction type creates it with an empty request, and shows it in the panel.
+  await connect(page, "Quote Engine", "Rating API", "calls");
+  await saved(page);
+  await expect(canvas(page).locator(".line-label", { hasText: "⇄ Calls" })).toHaveCount(1);
+  const messages = properties(page).locator(".group", { hasText: "Messages" });
+  await expect(messages.locator("li[data-role]")).toHaveCount(1);
+  await messages.getByRole("button", { name: "Add response" }).click();
+  await expect(messages.locator("li[data-role]")).toHaveCount(2);
+
+  const request = messages.locator('li[data-role="request"]');
+  const response = messages.locator('li[data-role="response"]');
+  await request.getByLabel("Add to payload").selectOption({ label: "Claim Intake" });
+  await response.getByLabel("Add to payload").selectOption({ label: "Handle Claim" });
+  await saved(page);
+  await expect(request.locator(".chip")).toHaveText(["Claim Intake×"]);
+  await expect(response.locator(".chip")).toHaveText(["Handle Claim×"]);
+
+  // Deleting the interaction takes its messages; one undo brings back all three.
+  await properties(page).getByRole("button", { name: "Delete relationship" }).click();
+  const toast = page.getByRole("status").filter({ hasText: "and its 2 messages" });
+  await expect(canvas(page).locator(".line-label", { hasText: "⇄ Calls" })).toHaveCount(0);
+  await expect(toast.getByRole("button", { name: "Undo" })).toBeEnabled();
+  await toast.getByRole("button", { name: "Undo" }).click();
+  await saved(page);
+  await page.reload();
+  await saved(page);
+  await select(page, "Quote Engine");
+  const calls = properties(page).locator('.rel-group[data-kind="interaction"]');
+  await expect(calls.locator('li[data-role="request"]')).toContainText("Claim Intake");
+  await expect(calls.locator('li[data-role="response"]')).toContainText("Handle Claim");
 });

@@ -58,6 +58,7 @@ export type SemanticCategory =
   | "information" | "technology" | "location" | "motivation" | "other";
 
 export type SemanticLevel = "conceptual" | "logical" | "physical" | "implementation";
+export type PayloadUse = "none" | "optional" | "expected";      // semantics §2.2
 
 export interface ObjectType {
   key: TypeKey; name: string; plural?: string;
@@ -79,6 +80,7 @@ export interface RelationshipType {
   semantic?: SemanticKind;                      // what the engine understands it to mean (default "association")
   semanticDirection?: "forward" | "reverse";    // reverse: the source plays the kind's target role
   cascadeDelete?: boolean;                      // composition: deleting the whole deletes its parts
+  payload?: PayloadUse;                         // whether relationships carry objects (default "optional" for flow and trigger, else "none")
   properties?: PropertyKey[];
   line?: Partial<LineStyle>;
 }
@@ -110,6 +112,9 @@ export interface ModelObject extends ModelItem {
 export interface Relationship extends ModelItem {
   sourceId: Id; targetId: Id; name: string;
   derivedBy: string | null;                     // derived relationships: the rule that maintains it
+  payload: Id[];                                // what it carries, in order (semantics §5)
+  parentId: Id | null;                          // a message: the interaction it belongs to (semantics §6)
+  rank: number;                                 // orders the messages of an interaction
 }
 
 // ================================================================ diagrams

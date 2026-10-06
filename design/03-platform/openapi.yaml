@@ -352,6 +352,9 @@ components:
         name: { type: string }
         properties: { $ref: '#/components/schemas/Properties' }
         derivedBy: { type: [string, 'null'] }
+        payload: { type: array, items: { type: string }, description: 'Objects the relationship carries (semantics §5)' }
+        parentId: { type: [string, 'null'], description: 'The interaction this flow is a message of (semantics §6)' }
+        rank: { type: integer, description: 'Orders the messages of an interaction' }
         version: { type: integer }
     Edit:
       type: object
@@ -361,7 +364,7 @@ components:
         edit:
           type: string
           enum: [createObject, setProperties, renameObject, moveToFolder, changeObjectType, deleteObject,
-                 createRelationship, reconnectRelationship, changeRelationshipType, deleteRelationship,
+                 createRelationship, reconnectRelationship, changeRelationshipType, setPayload, deleteRelationship,
                  createFolder, renameFolder, moveFolder, deleteFolder,
                  createDiagram, updateDiagram, deleteDiagram,
                  addObjectOccurrence, moveObjectOccurrence, styleOccurrence, removeOccurrence,

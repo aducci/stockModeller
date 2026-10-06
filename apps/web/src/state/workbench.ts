@@ -5,7 +5,7 @@ import { LiveSession, type PresenceUser, type SessionStatus } from "@connectome/
 import { ulid, type Edit, type Id } from "@connectome/model";
 import { describeRejection } from "../text";
 
-export type ItemKind = "object" | "folder" | "diagram";
+export type ItemKind = "object" | "folder" | "diagram" | "relationship";
 export interface Selection {
   kind: ItemKind;
   id: Id;

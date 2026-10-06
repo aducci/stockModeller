@@ -148,7 +148,13 @@ function FilterResults({ query }: { query: string }) {
   );
 }
 
-function Row(props: { item: Selection; depth: number; icon: string; label: string; onToggle?: () => void }) {
+function Row(props: {
+  item: Selection & { kind: "object" | "folder" | "diagram" };
+  depth: number;
+  icon: string;
+  label: string;
+  onToggle?: () => void;
+}) {
   const { item, depth, icon, label, onToggle } = props;
   const { state, metamodel } = useModel();
   const edit = useWorkbench((s) => s.edit);

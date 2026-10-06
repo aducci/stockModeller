@@ -1,7 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { essentials, insuranceGroup } from "@connectome/content";
 import { applyChange, Metamodel, ModelState } from "@connectome/engine";
-import { containerOf, containPlan, contentsOf, moveToFolderPlan, relationshipGroups } from "../src/semantics";
+import {
+  addPayloadPlan,
+  containerOf,
+  containPlan,
+  contentsOf,
+  messagePlan,
+  messagesOf,
+  moveToFolderPlan,
+  payloadChoices,
+  payloadText,
+  relationshipGroups,
+} from "../src/semantics";
 
 const metamodel = Metamodel.compile(essentials.metamodel, essentials.diagramTypes);
 const state = new ModelState();
@@ -66,5 +77,71 @@ describe("containment plans", () => {
     });
     expect(containerOf(state, metamodel, "O-CAP-1")).toBeUndefined();
     expect(contentsOf(state, metamodel, "O-CAP-1").map((o) => o.name)).toEqual(["Claim Intake", "Claim Settlement"]);
+  });
+});
+
+describe("payloads and messages", () => {
+  const local = state.clone();
+  applyChange(
+    local,
+    {
+      id: "C-PAY",
+      label: "Payments",
+      scenarioId: insuranceGroup.baselineScenarioId,
+      edits: [
+        { edit: "createObject", id: "D-PAY", type: "dataObject", name: "Payment Information", folderId: "F04" },
+        { edit: "createObject", id: "I-API", type: "interface", name: "Payments API", folderId: "F04" },
+        { edit: "createRelationship", id: "C1", type: "calls", sourceId: "O-APP-1", targetId: "I-API" },
+        {
+          edit: "createRelationship",
+          id: "M1",
+          type: "flowsTo",
+          sourceId: "O-APP-1",
+          targetId: "I-API",
+          parentId: "C1",
+        },
+        { edit: "setPayload", id: "R-08", baseVersion: 1, payload: ["D-PAY"] },
+      ],
+    },
+    {
+      metamodel,
+      actor: { kind: "user", id: "U-DANA" },
+      scenario: { id: insuranceGroup.baselineScenarioId, isBaseline: true },
+    },
+  );
+
+  it("adds to a flow's payload, offering information first, and refuses types without one", () => {
+    expect(payloadText(local, local.relationships.get("R-08")!)).toBe("Payment Information");
+    expect(addPayloadPlan(local, metamodel, "R-08", "D-PAY")).toEqual({
+      error: "It already carries Payment Information",
+    });
+    expect(addPayloadPlan(local, metamodel, "R-05", "D-PAY")).toEqual({ error: "Realizes carries no payload" });
+    expect(addPayloadPlan(local, metamodel, "R-09", "D-PAY")).toMatchObject({
+      label: "Carry Payment Information",
+      edits: [{ edit: "setPayload", id: "R-09", payload: ["D-PAY"] }],
+    });
+    expect(payloadChoices(local, metamodel, local.relationships.get("R-09")!)[0]!.name).toBe("Payment Information");
+  });
+
+  it("lists an interaction's messages under it, with requests and responses", () => {
+    const calls = relationshipGroups(local, metamodel, "O-APP-1").find((g) => g.kind === "interaction")!;
+    expect(calls.rows.map((r) => r.relationship.id)).toEqual(["C1"]);
+    expect(
+      relationshipGroups(local, metamodel, "O-APP-1").flatMap((g) => g.rows.map((r) => r.relationship.id)),
+    ).not.toContain("M1");
+    expect(messagesOf(local, local.relationships.get("C1")!).map((m) => m.role)).toEqual(["request"]);
+    expect(messagePlan(local, metamodel, "C1", "response", "M2")).toEqual({
+      label: "Add a response from Payments API to Claims Manager",
+      edits: [
+        {
+          edit: "createRelationship",
+          id: "M2",
+          type: "flowsTo",
+          sourceId: "I-API",
+          targetId: "O-APP-1",
+          parentId: "C1",
+        },
+      ],
+    });
   });
 });

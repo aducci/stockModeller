@@ -282,3 +282,139 @@ describe("containment (semantics.md §3)", () => {
     expect(state.objects.get("P")).toBeUndefined();
   });
 });
+
+describe("payloads and interactions (semantics.md §5–§6)", () => {
+  const undo = (state: ReturnType<typeof exampleState>, result: ReturnType<typeof applyOk>) =>
+    applyOk(state, JSON.parse(JSON.stringify(invertLog(result.log))) as Edit[]);
+  const ends = (state: ReturnType<typeof exampleState>, id: string) => {
+    const r = state.relationships.get(id)!;
+    return `${r.sourceId}->${r.targetId}`;
+  };
+  const withInformation = () => {
+    const state = exampleState();
+    applyOk(state, [
+      { edit: "createObject", id: "D-PAY", type: "dataObject", name: "Payment Information", folderId: "F04" },
+      { edit: "createObject", id: "D-CLM", type: "dataObject", name: "Claim", folderId: "F04" },
+      { edit: "createObject", id: "I-API", type: "interface", name: "Payments API", folderId: "F04" },
+    ]);
+    return state;
+  };
+
+  it("sets a flow's payload and undoes it; types without a payload refuse one", () => {
+    const state = withInformation();
+    const result = applyOk(state, [{ edit: "setPayload", id: "R-08", baseVersion: 1, payload: ["D-PAY", "D-CLM"] }]);
+    expect(state.relationships.get("R-08")!.payload).toEqual(["D-PAY", "D-CLM"]);
+    expect(state.relationships.find("byPayload", "D-CLM").map((r) => r.id)).toEqual(["R-08"]);
+    undo(state, result);
+    expect(state.relationships.get("R-08")!.payload).toEqual([]);
+    const realizes = apply(state, [{ edit: "setPayload", id: "R-05", baseVersion: 1, payload: ["D-PAY"] }]);
+    expect(realizes).toMatchObject({ ok: false, reasons: [expect.objectContaining({ property: "payload" })] });
+    const twice = apply(state, [{ edit: "setPayload", id: "R-08", baseVersion: 3, payload: ["D-PAY", "D-PAY"] }]);
+    expect(twice).toMatchObject({ ok: false, reasons: [expect.objectContaining({ property: "payload.1" })] });
+  });
+
+  it("takes a deleted object out of every payload, and undo puts it back in place", () => {
+    const state = withInformation();
+    applyOk(state, [
+      { edit: "setPayload", id: "R-08", baseVersion: 1, payload: ["D-PAY", "D-CLM"] },
+      { edit: "setPayload", id: "R-09", baseVersion: 1, payload: ["D-PAY"] },
+    ]);
+    const result = applyOk(state, [{ edit: "deleteObject", id: "D-PAY", baseVersion: 1 }]);
+    expect(state.relationships.get("R-08")!.payload).toEqual(["D-CLM"]);
+    expect(state.relationships.get("R-09")!.payload).toEqual([]);
+    undo(state, result);
+    expect(state.relationships.get("R-08")!.payload).toEqual(["D-PAY", "D-CLM"]);
+    expect(state.relationships.get("R-09")!.payload).toEqual(["D-PAY"]);
+  });
+
+  it("keeps an interaction's messages on its two objects and follows it when reconnected", () => {
+    const state = withInformation();
+    applyOk(state, [
+      { edit: "createRelationship", id: "C1", type: "calls", sourceId: "O-APP-1", targetId: "I-API" },
+      {
+        edit: "createRelationship",
+        id: "M-REQ",
+        type: "flowsTo",
+        sourceId: "O-APP-1",
+        targetId: "I-API",
+        parentId: "C1",
+        payload: ["D-CLM"],
+      },
+      {
+        edit: "createRelationship",
+        id: "M-RES",
+        type: "flowsTo",
+        sourceId: "I-API",
+        targetId: "O-APP-1",
+        parentId: "C1",
+      },
+    ]);
+    expect([state.relationships.get("M-REQ")!.rank, state.relationships.get("M-RES")!.rank]).toEqual([0, 1]);
+
+    const elsewhere = apply(state, [
+      {
+        edit: "createRelationship",
+        id: "M-X",
+        type: "flowsTo",
+        sourceId: "O-APP-2",
+        targetId: "O-APP-1",
+        parentId: "C1",
+      },
+    ]);
+    expect(elsewhere).toMatchObject({ ok: false, reasons: [expect.objectContaining({ rule: "message:endpoints" })] });
+    const notInteraction = apply(state, [
+      {
+        edit: "createRelationship",
+        id: "M-X",
+        type: "flowsTo",
+        sourceId: "O-APP-1",
+        targetId: "O-APP-3",
+        parentId: "R-08",
+      },
+    ]);
+    expect(notInteraction).toMatchObject({ ok: false, reasons: [expect.objectContaining({ property: "parentId" })] });
+
+    const moved = applyOk(state, [{ edit: "reconnectRelationship", id: "C1", baseVersion: 1, sourceId: "O-APP-2" }]);
+    expect([ends(state, "M-REQ"), ends(state, "M-RES")]).toEqual(["O-APP-2->I-API", "I-API->O-APP-2"]);
+    undo(state, moved);
+    expect([ends(state, "M-REQ"), ends(state, "M-RES")]).toEqual(["O-APP-1->I-API", "I-API->O-APP-1"]);
+
+    const retyped = apply(state, [{ edit: "changeRelationshipType", id: "C1", baseVersion: 3, type: "flowsTo" }]);
+    expect(retyped).toMatchObject({ ok: false, reasons: [expect.objectContaining({ property: "type" })] });
+  });
+
+  it("deletes an interaction with its messages, and undo restores them in one step", () => {
+    const state = withInformation();
+    applyOk(state, [
+      { edit: "createRelationship", id: "C1", type: "calls", sourceId: "O-APP-1", targetId: "I-API" },
+      {
+        edit: "createRelationship",
+        id: "M-REQ",
+        type: "flowsTo",
+        sourceId: "O-APP-1",
+        targetId: "I-API",
+        parentId: "C1",
+      },
+      {
+        edit: "createRelationship",
+        id: "M-RES",
+        type: "flowsTo",
+        sourceId: "I-API",
+        targetId: "O-APP-1",
+        parentId: "C1",
+        payload: ["D-PAY"],
+      },
+    ]);
+    const before = state.relationships.get("M-RES");
+    const result = applyOk(state, [{ edit: "deleteRelationship", id: "C1", baseVersion: 1 }]);
+    expect(["C1", "M-REQ", "M-RES"].map((id) => state.relationships.get(id))).toEqual([
+      undefined,
+      undefined,
+      undefined,
+    ]);
+    undo(state, result);
+    expect(state.relationships.get("M-RES")).toMatchObject({ parentId: "C1", rank: 1, payload: ["D-PAY"] });
+    expect(state.relationships.get("M-RES")!.properties).toEqual(before!.properties);
+    expect(state.relationships.get("M-REQ")).toMatchObject({ parentId: "C1", rank: 0 });
+  });
+});

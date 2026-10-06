@@ -652,3 +652,54 @@ button.danger {
     grid-template-areas: "top" "banner" "explorer" "centre" "properties";
   }
 }
+
+/* Payloads and messages (design/02-model/semantics.md §5–§6) */
+.payload {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.payload .chip button {
+  margin-left: 4px;
+  padding: 0;
+}
+.payload select {
+  max-width: 10em;
+}
+.payload-text {
+  color: var(--fg-2);
+}
+ul.messages {
+  margin-left: 14px;
+}
+ul.messages li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.props .actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+.props-header h2.name {
+  margin: 0;
+  font-size: 15px;
+}
+.canvas .line-hit {
+  stroke: transparent;
+  stroke-width: 12;
+  cursor: pointer;
+}
+.canvas .line.interaction {
+  stroke-width: 3;
+}
+.canvas .line.selected {
+  stroke: var(--accent);
+}
+.canvas .line-label {
+  font-size: 11px;
+  fill: var(--fg-2);
+  pointer-events: none;
+}

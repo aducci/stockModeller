@@ -48,12 +48,15 @@ function candidates(state: ModelState, next: () => number, n: number): Edit[] {
     .filter((x) => x.type === "contains")
     .flatMap((x) => state.objectOccurrences.find("byObject", x.sourceId).map((p) => ({ rel: x, parent: p })));
   const nest = pick(nestable);
+  // Interactions, for messages (semantics.md §6), and relationships that can carry a payload (§5).
+  const interaction = pick(rels.filter((x) => metamodel.relationshipType(x.type)!.semantic === "interaction"));
+  const carrier = pick(rels.filter((x) => metamodel.relationshipType(x.type)!.payload !== "none"));
   const all: (Edit | null)[] = [
     f
       ? {
           edit: "createObject",
           id,
-          type: pick(["server", "application", "capability", "process"])!,
+          type: pick(["server", "application", "capability", "process", "interface", "dataObject"])!,
           name: `Gen ${n}`,
           folderId: f.id,
         }
@@ -97,6 +100,36 @@ function candidates(state: ModelState, next: () => number, n: number): Edit[] {
         }
       : null,
     o ? { edit: "deleteObject", id: o.id, baseVersion: o.version, contents: "deleteContents" } : null,
+    carrier && o
+      ? {
+          edit: "setPayload",
+          id: carrier.id,
+          baseVersion: carrier.version,
+          payload: next() < 0.2 ? [] : [...new Set([o.id, ...(o2 && next() < 0.5 ? [o2.id] : [])])],
+        }
+      : null,
+    o && o2
+      ? {
+          edit: "createRelationship",
+          id,
+          type: "calls",
+          sourceId: o.id,
+          targetId: o2.id,
+        }
+      : null,
+    interaction && o
+      ? {
+          edit: "createRelationship",
+          id,
+          type: "flowsTo",
+          ...(next() < 0.6
+            ? { sourceId: interaction.sourceId, targetId: interaction.targetId }
+            : { sourceId: interaction.targetId, targetId: interaction.sourceId }),
+          parentId: interaction.id,
+          payload: [o.id],
+          ...(next() < 0.3 ? { rank: n } : {}),
+        }
+      : null,
     { edit: "createFolder", id, parentId: f?.id ?? null, name: `Folder ${n}` },
     f ? { edit: "renameFolder", id: f.id, name: `${f.name}'` } : null,
     f ? { edit: "deleteFolder", id: f.id, contents: "deleteContents" } : null,

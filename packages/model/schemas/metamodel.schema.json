@@ -363,6 +363,10 @@
           "type": "boolean",
           "description": "composition only: deleting the whole deletes its parts"
         },
+        "payload": {
+          "enum": ["none", "optional", "expected"],
+          "description": "Whether relationships carry objects; default optional for flow and trigger kinds, none otherwise"
+        },
         "nesting": {
           "type": "boolean",
           "description": "Forms hierarchies; can be shown by placing a symbol inside another"
