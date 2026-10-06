@@ -6,7 +6,7 @@ The product and technical design lives in [`design/`](design/README.md) and is t
 
 ## Status
 
-Milestone **M0 (Skeleton)**, slices 0.1–0.4 are done: the model types, the change engine and the database layer. The API server, live updates and the web app come next. There is nothing to run in a browser yet; the work so far is verified by tests.
+Milestone **M0 (Skeleton)**, slices 0.1–0.5 are done: the model types, the change engine, the database layer and the REST API. Live updates and the web app come next.
 
 ## Layout
 
@@ -18,7 +18,7 @@ Milestone **M0 (Skeleton)**, slices 0.1–0.4 are done: the model types, the cha
 | [`packages/engine`](packages/engine)   | The change engine: applies a change atomically, enforces the model's rules and per-property conflicts, and records an inverse for every edit. Pure TypeScript with no I/O, so the server and the browser run the same code |
 | [`packages/db`](packages/db)           | PostgreSQL: migrations, row-level security per workspace, scenario-aware reads, and the commit path (change log + rows + sequence in one transaction)                                                                      |
 
-Module boundaries are enforced by ESLint (`eslint.config.js`): `model` imports nothing, `engine` only `model`, `db` only `model` and `engine`.
+Module boundaries are enforced by ESLint (`eslint.config.js`): `model` imports nothing, `engine` only `model`, `db` only `model` and `engine`; the server may use them all.
 
 ## Development
 

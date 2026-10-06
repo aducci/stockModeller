@@ -30,10 +30,17 @@ export function connect(options: DbOptions): Connection {
 
 /**
  * Runs `fn` in a transaction scoped to one workspace: row-level security then only shows and accepts
- * that workspace's rows. Every request handler reaches the database through this.
+ * that workspace's rows. Every request handler reaches the database through this. Reads that span several
+ * queries use "repeatable read" so they see one consistent snapshot.
  */
-export async function withWorkspace<T>(conn: Connection, workspaceId: string, fn: (tx: Tx) => Promise<T>): Promise<T> {
-  return conn.db.transaction().execute(async (tx) => {
+export async function withWorkspace<T>(
+  conn: Connection,
+  workspaceId: string,
+  fn: (tx: Tx) => Promise<T>,
+  options: { isolation?: "read committed" | "repeatable read" | "serializable" } = {},
+): Promise<T> {
+  const transaction = conn.db.transaction();
+  return (options.isolation ? transaction.setIsolationLevel(options.isolation) : transaction).execute(async (tx) => {
     await sql`select set_config('app.workspace_id', ${workspaceId}, true)`.execute(tx);
     if (conn.appRole) await sql`set local role ${sql.id(conn.appRole)}`.execute(tx);
     return fn(tx);

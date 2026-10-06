@@ -11,4 +11,14 @@ export {
 } from "./repositories";
 export { loadState, writeTouchedRows, markWritten } from "./model-state";
 export { lockRepository, commitChange, findChange, changeLogSince, type CommitInput } from "./changes";
+export {
+  listRepositories,
+  getRepository,
+  listScenarios,
+  repositorySeq,
+  itemHistory,
+  changeLog,
+  type RepositorySummary,
+  type ScenarioSummary,
+} from "./reads";
 export type { Database } from "./schema";

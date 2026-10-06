@@ -41,3 +41,6 @@ Questions the build raised. Each has a provisional answer in the code; change th
 | B7 | `example-repository.json` scenario edits omit `baseVersion`, which `changes.ts` requires | The tests fill it in from the state; the example should carry it |
 | B8 | Must an object's name be unique only among objects of exactly its type, or also among its subtypes? | Exactly its type (`application` and `saasApplication` are checked separately) |
 | B9 | When an object changes type, values the new type cannot hold | They are dropped; undo restores them |
+| B10 | The query language is M1 work, but `GET …/objects?q=` is in the API now | A subset works now: `type:<key>` (subtypes included) and `folder:"<path>"` (subfolders included), joined with `AND`. Anything else gets 422. It is a strict subset of the grammar, so queries written now keep working |
+| B11 | Undo: "if someone has since changed the same property, that part is skipped" | Not yet: an undo whose inverse conflicts is rejected as a whole (409). Skipping parts needs per-edit conflict handling in the engine. Undo is limited to your own changes (403 otherwise) and to once per change |
+| B12 | Sign-in before OIDC (M1) | Development tokens `Bearer dev:<workspace>:<user>`, only when `CONNECTOME_DEV_AUTH=1`, and refused when `NODE_ENV=production`. Without it every API request gets 401 |

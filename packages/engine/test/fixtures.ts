@@ -1,64 +1,26 @@
 // Test fixtures built from the design pack, so the engine is tested against the spec's own examples.
-import { essentials } from "@connectome/content";
-import { parseChange, type Actor, type Change, type Edit, type Id } from "@connectome/model";
+import { essentials, insuranceGroup } from "@connectome/content";
+import type { Actor, Change, Edit, Id } from "@connectome/model";
 import { applyChange, Metamodel, ModelState, type ApplyContext, type ApplyResult } from "../src";
-import { readDesignJson } from "../../model/test/design";
 
 export const metamodel = Metamodel.compile(essentials.metamodel, essentials.diagramTypes);
 
-export const BASELINE = "S0000000000000000000000001";
-export const TARGET_2027 = "S0000000000000000000000002";
+export const BASELINE = insuranceGroup.baselineScenarioId;
+export const TARGET_2027 = insuranceGroup.targetScenario.id;
 
 export const dana: Actor = { kind: "user", id: "U-DANA" };
 export const lee: Actor = { kind: "user", id: "U-LEE" };
 
-interface ExampleRepository {
-  folders: { id: Id; parentId: Id | null; name: string }[];
-  objects: Record<string, unknown>[];
-  relationships: Record<string, unknown>[];
-  scenarioChanges: Record<Id, Record<string, unknown>[]>;
-  diagrams: {
-    id: Id;
-    name: string;
-    diagramType: string;
-    folderId: Id;
-    objectOccurrences: Record<string, unknown>[];
-    relationshipOccurrences: Record<string, unknown>[];
-    annotations: Record<string, unknown>[];
-  }[];
-}
-
-export const example = readDesignJson<ExampleRepository>("05-structures/example-repository.json");
+export const example = insuranceGroup.data;
 
 /** The example repository's baseline as one change (folders, objects, relationships, the diagram). */
 export function exampleBaselineChange(): Change {
-  const edits: unknown[] = [
-    ...example.folders.map((f) => ({ edit: "createFolder", ...f })),
-    ...example.objects.map((o) => ({ edit: "createObject", ...o })),
-    ...example.relationships.map((r) => ({ edit: "createRelationship", ...r })),
-  ];
-  for (const d of example.diagrams) {
-    edits.push({ edit: "createDiagram", id: d.id, name: d.name, diagramType: d.diagramType, folderId: d.folderId });
-    for (const occurrence of d.objectOccurrences)
-      edits.push({ edit: "addObjectOccurrence", diagramId: d.id, occurrence });
-    for (const occurrence of d.relationshipOccurrences) {
-      edits.push({ edit: "addRelationshipOccurrence", diagramId: d.id, occurrence });
-    }
-    for (const annotation of d.annotations) edits.push({ edit: "addAnnotation", diagramId: d.id, annotation });
-  }
-  return parseChange({ id: "C-EXAMPLE", scenarioId: BASELINE, label: "Load example repository", edits });
+  return insuranceGroup.baselineChange();
 }
 
 /** The Target 2027 scenario's own edits, with base versions filled in from the state they apply to. */
 export function exampleScenarioChange(state: ModelState): Change {
-  const edits = example.scenarioChanges[TARGET_2027]!.map((e) => {
-    const id = e.id as Id;
-    const existing = state.objects.get(id) ?? state.relationships.get(id);
-    return "baseVersion" in e || !existing || String(e.edit).startsWith("create")
-      ? e
-      : { ...e, baseVersion: existing.version };
-  });
-  return parseChange({ id: "C-TARGET-2027", scenarioId: TARGET_2027, label: "Target 2027", edits });
+  return insuranceGroup.scenarioChange((id) => (state.objects.get(id) ?? state.relationships.get(id))?.version);
 }
 
 export function context(overrides: Partial<ApplyContext> = {}): ApplyContext {

@@ -9,8 +9,12 @@ const allowed = {
   content: ["model"],
   engine: ["model"],
   db: ["model", "engine"],
+  server: ["model", "engine", "db", "content"],
 };
 const packages = Object.keys(allowed);
+const forbidden = (pkg) =>
+  packages.filter((p) => p !== pkg && !allowed[pkg].includes(p)).map((p) => `@connectome/${p}`);
+const dir = (pkg) => (pkg === "server" ? `apps/${pkg}` : `packages/${pkg}`);
 
 export default tseslint.config(
   { ignores: ["**/node_modules/**", "design/**", "**/dist/**", "**/coverage/**"] },
@@ -24,16 +28,20 @@ export default tseslint.config(
     },
   },
   ...packages.map((pkg) => ({
-    files: [`packages/${pkg}/src/**/*.ts`],
+    files: [`${dir(pkg)}/src/**/*.ts`],
     rules: {
       "no-restricted-imports": [
         "error",
         {
           patterns: [
-            {
-              group: packages.filter((p) => p !== pkg && !allowed[pkg].includes(p)).map((p) => `@connectome/${p}`),
-              message: `@connectome/${pkg} may only import: ${allowed[pkg].join(", ") || "no other package"} (see eslint.config.js).`,
-            },
+            ...(forbidden(pkg).length > 0
+              ? [
+                  {
+                    group: forbidden(pkg),
+                    message: `@connectome/${pkg} may only import: ${allowed[pkg].join(", ") || "no other package"} (see eslint.config.js).`,
+                  },
+                ]
+              : []),
             { group: ["../../*"], message: "Import other packages by name, not by relative path." },
           ],
           // The engine is pure: no I/O, so it runs unchanged in the browser and on the server.

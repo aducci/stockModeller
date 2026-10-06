@@ -1,6 +1,6 @@
 // Committing changes: the change and change_log rows, the touched rows and the repository sequence,
 // in one transaction (architecture.md §6 step 3). Writes serialise per repository, never globally.
-import type { Actor, Change, ChangeSource, CommittedChange, LogEntry } from "@connectome/model";
+import type { Actor, Change, ChangeSource, CommittedChange, LogEntry, RuleFinding } from "@connectome/model";
 import type { TouchedRow } from "@connectome/engine";
 import type { Tx } from "./client";
 import { writeTouchedRows } from "./model-state";
@@ -26,6 +26,7 @@ export interface CommitInput {
   log: LogEntry[];
   touched: TouchedRow[];
   versions: Record<string, number>;
+  findings: RuleFinding[];
   undoesChangeId?: string;
 }
 
@@ -49,6 +50,7 @@ export async function commitChange(tx: Tx, input: CommitInput): Promise<Committe
       label: change.label,
       change_request_id: change.changeRequestId ?? null,
       undoes_change_id: input.undoesChangeId ?? null,
+      outcome: JSON.stringify({ versions: input.versions, findings: input.findings }),
     })
     .returning("committed_at")
     .executeTakeFirstOrThrow();
