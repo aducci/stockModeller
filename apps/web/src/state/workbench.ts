@@ -10,6 +10,11 @@ export interface Selection {
   kind: ItemKind;
   id: Id;
 }
+/** What the properties panel shows: an explorer item, or a relationship (picked on a diagram or in the panel). */
+export type Focus = Selection | { kind: "relationship"; id: Id };
+/** The selection when it is an explorer item (a folder, object or diagram), else null. */
+export const itemSelected = (focus: Focus | null): Selection | null =>
+  focus && focus.kind !== "relationship" ? focus : null;
 export interface Tab {
   kind: "object" | "diagram";
   id: Id;
@@ -47,7 +52,7 @@ interface WorkbenchState {
   status: SessionStatus;
   pending: number;
   presence: PresenceUser[];
-  selection: Selection | null;
+  selection: Focus | null;
   tabs: Tab[];
   activeTab: Id | null;
   /** Tabs whose item someone else changed since the tab was last looked at. */
@@ -55,13 +60,15 @@ interface WorkbenchState {
   toasts: Toast[];
   /** The object the "Delete object" dialog asks about (Shift+Delete). */
   confirmDelete: Id | null;
+  /** The trace shown in the properties panel and highlighted on diagrams (semantics.md §9.3). */
+  trace: { startId: Id; label: string; objectIds: ReadonlySet<Id> } | null;
   explorerTask: ExplorerTask | null;
   /** Rows Ctrl/⌘-clicked in the explorer: they are dragged, grouped or moved together. */
   marked: Selection[];
 
   open(options: OpenOptions): Promise<void>;
   close(): void;
-  select(selection: Selection | null): void;
+  select(selection: Focus | null): void;
   openTab(tab: Tab): void;
   closeTab(id: Id): void;
   closeAllTabs(): void;
@@ -76,6 +83,7 @@ interface WorkbenchState {
   toggleMark(item: Selection | null): void;
   /** A toast that reports no change (e.g. why a gesture did nothing). */
   notify(text: string, tone?: Toast["tone"]): void;
+  showTrace(trace: WorkbenchState["trace"]): void;
 }
 
 let unsubscribe: (() => void) | undefined;
@@ -108,6 +116,7 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
     changedTabs: new Set(),
     toasts: [],
     confirmDelete: null,
+    trace: null,
     explorerTask: null,
     marked: [],
 
@@ -183,7 +192,11 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
       unsubscribe?.();
       unsubscribe = undefined;
       get().session?.close();
-      set({ session: null, presence: [], toasts: [] });
+      set({ session: null, presence: [], toasts: [], trace: null });
+    },
+
+    showTrace(trace) {
+      set({ trace });
     },
 
     select(selection) {

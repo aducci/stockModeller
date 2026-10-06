@@ -746,6 +746,57 @@ button.danger {
   }
 }
 
+/* Payloads and messages (design/02-model/semantics.md §5–§6) */
+.payload {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.payload .chip button {
+  margin-left: 4px;
+  padding: 0;
+}
+.payload select {
+  max-width: 10em;
+}
+.payload-text {
+  color: var(--fg-2);
+}
+ul.messages {
+  margin-left: 14px;
+}
+ul.messages li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.props .actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+.props-header h2.name {
+  margin: 0;
+  font-size: 15px;
+}
+.canvas .line-hit {
+  stroke: transparent;
+  stroke-width: 12;
+  cursor: pointer;
+}
+.canvas .line.interaction {
+  stroke-width: 3;
+}
+.canvas .line.selected {
+  stroke: var(--accent);
+}
+.canvas .line-label {
+  font-size: 11px;
+  fill: var(--fg-2);
+  pointer-events: none;
+}
+
 /* Menus: the explorer's right-click menu and the top bar's menu bar */
 .menubar {
   display: flex;
@@ -859,4 +910,42 @@ svg.glyph {
   align-items: center;
   gap: 3px;
   color: var(--fg-2);
+}
+
+/* Explorer semantic groups (workbench.md, "Explorer: a semantic navigator") */
+.explorer .group-row,
+.explorer .ref-row {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  color: var(--fg-2);
+  cursor: pointer;
+}
+.explorer .group-row {
+  font-size: 12px;
+}
+.explorer .ref-row:hover,
+.explorer .group-row:hover {
+  background: var(--pane-2);
+}
+
+/* Trace (semantics.md §9.3) */
+.trace select {
+  width: 100%;
+}
+.trace-level h4 {
+  margin: 8px 0 2px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.canvas .occ.traced rect {
+  stroke: var(--changed);
+  stroke-width: 3;
 }

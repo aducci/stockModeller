@@ -19,14 +19,15 @@ export function OccurrenceShape(props: {
   notation: ReturnType<typeof notationFor>;
   fill: string | undefined;
   stroke: string | undefined;
-  square: boolean;
+  shape: string | undefined;
   /** Whether other occurrences are nested inside it. */
   container: boolean;
   /** The canvas zoom: a glyph's name keeps its on-screen size, so it stays readable when zoomed out. */
   zoom?: number;
 }) {
   const { metamodel } = useModel();
-  const { box: b, form, object, notation, fill, stroke, square, container, zoom = 1 } = props;
+  const { box: b, form, object, notation, fill, stroke, shape, container, zoom = 1 } = props;
+  const square = shape === "rect";
   const name = object?.name ?? "(deleted)";
 
   if (form === "glyph") {
@@ -106,7 +107,15 @@ export function OccurrenceShape(props: {
 
   return (
     <>
-      <rect x={b.x} y={b.y} width={b.w} height={b.h} rx={square ? 0 : 4} fill={fill} stroke={stroke} />
+      <rect
+        x={b.x}
+        y={b.y}
+        width={b.w}
+        height={b.h}
+        rx={square ? 0 : shape === "ellipse" ? b.h / 2 : 4}
+        fill={fill}
+        stroke={stroke}
+      />
       <GlyphUse glyph={notation.glyph} x={b.x + b.w - 20} y={b.y + 5} colour={notation.ink} />
       <text x={b.x + 6} y={b.y + (container ? 16 : b.h / 2 + 4)} className={container ? "container-label" : ""}>
         {name}

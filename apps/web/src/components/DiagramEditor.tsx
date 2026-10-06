@@ -31,6 +31,7 @@ import {
   type Box,
   type ConnectChoice,
 } from "../diagram";
+import { addPayloadPlan, messageType, payloadText } from "../semantics";
 
 /** Drag-and-drop payloads: an object type from the palette, or an existing object from the explorer. */
 export const DRAG_TYPE = "application/x-connectome-type";
@@ -96,6 +97,7 @@ export function DiagramEditor({ id }: { id: Id }) {
   const askDeleteObject = useWorkbench((s) => s.askDeleteObject);
   const notify = useWorkbench((s) => s.notify);
   const workbenchSelection = useWorkbench((s) => s.selection);
+  const traced = useWorkbench((s) => s.trace?.objectIds);
   const [selected, setSelected] = useState<Id | null>(null);
   const [gesture, setGesture] = useState<Gesture | null>(null);
   const [naming, setNaming] = useState<{ type: string; at: Point } | null>(null);
@@ -148,6 +150,42 @@ export function DiagramEditor({ id }: { id: Id }) {
   // Larger symbols behind smaller ones, so nothing placed over a container is hidden by it.
   const ordered = [...occurrences].filter((o) => boxes.has(o.id)).sort((a, b) => area(b) - area(a) || a.z - b.z);
   const lines = state.relationshipOccurrences.find("byDiagram", id).filter((l) => l.shownAs !== "nesting");
+  const parallel = new Map<Id, { index: number; count: number }>();
+  const pairs = new Map<string, Id[]>();
+  for (const l of [...lines].sort((x, y) => x.id.localeCompare(y.id))) {
+    const key = [l.sourceOccurrenceId, l.targetOccurrenceId].sort().join("|");
+    pairs.set(key, [...(pairs.get(key) ?? []), l.id]);
+  }
+  for (const ids of pairs.values()) ids.forEach((lineId, index) => parallel.set(lineId, { index, count: ids.length }));
+  // Line geometry. Lines between the same two symbols are drawn side by side, never on top of each other (§8).
+  const drawn = lines.flatMap((l) => {
+    const a = boxes.get(l.sourceOccurrenceId);
+    const b = boxes.get(l.targetOccurrenceId);
+    if (!a || !b) return [];
+    const centre = (x: Box) => ({ x: x.x + x.w / 2, y: x.y + x.h / 2 });
+    const p0 = edgePoint(a, centre(b));
+    const q0 = edgePoint(b, centre(a));
+    const { index, count } = parallel.get(l.id)!;
+    const len = Math.hypot(q0.x - p0.x, q0.y - p0.y) || 1;
+    const flip = l.sourceOccurrenceId < l.targetOccurrenceId ? 1 : -1;
+    const shift = (index - (count - 1) / 2) * 12 * flip;
+    const nx = (-(q0.y - p0.y) / len) * shift;
+    const ny = ((q0.x - p0.x) / len) * shift;
+    const rel = state.relationships.get(l.relationshipId);
+    const type = rel ? metamodel.relationshipType(rel.type) : undefined;
+    const interaction = type?.semantic === "interaction";
+    const operation = rel?.properties["interaction.operation"];
+    // An interaction shows its operation; a flow what it carries (design/04-ux/diagram-editor.md §8).
+    const label = interaction
+      ? `⇄ ${typeof operation === "string" ? operation : (type?.name ?? "")}`
+      : rel && rel.payload.length > 0
+        ? payloadText(state, rel)
+        : "";
+    const chosen = rel !== undefined && workbenchSelection?.kind === "relationship" && workbenchSelection.id === rel.id;
+    const p = { x: p0.x + nx, y: p0.y + ny };
+    const q = { x: q0.x + nx, y: q0.y + ny };
+    return [{ l, p, q, rel, type, interaction, label, chosen }];
+  });
   const repeats = new Map<Id, number>();
   for (const o of occurrences) repeats.set(o.objectId, (repeats.get(o.objectId) ?? 0) + 1);
   const nextZ = Math.max(0, ...occurrences.map((o) => o.z)) + 1;
@@ -184,6 +222,14 @@ export function DiagramEditor({ id }: { id: Id }) {
     if (type) return setNaming({ type, at });
     const object = state.objects.get(objectId);
     if (!object) return;
+    // Dropped on a line: the relationship carries it (design/04-ux/diagram-editor.md §8).
+    const onLine = document.elementFromPoint(e.clientX, e.clientY)?.closest<SVGElement>("[data-line]");
+    if (onLine?.dataset.rel) {
+      const plan = addPayloadPlan(state, metamodel, onLine.dataset.rel, objectId);
+      if ("error" in plan) return notify(plan.error, "error");
+      if (edit(plan.label, plan.edits)) select({ kind: "relationship", id: onLine.dataset.rel });
+      return;
+    }
     const others = occurrences.filter((o) => o.objectId === objectId).map((o) => o.id);
     const occId = ulid();
     const ok = edit(`Add ${object.name} to ${diagram.name}`, [
@@ -304,7 +350,12 @@ export function DiagramEditor({ id }: { id: Id }) {
       metamodel.diagramType(diagram.diagramType)?.nesting === "nested" &&
       b.parentOccurrenceId === null &&
       !isAncestor(b.id, a.id);
-    edit(choice.existingId ? `Show ${label}` : label, [
+    // A new interaction starts with an empty request; the properties panel then asks for payloads (§8).
+    const request =
+      choice.type.semantic === "interaction" && !choice.existingId
+        ? messageType(metamodel, state.objects.get(a.objectId)!.type, state.objects.get(b.objectId)!.type)
+        : undefined;
+    const ok = edit(choice.existingId ? `Show ${label}` : label, [
       ...(choice.existingId
         ? []
         : [
@@ -316,6 +367,18 @@ export function DiagramEditor({ id }: { id: Id }) {
               targetId: b.objectId,
             },
           ]),
+      ...(request
+        ? [
+            {
+              edit: "createRelationship" as const,
+              id: ulid(),
+              type: request.key,
+              sourceId: a.objectId,
+              targetId: b.objectId,
+              parentId: relationshipId,
+            },
+          ]
+        : []),
       ...(nest ? nestEdits(a, b) : []),
       {
         edit: "addRelationshipOccurrence",
@@ -332,6 +395,10 @@ export function DiagramEditor({ id }: { id: Id }) {
         },
       },
     ]);
+    if (ok && choice.type.semantic === "interaction") {
+      setSelected(null);
+      select({ kind: "relationship", id: relationshipId });
+    }
   };
 
   /** Whether occurrence `ancestor` is `occ` or contains it on this diagram. */
@@ -513,6 +580,27 @@ export function DiagramEditor({ id }: { id: Id }) {
             {ARROW_MARKERS}
           </defs>
           <rect width={width} height={height} fill="url(#grid)" pointerEvents="none" />
+          {/* Lines are picked (and dropped on) beneath the symbols, so they never take a symbol's clicks. */}
+          {drawn.map(({ l, p, q, rel, type }) => (
+            <line
+              key={l.id}
+              className="line-hit"
+              data-line={l.id}
+              data-rel={rel?.id}
+              x1={p.x}
+              y1={p.y}
+              x2={q.x}
+              y2={q.y}
+              aria-label={rel ? `${nameOf(rel.sourceId)} ${type?.verb ?? rel.type} ${nameOf(rel.targetId)}` : undefined}
+              onPointerDown={(e) => {
+                if (!rel) return;
+                e.stopPropagation();
+                setSelected(null);
+                setMenu(null);
+                select({ kind: "relationship", id: rel.id });
+              }}
+            />
+          ))}
           {ordered.map((o) => {
             const b = boxes.get(o.id)!;
             const object = state.objects.get(o.objectId);
@@ -530,6 +618,7 @@ export function DiagramEditor({ id }: { id: Id }) {
               o.id === selected && "selected",
               siblings.has(o.id) && "sibling",
               flash.has(o.id) && "flash",
+              traced?.has(o.objectId) && "traced",
             ].filter(Boolean);
             return (
               <g
@@ -556,7 +645,7 @@ export function DiagramEditor({ id }: { id: Id }) {
                   notation={notation}
                   fill={symbol.fill ?? notation.fill}
                   stroke={symbol.stroke ?? notation.stroke}
-                  square={symbol.shape === "rect"}
+                  shape={symbol.shape}
                   container={container}
                   zoom={zoom}
                 />
@@ -574,30 +663,22 @@ export function DiagramEditor({ id }: { id: Id }) {
               </g>
             );
           })}
-          {lines.map((l) => {
-            const a = boxes.get(l.sourceOccurrenceId);
-            const b = boxes.get(l.targetOccurrenceId);
-            if (!a || !b) return null;
-            const centre = (x: Box) => ({ x: x.x + x.w / 2, y: x.y + x.h / 2 });
-            const p = edgePoint(a, centre(b));
-            const q = edgePoint(b, centre(a));
-            const rel = state.relationships.get(l.relationshipId);
+          {drawn.map(({ l, p, q, rel, type, interaction, label, chosen }) => {
             const line = lineFor(metamodel, rel?.type);
             return (
               <g key={l.id}>
                 <line
-                  className="line"
-                  data-relationship={rel ? metamodel.relationshipType(rel.type)?.verb : undefined}
+                  className={["line", interaction && "interaction", chosen && "selected"].filter(Boolean).join(" ")}
+                  data-relationship={type?.verb}
                   x1={p.x}
                   y1={p.y}
                   x2={q.x}
                   y2={q.y}
-                  strokeWidth={line.width}
                   strokeDasharray={line.dash}
                   markerStart={markerUrl(line.start)}
                   markerEnd={markerUrl(line.end)}
                 />
-                {line.mid && (
+                {line.mid && !label && (
                   <GlyphUse
                     glyph={line.mid}
                     x={(p.x + q.x) / 2 - 8}
@@ -605,6 +686,11 @@ export function DiagramEditor({ id }: { id: Id }) {
                     size={16}
                     colour="var(--fg-2)"
                   />
+                )}
+                {label && rel && (
+                  <text className="line-label" x={(p.x + q.x) / 2} y={(p.y + q.y) / 2 - 4}>
+                    {label}
+                  </text>
                 )}
               </g>
             );

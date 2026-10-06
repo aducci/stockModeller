@@ -135,6 +135,18 @@ export function checkInvariants(state: ModelState): void {
     ) {
       fail(`${r.targetId} has two parents through ${r.type}`);
     }
+    // Payloads and messages (semantics.md §5–§6).
+    if (r.payload.length > 0 && type.payload === "none") fail(`${r.id} carries a payload it cannot have`);
+    if (new Set(r.payload).size !== r.payload.length) fail(`${r.id} lists a payload object twice`);
+    for (const id of r.payload) if (!state.objects.get(id)) fail(`${r.id} carries a missing object ${id}`);
+    if (r.parentId !== null) {
+      const parent = state.relationships.get(r.parentId);
+      if (!parent || metamodel.relationshipType(parent.type)!.semantic !== "interaction")
+        fail(`message ${r.id} has no interaction`);
+      const ends = [parent!.sourceId, parent!.targetId].sort().join();
+      if ([r.sourceId, r.targetId].sort().join() !== ends) fail(`message ${r.id} leaves its interaction's objects`);
+      if (type.semantic !== "flow") fail(`message ${r.id} is not a flow`);
+    }
   }
   // Containment (design/02-model/semantics.md §3): one container, and the content lives in its folder.
   for (const o of state.objects.live()) {

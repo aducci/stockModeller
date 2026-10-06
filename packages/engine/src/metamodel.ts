@@ -7,6 +7,7 @@ import {
   type DiagramType,
   type MetamodelPackage,
   type ObjectType,
+  type PayloadUse,
   type PropertyType,
   type RelationshipRule,
   type RelationshipType,
@@ -46,6 +47,7 @@ export interface ResolvedRelationshipType extends RelationshipType {
   semanticDirection: "forward" | "reverse";
   nesting: boolean;
   singleParent: boolean;
+  payload: PayloadUse;
 }
 
 export interface CompiledRule extends RelationshipRule {
@@ -248,6 +250,7 @@ export class Metamodel {
         semanticDirection: rt.semanticDirection ?? "forward",
         nesting: containment || (rt.nesting ?? false),
         singleParent: containment || (rt.singleParent ?? false),
+        payload: rt.payload ?? (semantic === "flow" || semantic === "trigger" ? "optional" : "none"),
       });
       mm.relationshipProperties.set(rt.key, new Set([...(rt.properties ?? []), ...kind.properties]));
       for (const p of rt.properties ?? []) {

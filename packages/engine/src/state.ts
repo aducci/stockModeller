@@ -4,12 +4,18 @@
 import type { Id } from "@connectome/model";
 import { COLLECTIONS, type CollectionName, type Rows } from "./rows";
 
-type IndexKey<T> = (row: T) => string | null;
+/** An index value; a list indexes the row under each of its values. */
+type IndexKey<T> = (row: T) => string | readonly string[] | null;
 
 const INDEXES: { [C in CollectionName]: Record<string, IndexKey<Rows[C]>> } = {
   folders: { byParent: (r) => r.parentId ?? "" },
   objects: { byFolder: (r) => r.folderId, byType: (r) => r.type },
-  relationships: { bySource: (r) => r.sourceId, byTarget: (r) => r.targetId },
+  relationships: {
+    bySource: (r) => r.sourceId,
+    byTarget: (r) => r.targetId,
+    byParent: (r) => r.parentId,
+    byPayload: (r) => r.payload,
+  },
   diagrams: { byFolder: (r) => r.folderId },
   objectOccurrences: {
     byDiagram: (r) => r.diagramId,
@@ -24,6 +30,11 @@ const INDEXES: { [C in CollectionName]: Record<string, IndexKey<Rows[C]>> } = {
   },
   annotations: { byDiagram: (r) => r.diagramId, byParent: (r) => r.parentOccurrenceId },
 };
+
+function values(value: string | readonly string[] | null): readonly string[] {
+  if (value === null) return [];
+  return typeof value === "string" ? [value] : value;
+}
 
 export class Collection<T extends { id: Id; deleted: boolean }> {
   private readonly rows = new Map<Id, T>();
@@ -87,21 +98,21 @@ export class Collection<T extends { id: Id; deleted: boolean }> {
 
   private addToIndexes(row: T) {
     for (const { key, map } of this.indexes.values()) {
-      const value = key(row);
-      if (value === null) continue;
-      let ids = map.get(value);
-      if (!ids) map.set(value, (ids = new Set()));
-      ids.add(row.id);
+      for (const value of values(key(row))) {
+        let ids = map.get(value);
+        if (!ids) map.set(value, (ids = new Set()));
+        ids.add(row.id);
+      }
     }
   }
 
   private unindex(row: T) {
     for (const { key, map } of this.indexes.values()) {
-      const value = key(row);
-      if (value === null) continue;
-      const ids = map.get(value);
-      ids?.delete(row.id);
-      if (ids?.size === 0) map.delete(value);
+      for (const value of values(key(row))) {
+        const ids = map.get(value);
+        ids?.delete(row.id);
+        if (ids?.size === 0) map.delete(value);
+      }
     }
   }
 }

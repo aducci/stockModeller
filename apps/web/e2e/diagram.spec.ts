@@ -239,8 +239,8 @@ test("validation scenario 4: one renames while the other moves, and both changes
 test("shows an occurrence as a card, undoes it, cycles with R, and draws glyphs when zoomed out", async ({ page }) => {
   await signIn(page);
   await openDiagram(page);
-  await addFromPalette(page, "Application", "Quote Engine", 660, 560);
-  const quote = symbol(page, "Quote Engine");
+  await addFromPalette(page, "Application", "Premium Calculator", 660, 560);
+  const quote = symbol(page, "Premium Calculator");
   await expect(quote).toHaveAttribute("data-rendition", "box");
   const boxWidth = await quote.locator("rect").first().getAttribute("width");
 
@@ -253,7 +253,7 @@ test("shows an occurrence as a card, undoes it, cycles with R, and draws glyphs 
   await saved(page);
 
   // One undo puts both the rendition and the size back.
-  const toast = page.getByRole("status").filter({ hasText: "Show Quote Engine as card" });
+  const toast = page.getByRole("status").filter({ hasText: "Show Premium Calculator as card" });
   await toast.getByRole("button", { name: "Undo" }).click();
   await expect(quote).toHaveAttribute("data-rendition", "box");
   await expect(quote.locator("rect").first()).toHaveAttribute("width", boxWidth!);

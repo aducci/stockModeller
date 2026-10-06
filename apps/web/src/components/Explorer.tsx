@@ -16,8 +16,9 @@ import {
 } from "react";
 import { ulid, type Edit, type Id } from "@connectome/model";
 import { useAuth } from "../state/auth";
-import { useModel, useWorkbench, type Selection } from "../state/workbench";
+import { itemSelected, useModel, useWorkbench, type Selection } from "../state/workbench";
 import { byName } from "../text";
+import { explorerGroups, payloadText, type RelationshipGroup } from "../semantics";
 import { folderChain, targetFolder } from "../explorer";
 import { notationFor } from "../notation";
 import {
@@ -64,7 +65,7 @@ const Context = createContext<ExplorerContext>({ openMenu: () => {}, setHint: ()
 
 export function Explorer() {
   const { state, metamodel } = useModel();
-  const selection = useWorkbench((s) => s.selection);
+  const selection = useWorkbench((s) => itemSelected(s.selection));
   const task = useWorkbench((s) => s.explorerTask);
   const setTask = useWorkbench((s) => s.setExplorerTask);
   const toggleMark = useWorkbench((s) => s.toggleMark);
@@ -196,7 +197,7 @@ function Children({ parent, depth }: { parent: Parent; depth: number }) {
 /** Opens a folder or container when something inside it is selected (the explorer reveals the selection). */
 function useReveal(id: Id, setOpen: (open: boolean) => void) {
   const { state, metamodel } = useModel();
-  const selection = useWorkbench((s) => s.selection);
+  const selection = useWorkbench((s) => itemSelected(s.selection));
   const holds =
     !!selection &&
     selection.id !== id &&
@@ -237,14 +238,17 @@ function FolderNode({ id, depth }: { id: Id; depth: number }) {
 
 function ObjectNode({ id, depth }: { id: Id; depth: number }) {
   const { state, metamodel } = useModel();
-  const [open, setOpen] = useState(true);
-  useReveal(id, setOpen);
-  const object = state.objects.get(id);
-  if (!object) return null;
   const contents = childrenOf(state, metamodel, { kind: "object", id });
   const group = isGroup(state, metamodel, id);
   const members = group ? groupMembers(state, id) : [];
-  const hasChildren = contents.length + members.length > 0;
+  const meaning = explorerGroups(state, metamodel, id, new Set(members.map((m) => m.relationship.id)));
+  // Structure is open until closed; meaning alone waits to be asked for (workbench.md, "Explorer: a semantic navigator").
+  const [chosen, setOpen] = useState<boolean | null>(null);
+  const open = chosen ?? contents.length + members.length > 0;
+  useReveal(id, setOpen);
+  const object = state.objects.get(id);
+  if (!object) return null;
+  const hasChildren = contents.length + members.length + meaning.length > 0;
   const shape = <ObjectGlyph type={object.type} group={group} />;
   const icon = !hasChildren ? (
     shape
@@ -279,6 +283,47 @@ function ObjectNode({ id, depth }: { id: Id; depth: number }) {
                 label={member.name}
                 memberOf={relationship.id}
               />
+            </li>
+          ))}
+          {meaning.map((g) => (
+            <MeaningGroup key={`${g.kind}:${g.direction}`} group={g} depth={depth + 1} />
+          ))}
+        </ul>
+      )}
+    </li>
+  );
+}
+
+/**
+ * One semantic group under an object: its relationships of one kind and direction, collapsed and dimmed, with the
+ * objects at their other end as references (↗). Selecting a reference selects that object; it is stored elsewhere.
+ */
+function MeaningGroup({ group, depth }: { group: RelationshipGroup; depth: number }) {
+  const { state } = useModel();
+  const select = useWorkbench((s) => s.select);
+  const [open, setOpen] = useState(false);
+  return (
+    <li role="treeitem" aria-expanded={open} className="meaning" data-kind={group.kind}>
+      <button className="group-row" style={{ paddingLeft: 8 + depth * 14 }} onClick={() => setOpen(!open)}>
+        {open ? "▾" : "▸"} ⋯ {group.label} ({group.rows.length})
+      </button>
+      {open && (
+        <ul role="group">
+          {group.rows.map(({ relationship, other, arrow }) => (
+            <li key={relationship.id} role="treeitem">
+              <button
+                className="ref-row"
+                style={{ paddingLeft: 8 + (depth + 1) * 14 }}
+                onClick={() => select({ kind: "object", id: other })}
+              >
+                ↗ {state.objects.get(other)?.name ?? other}
+                {relationship.payload.length > 0 && (
+                  <span className="payload-text">
+                    {" "}
+                    {arrow} {payloadText(state, relationship)}
+                  </span>
+                )}
+              </button>
             </li>
           ))}
         </ul>
@@ -501,7 +546,8 @@ function Row(props: {
       onClick={(e) => {
         if ((e.ctrlKey || e.metaKey) && !memberOf) {
           // Ctrl/⌘-click marks rows to drag or group together; the selection joins the marks.
-          const { selection, marked: marks } = useWorkbench.getState();
+          const { marked: marks } = useWorkbench.getState();
+          const selection = itemSelected(useWorkbench.getState().selection);
           if (marks.length === 0 && selection && selection.id !== item.id) toggleMark(selection);
           toggleMark(item);
           return;

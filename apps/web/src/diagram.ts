@@ -200,7 +200,7 @@ export function connectChoices(
 
   const existing = state.relationships
     .find("bySource", sourceId)
-    .filter((r) => r.targetId === targetId && shown(r.type))
+    .filter((r) => r.targetId === targetId && r.parentId === null && shown(r.type)) // messages go with their interaction
     .flatMap((r) => {
       const type = metamodel.relationshipType(r.type);
       return type ? [{ type, existingId: r.id }] : [];

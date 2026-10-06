@@ -60,6 +60,7 @@ describe("diagram editor helpers", () => {
       "capability",
       "application",
       "saasApplication",
+      "interface",
     ]);
   });
 

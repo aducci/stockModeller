@@ -31,8 +31,9 @@ export function relationshipGroups(state: ModelState, metamodel: Metamodel, obje
     });
     groups.set(key, group);
   };
-  for (const r of state.relationships.find("bySource", objectId)) add(r, "source");
-  for (const r of state.relationships.find("byTarget", objectId)) add(r, "target");
+  // Messages are listed under their interaction (semantics.md §6), not on their own.
+  for (const r of state.relationships.find("bySource", objectId)) if (r.parentId === null) add(r, "source");
+  for (const r of state.relationships.find("byTarget", objectId)) if (r.parentId === null) add(r, "target");
 
   const order = (g: RelationshipGroup) =>
     SEMANTIC_KINDS.findIndex((k) => k.kind === g.kind) * 2 + (g.direction === "outgoing" ? 0 : 1);
@@ -43,6 +44,22 @@ export function relationshipGroups(state: ModelState, metamodel: Metamodel, obje
       ...g,
       rows: g.rows.sort((a, b) => a.verb.localeCompare(b.verb) || name(a.other).localeCompare(name(b.other))),
     }));
+}
+
+/**
+ * The explorer's semantic groups under an object: its relationship groups without containment (the tree already shows
+ * contents and container) and without the relationships shown as group members (`exclude`).
+ */
+export function explorerGroups(
+  state: ModelState,
+  metamodel: Metamodel,
+  objectId: Id,
+  exclude: ReadonlySet<Id> = new Set(),
+): RelationshipGroup[] {
+  return relationshipGroups(state, metamodel, objectId)
+    .filter((g) => g.kind !== "containment")
+    .map((g) => ({ ...g, rows: g.rows.filter((r) => !exclude.has(r.relationship.id)) }))
+    .filter((g) => g.rows.length > 0);
 }
 
 // ------------------------------------------------------------------ containment (semantics.md §3)
@@ -122,5 +139,85 @@ export function moveToFolderPlan(state: ModelState, metamodel: Metamodel, object
         ? []
         : [{ edit: "moveToFolder" as const, id: object.id, baseVersion: object.version, folderId }]),
     ],
+  };
+}
+
+// ------------------------------------------------------------------ payloads and messages (semantics.md §5–§6)
+
+/** What a relationship carries, by name, e.g. "Payment Information, Claim". Empty when it carries nothing. */
+export function payloadText(state: ModelState, relationship: RelationshipRow): string {
+  return relationship.payload.map((id) => state.objects.get(id)?.name ?? "(deleted)").join(", ");
+}
+
+/** An interaction's messages in order, each with its role: a request goes the interaction's way, a response back. */
+export function messagesOf(
+  state: ModelState,
+  interaction: RelationshipRow,
+): { message: RelationshipRow; role: "request" | "response" }[] {
+  return state.relationships
+    .find("byParent", interaction.id)
+    .sort((a, b) => a.rank - b.rank || a.id.localeCompare(b.id))
+    .map((message) => ({ message, role: message.sourceId === interaction.sourceId ? "request" : "response" }));
+}
+
+/** Objects offered as a payload: information first (the framework's usual payload), then everything else, by name. */
+export function payloadChoices(state: ModelState, metamodel: Metamodel, relationship: RelationshipRow): ObjectRow[] {
+  const information = (o: ObjectRow) => metamodel.objectType(o.type)?.category === "information";
+  return [...state.objects.live()]
+    .filter((o) => !relationship.payload.includes(o.id))
+    .sort((a, b) => Number(information(b)) - Number(information(a)) || a.name.localeCompare(b.name));
+}
+
+/** Adds an object to what a relationship carries (dropping it on a flow line, or the payload picker). */
+export function addPayloadPlan(state: ModelState, metamodel: Metamodel, relationshipId: Id, objectId: Id): Plan {
+  const relationship = state.relationships.get(relationshipId);
+  const object = state.objects.get(objectId);
+  if (!relationship || !object) return { error: "That item was deleted meanwhile" };
+  const type = metamodel.relationshipType(relationship.type);
+  if (!type || type.payload === "none") return { error: `${type?.name ?? relationship.type} carries no payload` };
+  if (relationship.payload.includes(objectId)) return { error: `It already carries ${object.name}` };
+  return {
+    label: `Carry ${object.name}`,
+    edits: [
+      {
+        edit: "setPayload",
+        id: relationship.id,
+        baseVersion: relationship.version,
+        payload: [...relationship.payload, objectId],
+      },
+    ],
+  };
+}
+
+/** The flow type a new message between two object types gets: the first the rules allow, in package order. */
+export function messageType(metamodel: Metamodel, sourceType: string, targetType: string) {
+  return metamodel
+    .allRelationshipTypes()
+    .find((t) => t.semantic === "flow" && metamodel.matchingRules(t.key, sourceType, targetType).length > 0);
+}
+
+/**
+ * A new message for an interaction: a request goes from initiator to responder, a response back. Its type is the
+ * first flow type the rules allow for that direction.
+ */
+export function messagePlan(
+  state: ModelState,
+  metamodel: Metamodel,
+  interactionId: Id,
+  role: "request" | "response",
+  id: Id = ulid(),
+): Plan {
+  const interaction = state.relationships.get(interactionId);
+  if (!interaction) return { error: "That interaction was deleted meanwhile" };
+  const [sourceId, targetId] =
+    role === "request" ? [interaction.sourceId, interaction.targetId] : [interaction.targetId, interaction.sourceId];
+  const source = state.objects.get(sourceId);
+  const target = state.objects.get(targetId);
+  if (!source || !target) return { error: "That interaction was deleted meanwhile" };
+  const type = messageType(metamodel, source.type, target.type);
+  if (!type) return { error: `No flow type lets ${source.name} send to ${target.name}` };
+  return {
+    label: `Add a ${role} from ${source.name} to ${target.name}`,
+    edits: [{ edit: "createRelationship", id, type: type.key, sourceId, targetId, parentId: interaction.id }],
   };
 }

@@ -3,7 +3,7 @@
 import type { Metamodel, ModelState } from "@connectome/engine";
 import type { Id } from "@connectome/model";
 import { useAuth } from "../state/auth";
-import { useWorkbench, type Selection } from "../state/workbench";
+import { itemSelected, useWorkbench, type Selection } from "../state/workbench";
 import { navigate } from "../route";
 import { itemName, targetFolder, whyFolderNotDeletable } from "../explorer";
 import { addToGroupPlan, isGroup, removeFromGroupPlan, type Plan } from "../dragdrop";
@@ -153,7 +153,8 @@ export function backgroundMenu(): MenuEntry[] {
 
 /** The File menu in the top bar: acts on the shared selection. */
 export function fileMenu(state: ModelState): MenuEntry[] {
-  const { selection, tabs, activeTab, closeTab, closeAllTabs } = store();
+  const { tabs, activeTab, closeTab, closeAllTabs } = store();
+  const selection = itemSelected(store().selection);
   const current = selection && itemName(state, selection) !== undefined ? selection : null;
   const folderId = targetFolder(state, current);
   const none = "Select an item in the explorer first";
