@@ -10,7 +10,9 @@ const app = buildApp({
   conn,
   authenticate: config.devAuth ? devAuthenticate : noAuthenticate,
   logger: { level: config.logLevel },
+  live: { connectionString: config.databaseUrl, ...(config.secret ? { ticketSecret: config.secret } : {}) },
 });
+if (!config.secret) app.log.warn("CONNECTOME_SECRET is not set: live tickets only work on this instance.");
 if (!config.devAuth)
   app.log.warn(
     "No sign-in method is configured: every API request will get 401. Set CONNECTOME_DEV_AUTH=1 for development.",

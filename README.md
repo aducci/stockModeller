@@ -6,7 +6,7 @@ The product and technical design lives in [`design/`](design/README.md) and is t
 
 ## Status
 
-Milestone **M0 (Skeleton)**, slices 0.1–0.5 are done: the model types, the change engine, the database layer and the REST API. Live updates and the web app come next.
+Milestone **M0 (Skeleton)**, slices 0.1–0.6 are done: the model types, the change engine, the database layer, the REST API and live updates over WebSocket. The web app comes next.
 
 ## Layout
 

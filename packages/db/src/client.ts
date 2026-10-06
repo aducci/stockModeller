@@ -46,3 +46,8 @@ export async function withWorkspace<T>(
     return fn(tx);
   });
 }
+
+/** Sends a notification outside any transaction (e.g. presence, which is never stored). */
+export async function notify(conn: Connection, channel: string, payload: string): Promise<void> {
+  await sql`select pg_notify(${channel}, ${payload})`.execute(conn.db);
+}

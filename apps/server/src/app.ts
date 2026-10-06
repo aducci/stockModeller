@@ -1,5 +1,6 @@
 // The HTTP application (role "web" in ADR-002). The web app uses this same public API.
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
+import websocket from "@fastify/websocket";
 import { ZodError } from "zod";
 import type { Connection } from "@connectome/db";
 import type { Authenticate, Principal } from "./auth";
@@ -8,11 +9,16 @@ import { ModelService } from "./service";
 import { changeRoutes } from "./routes/changes";
 import { modelRoutes } from "./routes/model";
 import { repositoryRoutes } from "./routes/repositories";
+import { LiveHub } from "./live/hub";
+import { liveRoutes } from "./live/routes";
+import { Tickets } from "./live/tickets";
 
 export interface AppOptions {
   conn: Connection;
   authenticate: Authenticate;
   logger?: boolean | { level: string };
+  /** Enables live updates: the LISTEN connection needs its own connection string. */
+  live?: { connectionString: string; ticketSecret?: string };
 }
 
 /** What every route module receives. */
@@ -28,9 +34,18 @@ declare module "fastify" {
   }
 }
 
-export function buildApp(options: AppOptions): FastifyInstance & { service: ModelService } {
+export function buildApp(options: AppOptions): FastifyInstance & { service: ModelService; hub: LiveHub | undefined } {
   const app = Fastify({ logger: options.logger ?? false, bodyLimit: 20 * 1024 * 1024 });
   const service = new ModelService(options.conn);
+  const tickets = new Tickets(options.live?.ticketSecret);
+  const hub = options.live
+    ? new LiveHub({ conn: options.conn, service, connectionString: options.live.connectionString, log: app.log })
+    : undefined;
+  if (hub) {
+    app.addHook("onReady", () => hub.start());
+    app.addHook("onClose", () => hub.stop());
+  }
+  app.register(websocket, { options: { maxPayload: 20 * 1024 * 1024 } });
 
   app.setErrorHandler((error, req, reply) => {
     const problem =
@@ -68,7 +83,9 @@ export function buildApp(options: AppOptions): FastifyInstance & { service: Mode
   app.register(
     async (api) => {
       api.addHook("onRequest", async (req) => {
-        const principal = options.authenticate(req);
+        // Browsers cannot set headers on a WebSocket: they sign in with a short-lived ticket instead.
+        const ticket = (req.query as { ticket?: unknown }).ticket;
+        const principal = options.authenticate(req) ?? (typeof ticket === "string" ? tickets.verify(ticket) : null);
         if (!principal) throw new ApiError(401, "unauthenticated", "Sign in to use the API");
         req.principal = principal;
       });
@@ -76,9 +93,10 @@ export function buildApp(options: AppOptions): FastifyInstance & { service: Mode
       repositoryRoutes(api, routes);
       modelRoutes(api, routes);
       changeRoutes(api, routes);
+      if (hub) liveRoutes(api, routes, hub, tickets);
     },
     { prefix: "/api/v1" },
   );
 
-  return Object.assign(app, { service });
+  return Object.assign(app, { service, hub });
 }

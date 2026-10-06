@@ -1,4 +1,4 @@
-export { connect, withWorkspace, type Connection, type Db, type DbOptions, type Tx } from "./client";
+export { connect, notify, withWorkspace, type Connection, type Db, type DbOptions, type Tx } from "./client";
 export { migrate, listMigrations, MIGRATIONS_DIR } from "./migrate";
 export {
   createWorkspace,
@@ -10,7 +10,17 @@ export {
   type NewRepository,
 } from "./repositories";
 export { loadState, writeTouchedRows, markWritten } from "./model-state";
-export { lockRepository, commitChange, findChange, changeLogSince, type CommitInput } from "./changes";
+export {
+  lockRepository,
+  commitChange,
+  committedChanges,
+  findChange,
+  changeLogSince,
+  CHANGES_CHANNEL,
+  type ChangeNotice,
+  type CommitInput,
+} from "./changes";
+export { listen, type Listener, type ListenOptions } from "./listen";
 export {
   listRepositories,
   getRepository,

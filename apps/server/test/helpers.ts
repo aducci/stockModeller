@@ -32,7 +32,7 @@ export async function setup() {
       ...essentials,
     }),
   );
-  const app = buildApp({ conn: db.conn, authenticate: devAuthenticate });
+  const app = buildApp({ conn: db.conn, authenticate: devAuthenticate, live: { connectionString: db.url } });
   await app.service.submit({ workspaceId: WS, userId: DANA }, REPO, undefined, insuranceGroup.baselineChange());
   await withWorkspace(db.conn, WS, (tx) =>
     createScenario(tx, { id: TARGET, workspaceId: WS, repositoryId: REPO, parentId: BASELINE, name: "Target 2027" }),

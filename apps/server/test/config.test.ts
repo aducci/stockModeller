@@ -31,3 +31,12 @@ describe("development sign-in", () => {
     expect(await call()).toBe("null");
   });
 });
+
+describe("production configuration", () => {
+  it("requires a shared secret for live tickets", () => {
+    expect(() => loadConfig({ DATABASE_URL: "postgres://x", NODE_ENV: "production" })).toThrow(/CONNECTOME_SECRET/);
+    expect(loadConfig({ DATABASE_URL: "postgres://x", NODE_ENV: "production", CONNECTOME_SECRET: "s" }).secret).toBe(
+      "s",
+    );
+  });
+});

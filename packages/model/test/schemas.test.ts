@@ -2,7 +2,15 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import type { z } from "zod";
 import { readFileSync } from "node:fs";
 import type { changeSchema, editSchema } from "../src";
-import { parseChange, validateDiagramType, validatePackage, type Change, type Edit } from "../src";
+import {
+  clientMessageSchema,
+  parseChange,
+  validateDiagramType,
+  validatePackage,
+  type Change,
+  type ClientMessage,
+  type Edit,
+} from "../src";
 import { readDesign, readDesignJson } from "./design";
 
 describe("JSON Schemas", () => {
@@ -81,5 +89,19 @@ describe("design pack", () => {
     const body = (text: string) => text.slice(text.indexOf("import type {"));
     const code = readFileSync(new URL("../src/changes.ts", import.meta.url), "utf8");
     expect(body(readDesign("05-structures/changes.ts"))).toBe(body(code));
+  });
+});
+
+describe("live messages", () => {
+  it("infers exactly the hand-written ClientMessage type", () => {
+    expectTypeOf<z.output<typeof clientMessageSchema>>().toExtend<ClientMessage>();
+    expectTypeOf<ClientMessage>().toExtend<z.input<typeof clientMessageSchema>>();
+  });
+
+  it("parses presence and rejects unknown message types", () => {
+    expect(clientMessageSchema.parse({ type: "presence", diagramId: "D1", cursor: { x: 1, y: 2 } })).toMatchObject({
+      type: "presence",
+    });
+    expect(() => clientMessageSchema.parse({ type: "shout" })).toThrow();
   });
 });
