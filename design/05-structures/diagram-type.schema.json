@@ -4,29 +4,438 @@
   "title": "Connectome diagram type",
   "description": "Defines a kind of diagram: allowed types, symbols, colour rules, labels, layout, legend and generation. See 02-model/diagrams-and-catalogues.md §3.",
   "type": "object",
-  "required": ["key", "name", "objectTypes"],
+  "required": [
+    "key",
+    "name",
+    "objectTypes"
+  ],
   "additionalProperties": false,
   "properties": {
-    "key": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9]*$" },
-    "name": { "type": "string" },
-    "description": { "type": "string" },
-    "kind": {"enum": ["canvas", "matrix"], "default": "canvas", "description": "The view kind. See 02-model/views-and-design-artifacts.md \u00a72."},
-    "matrix": {"type": "object", "required": ["rows", "columns", "relationships"], "additionalProperties": false, "description": "A matrix type's default definition (views-and-design-artifacts.md \u00a74); a diagram's definition overrides it key by key.", "properties": {"rows": {"$ref": "#/$defs/scope"}, "columns": {"$ref": "#/$defs/scope"}, "relationships": {"type": "object", "additionalProperties": false, "properties": {"types": {"type": "array", "items": {"type": "string"}}, "kinds": {"type": "array", "items": {"type": "string"}}, "dir": {"enum": ["rowToColumn", "columnToRow", "either"]}}}, "create": {"type": "string"}, "groupRows": {"type": "boolean"}, "hideEmpty": {"type": "boolean"}}},
-    "objectTypes": { "type": "array", "minItems": 1, "items": { "type": "string" } },
-    "relationshipTypes": { "type": "array", "items": { "type": "string" } },
-    "nesting": { "enum": ["nested", "lines"], "default": "nested", "description": "How nesting relationships are shown" },
-    "showExistingRelationships": { "type": "boolean", "default": true, "description": "Offer relationships between shown objects as faint lines" },
-    "symbols": { "type": "object", "additionalProperties": { "type": "object" }, "description": "Object type key → symbol override" },
+    "key": {
+      "type": "string",
+      "pattern": "^[a-z][a-zA-Z0-9]*$"
+    },
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "canvas",
+        "matrix",
+        "document"
+      ],
+      "default": "canvas",
+      "description": "The view kind. See 02-model/views-and-design-artifacts.md §2."
+    },
+    "matrix": {
+      "type": "object",
+      "required": [
+        "rows",
+        "columns",
+        "relationships"
+      ],
+      "additionalProperties": false,
+      "description": "A matrix type's default definition (views-and-design-artifacts.md §4); a diagram's definition overrides it key by key.",
+      "properties": {
+        "rows": {
+          "$ref": "#/$defs/scope"
+        },
+        "columns": {
+          "$ref": "#/$defs/scope"
+        },
+        "relationships": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "types": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "kinds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "dir": {
+              "enum": [
+                "rowToColumn",
+                "columnToRow",
+                "either"
+              ]
+            }
+          }
+        },
+        "create": {
+          "type": "string"
+        },
+        "groupRows": {
+          "type": "boolean"
+        },
+        "hideEmpty": {
+          "type": "boolean"
+        }
+      }
+    },
+    "document": {
+      "type": "object",
+      "required": [
+        "subject",
+        "sections"
+      ],
+      "additionalProperties": false,
+      "description": "A document template (views-and-design-artifacts.md §7.1): the subject it is about and its sections, each one component.",
+      "properties": {
+        "subject": {
+          "$ref": "#/$defs/scopeFilter"
+        },
+        "sections": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "key",
+                  "title",
+                  "component"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-zA-Z0-9]*$"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "guidance": {
+                    "type": "string"
+                  },
+                  "required": {
+                    "type": "boolean"
+                  },
+                  "component": {
+                    "const": "heading"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "key",
+                  "title",
+                  "component"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-zA-Z0-9]*$"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "guidance": {
+                    "type": "string"
+                  },
+                  "required": {
+                    "type": "boolean"
+                  },
+                  "component": {
+                    "const": "prose"
+                  },
+                  "config": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "mentions": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "create": {
+                            "type": "boolean"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "key",
+                  "title",
+                  "component",
+                  "config"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-zA-Z0-9]*$"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "guidance": {
+                    "type": "string"
+                  },
+                  "required": {
+                    "type": "boolean"
+                  },
+                  "component": {
+                    "const": "facts"
+                  },
+                  "config": {
+                    "type": "object",
+                    "required": [
+                      "properties"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "properties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "key",
+                  "title",
+                  "component",
+                  "config"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-zA-Z0-9]*$"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "guidance": {
+                    "type": "string"
+                  },
+                  "required": {
+                    "type": "boolean"
+                  },
+                  "component": {
+                    "const": "diagramLink"
+                  },
+                  "config": {
+                    "type": "object",
+                    "required": [
+                      "diagramType"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "diagramType": {
+                        "type": "string"
+                      },
+                      "placeSubject": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "key",
+                  "title",
+                  "component",
+                  "config"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-zA-Z0-9]*$"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "guidance": {
+                    "type": "string"
+                  },
+                  "required": {
+                    "type": "boolean"
+                  },
+                  "component": {
+                    "const": "relationTable"
+                  },
+                  "config": {
+                    "type": "object",
+                    "required": [
+                      "source",
+                      "columns"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "source": {
+                        "type": "object",
+                        "required": [
+                          "relationships"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "section": {
+                            "type": "string"
+                          },
+                          "relationships": {
+                            "$ref": "#/$defs/relationshipFilter"
+                          }
+                        }
+                      },
+                      "columns": {
+                        "type": "array",
+                        "items": {
+                          "oneOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "object",
+                              "required": [
+                                "key",
+                                "label",
+                                "properties"
+                              ],
+                              "additionalProperties": false,
+                              "properties": {
+                                "key": {
+                                  "type": "string"
+                                },
+                                "label": {
+                                  "type": "string"
+                                },
+                                "properties": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      "required": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "add": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "label": {
+                            "type": "string"
+                          },
+                          "types": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "kinds": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      },
+                      "missing": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "objectTypes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "relationshipTypes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "nesting": {
+      "enum": [
+        "nested",
+        "lines"
+      ],
+      "default": "nested",
+      "description": "How nesting relationships are shown"
+    },
+    "showExistingRelationships": {
+      "type": "boolean",
+      "default": true,
+      "description": "Offer relationships between shown objects as faint lines"
+    },
+    "symbols": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      },
+      "description": "Object type key → symbol override"
+    },
     "renditions": {
-      "type": "object", "additionalProperties": false,
+      "type": "object",
+      "additionalProperties": false,
       "description": "Which rendition occurrences start in, and the zoom levels below which every occurrence draws smaller. See 02-model/notation-and-metamodel-admin.md §4.",
       "properties": {
-        "default": { "type": "string", "description": "A rendition key: box, card, glyph, chip or container" },
+        "default": {
+          "type": "string",
+          "description": "A rendition key: box, card, glyph, chip or container"
+        },
         "semanticZoom": {
           "type": "array",
           "items": {
-            "type": "object", "required": ["below", "rendition"], "additionalProperties": false,
-            "properties": { "below": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 }, "rendition": { "type": "string" } }
+            "type": "object",
+            "required": [
+              "below",
+              "rendition"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "below": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 1
+              },
+              "rendition": {
+                "type": "string"
+              }
+            }
           }
         }
       }
@@ -34,48 +443,334 @@
     "colourRules": {
       "type": "array",
       "items": {
-        "type": "object", "required": ["when", "apply"], "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "when",
+          "apply"
+        ],
+        "additionalProperties": false,
         "properties": {
-          "name": { "type": "string" },
-          "when": { "type": "string", "description": "Query filter, e.g. 'type:application'" },
+          "name": {
+            "type": "string"
+          },
+          "when": {
+            "type": "string",
+            "description": "Query filter, e.g. 'type:application'"
+          },
           "apply": {
             "oneOf": [
-              { "type": "object", "required": ["colourBy"], "additionalProperties": false,
-                "properties": { "colourBy": { "type": "string", "description": "A list property: uses its value colours" } } },
-              { "type": "object", "required": ["gradient"], "additionalProperties": false,
-                "properties": { "gradient": { "type": "object", "required": ["property", "min", "max", "from", "to"], "additionalProperties": false,
-                  "properties": { "property": { "type": "string" }, "min": { "type": "number" }, "max": { "type": "number" }, "from": { "type": "string" }, "to": { "type": "string" } } } } },
-              { "type": "object", "required": ["badge"], "additionalProperties": false,
-                "properties": { "badge": { "type": "object", "required": ["icon", "tooltip"], "properties": { "icon": { "type": "string" }, "tooltip": { "type": "string" } } } } },
-              { "type": "object", "required": ["fade"], "additionalProperties": false, "properties": { "fade": { "const": true } } }
+              {
+                "type": "object",
+                "required": [
+                  "colourBy"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "colourBy": {
+                    "type": "string",
+                    "description": "A list property: uses its value colours"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "gradient"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "gradient": {
+                    "type": "object",
+                    "required": [
+                      "property",
+                      "min",
+                      "max",
+                      "from",
+                      "to"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "property": {
+                        "type": "string"
+                      },
+                      "min": {
+                        "type": "number"
+                      },
+                      "max": {
+                        "type": "number"
+                      },
+                      "from": {
+                        "type": "string"
+                      },
+                      "to": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "badge"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "badge": {
+                    "type": "object",
+                    "required": [
+                      "icon",
+                      "tooltip"
+                    ],
+                    "properties": {
+                      "icon": {
+                        "type": "string"
+                      },
+                      "tooltip": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "fade"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "fade": {
+                    "const": true
+                  }
+                }
+              }
             ]
           }
         }
       }
     },
-    "labels": { "type": "object", "additionalProperties": { "type": "string" }, "description": "Object type key → label template" },
-    "layout": { "type": "object", "additionalProperties": false,
-      "properties": { "algorithm": { "enum": ["nested", "layered", "grid", "radial", "none"] }, "direction": { "enum": ["down", "right"] }, "spacing": { "type": "integer" } } },
-    "legend": { "type": "object", "additionalProperties": false, "properties": { "show": { "type": "boolean" }, "position": { "enum": ["topRight", "bottomRight", "bottomLeft"] } } },
-    "inactiveObjects": { "enum": ["show", "fade", "hide"], "default": "fade", "description": "Objects not active on the 'as of' date" },
+    "labels": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Object type key → label template"
+    },
+    "layout": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "algorithm": {
+          "enum": [
+            "nested",
+            "layered",
+            "grid",
+            "radial",
+            "none"
+          ]
+        },
+        "direction": {
+          "enum": [
+            "down",
+            "right"
+          ]
+        },
+        "spacing": {
+          "type": "integer"
+        }
+      }
+    },
+    "legend": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "show": {
+          "type": "boolean"
+        },
+        "position": {
+          "enum": [
+            "topRight",
+            "bottomRight",
+            "bottomLeft"
+          ]
+        }
+      }
+    },
+    "inactiveObjects": {
+      "enum": [
+        "show",
+        "fade",
+        "hide"
+      ],
+      "default": "fade",
+      "description": "Objects not active on the 'as of' date"
+    },
     "generate": {
       "type": "array",
       "items": {
-        "type": "object", "required": ["key", "forEach", "include", "name", "folder"], "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "key",
+          "forEach",
+          "include",
+          "name",
+          "folder"
+        ],
+        "additionalProperties": false,
         "properties": {
-          "key": { "type": "string" },
-          "forEach": { "type": "string", "description": "Query: one diagram per matching object" },
-          "include": { "type": "array", "items": { "type": "object", "required": ["path"], "additionalProperties": false,
-            "properties": { "path": { "type": "string" }, "depth": { "type": "integer", "minimum": 1, "maximum": 6 } } } },
-          "layout": { "enum": ["nested", "layered", "grid", "radial"] },
-          "name": { "type": "string" },
-          "folder": { "type": "string" },
-          "orphans": { "enum": ["archive", "delete", "keep"], "default": "archive" },
-          "trigger": { "enum": ["manual", "onChange", "nightly"], "default": "manual" }
+          "key": {
+            "type": "string"
+          },
+          "forEach": {
+            "type": "string",
+            "description": "Query: one diagram per matching object"
+          },
+          "include": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "path"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "depth": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 6
+                }
+              }
+            }
+          },
+          "layout": {
+            "enum": [
+              "nested",
+              "layered",
+              "grid",
+              "radial"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "folder": {
+            "type": "string"
+          },
+          "orphans": {
+            "enum": [
+              "archive",
+              "delete",
+              "keep"
+            ],
+            "default": "archive"
+          },
+          "trigger": {
+            "enum": [
+              "manual",
+              "onChange",
+              "nightly"
+            ],
+            "default": "manual"
+          }
         }
       }
     }
   },
-  "$defs": { "scopeFilter": {"type": "object", "additionalProperties": false, "properties": {"type": {"type": "array", "items": {"type": "string"}}, "category": {"type": "array", "items": {"type": "string"}}, "folder": {"type": "string"}}},
-    "scope": {"type": "object", "required": ["from"], "additionalProperties": false, "properties": {"from": {"$ref": "#/$defs/scopeFilter"}, "steps": {"type": "array", "items": {"type": "object", "required": ["dir"], "additionalProperties": false, "properties": {"type": {"type": "array", "items": {"type": "string"}}, "kind": {"type": "array", "items": {"type": "string"}}, "dir": {"enum": ["out", "in", "either"]}, "to": {"$ref": "#/$defs/scopeFilter"}}}}, "order": {"enum": ["name", "rank"]}}} }
+  "$defs": {
+    "scopeFilter": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "category": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "folder": {
+          "type": "string"
+        }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "required": [
+        "from"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "$ref": "#/$defs/scopeFilter"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "dir"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "kind": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "dir": {
+                "enum": [
+                  "out",
+                  "in",
+                  "either"
+                ]
+              },
+              "to": {
+                "$ref": "#/$defs/scopeFilter"
+              }
+            }
+          }
+        },
+        "order": {
+          "enum": [
+            "name",
+            "rank"
+          ]
+        }
+      }
+    },
+    "relationshipFilter": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "types": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "kinds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
 }

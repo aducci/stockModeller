@@ -38,7 +38,8 @@ export type ModelEdit =
       /** build: so that restoring a deleted object is exact. */
       confirmations?: Record<PropertyKey, Confirmation>;
     }
-  | ({ edit: "setProperties"; set: Record<PropertyKey, PropertyValue> } & OnExisting) // null clears a value
+  /** null clears a value. build (slice V-2): `id` may name a relationship too, checked against its type's properties. */
+  | ({ edit: "setProperties"; set: Record<PropertyKey, PropertyValue> } & OnExisting)
   | ({ edit: "renameObject"; name: string } & OnExisting)
   | ({ edit: "setTags"; tags: string[] } & OnExisting)
   /** build: an object's description; "" clears it. */

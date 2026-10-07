@@ -5,6 +5,7 @@ import {
   LEVEL_PROPERTY,
   isRendition,
   MAX_EDITS_PER_CHANGE,
+  SUBJECT_KEY,
   type Actor,
   type Annotation,
   type Change,
@@ -300,6 +301,8 @@ class Transaction {
   }
 
   private setProperties(e: Extract<ModelEdit, { edit: "setProperties" }>): Id {
+    if (!this.state.objects.getAny(e.id) && this.state.relationships.getAny(e.id))
+      return this.setRelationshipProperties(e);
     const obj = this.requireLive("objects", e.id);
     const fields = Object.keys(e.set).map((k) => `properties.${k}`);
     this.checkBase("objects", obj, e.baseVersion, fields);
@@ -312,6 +315,20 @@ class Transaction {
     this.markChanged("objects", obj.id, fields);
     this.step({ edit: "setProperties", id: obj.id, baseVersion: PENDING_VERSION, set: previous });
     return obj.id;
+  }
+
+  /** build (slice V-2): a relationship's properties, against its type's and its kind's (semantics §4.3). */
+  private setRelationshipProperties(e: Extract<ModelEdit, { edit: "setProperties" }>): Id {
+    const rel = this.requireLive("relationships", e.id);
+    const fields = Object.keys(e.set).map((k) => `properties.${k}`);
+    this.checkBase("relationships", rel, e.baseVersion, fields);
+    const allowed = this.mm.relationshipTypeProperties(rel.type);
+    const properties = this.checkProperties(allowed, rel.properties, e.set, "properties");
+    const previous = Object.fromEntries(Object.keys(e.set).map((k) => [k, rel.properties[k] ?? null]));
+    this.write("relationships", { ...rel, properties });
+    this.markChanged("relationships", rel.id, fields);
+    this.step({ edit: "setProperties", id: rel.id, baseVersion: PENDING_VERSION, set: previous });
+    return rel.id;
   }
 
   private renameObject(e: Extract<ModelEdit, { edit: "renameObject" }>): Id {
@@ -1077,6 +1094,14 @@ class Transaction {
       e.baseVersion,
       keys.map((k) => `definition.${k}`),
     );
+    // A document's subject must name an object; a deleted one is allowed, so undo can always put it back.
+    const subject = e.set[SUBJECT_KEY];
+    if (
+      subject !== undefined &&
+      subject !== null &&
+      (typeof subject !== "string" || !this.state.objects.getAny(subject))
+    )
+      this.invalid(`set.${SUBJECT_KEY}`, "The subject must be an object");
     const definition: Record<string, unknown> = { ...diagram.definition };
     const previous: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(e.set)) {

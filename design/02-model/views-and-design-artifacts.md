@@ -336,7 +336,7 @@ Nothing in this chain writes except the gestures, and they go through the change
 | Item | Where | Edit |
 |---|---|---|
 | View kind | `kind` on the diagram type (`canvas` when absent, so every existing type keeps working) | Metamodel edit |
-| A view's definition (scope, columns, matrix settings, `showAs`, artifact subject, prose, per-section overrides, issues) | New `definition jsonb` on `diagram` (migration 008), `{}` for canvases | New edit `setViewDefinition { diagramId, set, unset }`: patches top-level keys; the inverse sets back the previous values. Conflicts per key, like properties |
+| A view's definition (scope, columns, matrix settings, `showAs`, artifact subject, prose, per-section overrides, issues) | New `definition jsonb` on `diagram` (migration 008), `{}` for canvases | `setViewDefinition { diagramId, baseVersion, set }`: patches top-level keys, `null` removing one; the inverse sets back the previous values. Conflicts per key, like properties (built in V-1) |
 | Message order in a sequence | New `step text` (fractional rank) on `relationship_occurrence` (migration 008) | `routeRelationshipOccurrence` gains optional `step`, with its inverse |
 | Lifeline order | The occurrence's `x` | `moveObjectOccurrence` (unchanged) |
 | Fragments, self-call notes | Annotations, `content.shape: "fragment" \| "note"` | Annotation edits (unchanged) |
@@ -379,4 +379,4 @@ Reordered 2026-10-07 after the product owner's review, to reach the document vie
 | **V-7** | Cell properties: RACI (`role`, `raci`, `raci.code`) and the CRUD data matrix; matrix checks | V-1, V-2 |
 | **V-8** | Issue and export: issued versions, Markdown / DOCX / PDF | V-2; "as of" from M2 for live issues |
 
-V-1 is built ([build plan](../build-plan.md); B28–B30); the component registry moved to V-2, where the first components need it. V-1 first: the framework pieces (definition, registry, paths) are what every later slice plugs into, and the matrix proves them on the view asked for by name. V-2 follows straight after, so the document view is usable two slices in.
+V-1 and V-2 are built ([build plan](../build-plan.md); B28–B35). As built, a template sits under the type's `document` key (`subject`, `sections`) rather than at the top level as in §7.1, and a table column can span several properties (B34). V-1 first: the framework pieces (definition, registry, paths) are what every later slice plugs into, and the matrix proves them on the view asked for by name. V-2 follows straight after, so the document view is usable two slices in.

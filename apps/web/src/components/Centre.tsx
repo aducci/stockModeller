@@ -6,6 +6,7 @@ import { ObjectProperties } from "./Properties";
 import { DiagramEditor } from "./DiagramEditor";
 import { MetamodelAdmin } from "./MetamodelAdmin";
 import { MatrixView } from "./MatrixView";
+import { DocumentView } from "./DocumentView";
 
 export function Centre() {
   const { state, metamodel } = useModel();
@@ -29,9 +30,7 @@ export function Centre() {
           >
             <span aria-hidden>
               {t.kind === "diagram"
-                ? viewKind(state, metamodel, t.id) === "matrix"
-                  ? "▦"
-                  : "⧉"
+                ? { matrix: "▦", document: "▤", canvas: "⧉" }[viewKind(state, metamodel, t.id)]
                 : t.kind === "metamodel"
                   ? "◇"
                   : "▭"}
@@ -65,6 +64,8 @@ export function Centre() {
         {active?.kind === "diagram" &&
           (viewKind(state, metamodel, active.id) === "matrix" ? (
             <MatrixView key={active.id} id={active.id} />
+          ) : viewKind(state, metamodel, active.id) === "document" ? (
+            <DocumentView key={active.id} id={active.id} />
           ) : (
             <DiagramEditor key={active.id} id={active.id} />
           ))}

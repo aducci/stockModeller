@@ -1,0 +1,105 @@
+{
+  "key": "hld",
+  "name": "High-level design",
+  "description": "A design artifact about one application: summary, key facts, its context diagram and a described row for every integration drawn on it.",
+  "kind": "document",
+  "objectTypes": [
+    "applicationBase",
+    "service"
+  ],
+  "document": {
+    "subject": {
+      "type": [
+        "applicationBase",
+        "service"
+      ]
+    },
+    "sections": [
+      {
+        "key": "summary",
+        "title": "Summary",
+        "component": "prose",
+        "required": true,
+        "guidance": "What changes and why, in a few lines. Type @ to mention an element of the model.",
+        "config": {
+          "mentions": {
+            "create": true
+          }
+        }
+      },
+      {
+        "key": "facts",
+        "title": "Key facts",
+        "component": "facts",
+        "config": {
+          "properties": [
+            "lifecycle.status",
+            "ownership.businessOwner",
+            "ownership.technicalOwner",
+            "assessment.criticality",
+            "cost.runCost"
+          ]
+        }
+      },
+      {
+        "key": "context",
+        "title": "Context",
+        "component": "diagramLink",
+        "required": true,
+        "guidance": "Draw what the subject exchanges with. Every flow or interaction on this diagram is a row under Integrations.",
+        "config": {
+          "diagramType": "context",
+          "placeSubject": true
+        }
+      },
+      {
+        "key": "integrations",
+        "title": "Integrations",
+        "component": "relationTable",
+        "required": true,
+        "guidance": "Describe every connector on the context diagram.",
+        "config": {
+          "source": {
+            "section": "context",
+            "relationships": {
+              "kinds": [
+                "flow",
+                "interaction"
+              ]
+            }
+          },
+          "columns": [
+            "direction",
+            {
+              "key": "protocol",
+              "label": "Protocol",
+              "properties": [
+                "interaction.protocol",
+                "flow.protocol"
+              ]
+            },
+            "interaction.pattern",
+            "payload"
+          ],
+          "required": [
+            "protocol"
+          ],
+          "add": {
+            "label": "Add integration",
+            "kinds": [
+              "flow",
+              "interaction"
+            ]
+          },
+          "missing": true
+        }
+      },
+      {
+        "key": "risks",
+        "title": "Risks and open points",
+        "component": "prose",
+        "guidance": "What could go wrong, and what is still to decide."
+      }
+    ]
+  }
+}

@@ -195,8 +195,21 @@ function RelationshipProperties({ id }: { id: Id }) {
   const name = (objectId: Id) => state.objects.get(objectId)?.name ?? "(deleted)";
   const parent = relationship.parentId ? state.relationships.get(relationship.parentId) : undefined;
   const messages = type?.semantic === "interaction" ? messagesOf(state, relationship) : [];
-  const { groups } = fieldGroups(metamodel, type?.properties ?? [], relationship.properties);
-  const ctx: GridContext = { state, metamodel, itemId: id, readOnly: () => true, commit: () => false };
+  const { groups } = fieldGroups(
+    metamodel,
+    metamodel.relationshipTypeProperties(relationship.type),
+    relationship.properties,
+  );
+  const ctx: GridContext = {
+    state,
+    metamodel,
+    itemId: id,
+    commit: (f, value) =>
+      edit(
+        `Set ${f.pt.name} of ${name(relationship.sourceId)} ${type?.verb ?? relationship.type} ${name(relationship.targetId)}`,
+        [{ edit: "setProperties", id, baseVersion: relationship.version, set: { [f.pt.key]: value } }],
+      ),
+  };
   const run = (plan: ReturnType<typeof messagePlan>) =>
     "error" in plan ? notify(plan.error, "error") : edit(plan.label, plan.edits);
   const remove = () => {

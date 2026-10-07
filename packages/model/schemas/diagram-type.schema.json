@@ -18,7 +18,7 @@
       "type": "string"
     },
     "kind": {
-      "enum": ["canvas", "matrix"],
+      "enum": ["canvas", "matrix", "document"],
       "default": "canvas",
       "description": "The view kind. See 02-model/views-and-design-artifacts.md §2."
     },
@@ -63,6 +63,260 @@
         },
         "hideEmpty": {
           "type": "boolean"
+        }
+      }
+    },
+    "document": {
+      "type": "object",
+      "required": ["subject", "sections"],
+      "additionalProperties": false,
+      "description": "A document template (views-and-design-artifacts.md §7.1): the subject it is about and its sections, each one component.",
+      "properties": {
+        "subject": {
+          "$ref": "#/$defs/scopeFilter"
+        },
+        "sections": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": ["key", "title", "component"],
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-zA-Z0-9]*$"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "guidance": {
+                    "type": "string"
+                  },
+                  "required": {
+                    "type": "boolean"
+                  },
+                  "component": {
+                    "const": "heading"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": ["key", "title", "component"],
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-zA-Z0-9]*$"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "guidance": {
+                    "type": "string"
+                  },
+                  "required": {
+                    "type": "boolean"
+                  },
+                  "component": {
+                    "const": "prose"
+                  },
+                  "config": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "mentions": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "create": {
+                            "type": "boolean"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": ["key", "title", "component", "config"],
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-zA-Z0-9]*$"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "guidance": {
+                    "type": "string"
+                  },
+                  "required": {
+                    "type": "boolean"
+                  },
+                  "component": {
+                    "const": "facts"
+                  },
+                  "config": {
+                    "type": "object",
+                    "required": ["properties"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "properties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": ["key", "title", "component", "config"],
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-zA-Z0-9]*$"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "guidance": {
+                    "type": "string"
+                  },
+                  "required": {
+                    "type": "boolean"
+                  },
+                  "component": {
+                    "const": "diagramLink"
+                  },
+                  "config": {
+                    "type": "object",
+                    "required": ["diagramType"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "diagramType": {
+                        "type": "string"
+                      },
+                      "placeSubject": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": ["key", "title", "component", "config"],
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-zA-Z0-9]*$"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "guidance": {
+                    "type": "string"
+                  },
+                  "required": {
+                    "type": "boolean"
+                  },
+                  "component": {
+                    "const": "relationTable"
+                  },
+                  "config": {
+                    "type": "object",
+                    "required": ["source", "columns"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "source": {
+                        "type": "object",
+                        "required": ["relationships"],
+                        "additionalProperties": false,
+                        "properties": {
+                          "section": {
+                            "type": "string"
+                          },
+                          "relationships": {
+                            "$ref": "#/$defs/relationshipFilter"
+                          }
+                        }
+                      },
+                      "columns": {
+                        "type": "array",
+                        "items": {
+                          "oneOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "object",
+                              "required": ["key", "label", "properties"],
+                              "additionalProperties": false,
+                              "properties": {
+                                "key": {
+                                  "type": "string"
+                                },
+                                "label": {
+                                  "type": "string"
+                                },
+                                "properties": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      "required": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "add": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "label": {
+                            "type": "string"
+                          },
+                          "types": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "kinds": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      },
+                      "missing": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
         }
       }
     },
@@ -367,6 +621,24 @@
         },
         "order": {
           "enum": ["name", "rank"]
+        }
+      }
+    },
+    "relationshipFilter": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "types": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "kinds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     }

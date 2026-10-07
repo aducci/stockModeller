@@ -73,6 +73,14 @@ function candidates(state: ModelState, next: () => number, n: number): Edit[] {
           set: { "lifecycle.status": pick(["planned", "active", null])! },
         }
       : null,
+    interaction
+      ? {
+          edit: "setProperties",
+          id: interaction.id,
+          baseVersion: interaction.version,
+          set: pick([{ "interaction.protocol": `HTTPS ${n}` }, { "interaction.protocol": null }])!,
+        }
+      : null,
     o && f ? { edit: "moveToFolder", id: o.id, baseVersion: o.version, folderId: f.id } : null,
     o ? { edit: "deleteObject", id: o.id, baseVersion: o.version } : null,
     o && o2
@@ -149,6 +157,7 @@ function candidates(state: ModelState, next: () => number, n: number): Edit[] {
             { hideEmpty: n % 2 === 0 },
             { groupRows: null },
             { rows: { from: { type: ["capability"] } }, hideEmpty: null },
+            ...(o ? [{ subject: o.id, summary: { paragraphs: [["See ", { mention: o.id }]] } }] : []),
           ])!,
         }
       : null,

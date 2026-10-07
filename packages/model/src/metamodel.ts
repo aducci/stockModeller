@@ -10,7 +10,7 @@ import type {
   TypeKey,
   ValueList,
 } from "./model";
-import type { MatrixDefinition, ViewKind } from "./views";
+import type { DocumentTemplate, MatrixDefinition, ViewKind } from "./views";
 
 export interface Layer {
   key: string;
@@ -82,6 +82,8 @@ export interface DiagramType {
   kind?: ViewKind;
   /** build (slice V-1): a matrix type's default definition; a diagram's own definition overrides it key by key. */
   matrix?: MatrixDefinition;
+  /** build (slice V-2): a document template (views-and-design-artifacts.md §7.1). */
+  document?: DocumentTemplate;
   objectTypes: TypeKey[];
   relationshipTypes?: TypeKey[];
   nesting?: "nested" | "lines";

@@ -1,10 +1,14 @@
 // A metamodel compiled for fast lookups: resolved inheritance, rule matching and diagram types.
 import {
+  COMPONENT_KEYS,
   LEVEL_PROPERTY,
+  SEMANTIC_KINDS,
+  SUBJECT_KEY,
   corePackage,
   isRendition,
   semanticKindInfo,
   type DiagramType,
+  type DocumentTemplate,
   type MetamodelPackage,
   type ObjectType,
   type PayloadUse,
@@ -317,8 +321,71 @@ export class Metamodel {
       }
       mm.diagramTypes.set(dt.key, { definition: dt, nesting: dt.nesting ?? "nested" });
     }
+    // Document templates last: their linked diagrams may name any diagram type.
+    for (const dt of diagramTypes) if (dt.document) checkDocument(mm, dt.key, dt.document, typeRef, problems);
 
     if (problems.length > 0) throw new MetamodelError(problems);
     return mm;
+  }
+}
+
+/** A document template (views-and-design-artifacts.md §7.1, §8.4 "Validation"): everything it names must exist. */
+function checkDocument(
+  mm: Metamodel,
+  key: TypeKey,
+  doc: DocumentTemplate,
+  typeRef: (t: TypeKey, where: string) => void,
+  problems: string[],
+): void {
+  const where = `Document template "${key}"`;
+  for (const t of doc.subject.type ?? []) typeRef(t, where);
+  const keys = new Set<string>();
+  const kinds = (list: readonly string[] | undefined, at: string) => {
+    for (const k of list ?? [])
+      if (!SEMANTIC_KINDS.some((x) => x.kind === k)) problems.push(`${at} uses unknown kind "${k}"`);
+  };
+  const relTypes = (list: readonly string[] | undefined, at: string) => {
+    for (const t of list ?? [])
+      if (!mm.relationshipType(t)) problems.push(`${at} uses unknown relationship type "${t}"`);
+  };
+  for (const section of doc.sections) {
+    const at = `${where}, section "${section.key}"`;
+    if (section.key === SUBJECT_KEY) problems.push(`${at}: "${SUBJECT_KEY}" is reserved for the document's subject`);
+    if (keys.has(section.key)) problems.push(`${where} has two sections "${section.key}"`);
+    keys.add(section.key);
+    if (!COMPONENT_KEYS.includes(section.component)) {
+      problems.push(`${at} uses unknown component "${section.component as string}"`);
+      continue;
+    }
+    if (section.component === "facts")
+      for (const p of section.config.properties)
+        if (!mm.propertyType(p)) problems.push(`${at} uses unknown property "${p}"`);
+    if (section.component === "diagramLink") {
+      const linked = mm.diagramType(section.config.diagramType);
+      if (!linked) problems.push(`${at} links unknown diagram type "${section.config.diagramType}"`);
+      else if ((linked.definition.kind ?? "canvas") !== "canvas")
+        problems.push(`${at} links "${section.config.diagramType}", which is not a canvas`);
+    }
+    if (section.component === "relationTable") {
+      const c = section.config;
+      relTypes(c.source.relationships.types, at);
+      kinds(c.source.relationships.kinds, at);
+      relTypes(c.add?.types, at);
+      kinds(c.add?.kinds, at);
+      if (c.source.section !== undefined) {
+        const linked = doc.sections.find((x) => x.key === c.source.section);
+        if (linked?.component !== "diagramLink")
+          problems.push(`${at} reads section "${c.source.section}", which is not a linked diagram`);
+      }
+      const columnKeys = new Set<string>();
+      for (const col of c.columns) {
+        const props =
+          typeof col === "string" ? (col === "direction" || col === "payload" ? [] : [col]) : col.properties;
+        for (const p of props) if (!mm.propertyType(p)) problems.push(`${at} uses unknown property "${p}"`);
+        columnKeys.add(typeof col === "string" ? col : col.key);
+      }
+      for (const r of c.required ?? [])
+        if (!columnKeys.has(r)) problems.push(`${at} requires "${r}", which is not one of its columns`);
+    }
   }
 }

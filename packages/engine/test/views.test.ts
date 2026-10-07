@@ -87,3 +87,79 @@ describe("matrix views", () => {
     expect(() => Metamodel.compile(essentials.metamodel, [broken])).toThrow(MetamodelError);
   });
 });
+
+describe("documents", () => {
+  const hld = essentials.diagramTypes.find((t) => t.key === "hld")!;
+  const compile = (document: unknown) => () =>
+    Metamodel.compile(essentials.metamodel, [
+      ...essentials.diagramTypes.filter((t) => t !== hld),
+      { ...hld, document } as never,
+    ]);
+
+  it("have a subject that is an object", () => {
+    const state = exampleState();
+    applyOk(state, [{ edit: "createDiagram", id: "D-H", name: "HLD", diagramType: "hld", folderId: "F06" }]);
+    const base = state.diagrams.get("D-H")!.version;
+    expect(
+      apply(state, [{ edit: "setViewDefinition", diagramId: "D-H", baseVersion: base, set: { subject: "R-08" } }]),
+    ).toMatchObject({ ok: false, reasons: [{ code: "invalid", property: "set.subject" }] });
+    applyOk(state, [{ edit: "setViewDefinition", diagramId: "D-H", baseVersion: base, set: { subject: "O-APP-3" } }]);
+    expect(
+      apply(state, [{ edit: "addObjectOccurrence", diagramId: "D-H", occurrence: occurrence("OC-X", "O-APP-1") }]),
+    ).toMatchObject({ ok: false });
+  });
+
+  it("templates must name what exists", () => {
+    expect(compile(hld.document)).not.toThrow();
+    const sections = hld.document!.sections;
+    expect(
+      compile({ ...hld.document, sections: [...sections, { key: "subject", title: "S", component: "heading" }] }),
+    ).toThrow(/reserved/);
+    expect(compile({ ...hld.document, sections: [...sections, { key: "x", title: "X", component: "chart" }] })).toThrow(
+      /unknown component/,
+    );
+    expect(
+      compile({
+        ...hld.document,
+        sections: [...sections, { key: "x", title: "X", component: "diagramLink", config: { diagramType: "hld" } }],
+      }),
+    ).toThrow(/not a canvas/);
+    expect(
+      compile({
+        ...hld.document,
+        sections: [
+          ...sections,
+          {
+            key: "x",
+            title: "X",
+            component: "relationTable",
+            config: {
+              source: { section: "summary", relationships: { kinds: ["flow"] } },
+              columns: ["nope"],
+              required: ["direction2"],
+            },
+          },
+        ],
+      }),
+    ).toThrow(/not a linked diagram[\s\S]*unknown property "nope"[\s\S]*not one of its columns/);
+  });
+});
+
+describe("relationship properties", () => {
+  it("are set against the type's and the kind's properties, with an exact inverse", () => {
+    const state = exampleState();
+    const r = () => state.relationships.get("R-08")!;
+    const result = applyOk(state, [
+      { edit: "setProperties", id: "R-08", baseVersion: r().version, set: { "flow.protocol": "gRPC" } },
+    ]);
+    expect(r().properties["flow.protocol"]).toBe("gRPC");
+    expect(result.log[0]!.inverse).toEqual([
+      { edit: "setProperties", id: "R-08", baseVersion: r().version, set: { "flow.protocol": "REST" } },
+    ]);
+    expect(
+      apply(state, [
+        { edit: "setProperties", id: "R-08", baseVersion: r().version, set: { "interaction.protocol": "x" } },
+      ]),
+    ).toMatchObject({ ok: false, reasons: [{ property: "properties.interaction.protocol" }] });
+  });
+});

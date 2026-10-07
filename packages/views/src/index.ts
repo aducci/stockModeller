@@ -2,3 +2,4 @@
 // rows to what a view draws. Used by the web app now, and by export and the server later.
 export * from "./scope";
 export * from "./matrix";
+export * from "./document";
