@@ -1,6 +1,6 @@
 // The HTTP calls the web app makes (design/03-platform/openapi.yaml).
 import type { RepositorySnapshot } from "@connectome/engine";
-import type { Change, Id, Rejection } from "@connectome/model";
+import type { Change, Id, MetamodelPackage, Rejection } from "@connectome/model";
 
 export interface ApiOptions {
   /** Where the server is, e.g. "http://localhost:3000" or "" for the page's own origin. */
@@ -98,7 +98,24 @@ export class ApiClient {
     return this.request("POST", `/repositories/${encodeURIComponent(repositoryId)}/changes${query}`, change);
   }
 
-  private async request<T>(method: "GET" | "POST", path: string, body?: unknown): Promise<T> {
+  /**
+   * Publishes new relationship rules as the next metamodel version (or, with `preview`, reports what would happen).
+   * Open sessions reload over the live connection once it is published.
+   */
+  publishRelationshipRules(
+    repositoryId: Id,
+    body: { baseVersion: string; relationshipRules: NonNullable<MetamodelPackage["relationshipRules"]> },
+    preview = false,
+  ): Promise<{
+    version: string;
+    preview: boolean;
+    newlyRefused: { relationshipType: string; sourceType: string; targetType: string; count: number }[];
+  }> {
+    const path = `/repositories/${encodeURIComponent(repositoryId)}/metamodel/relationship-rules`;
+    return this.request("PUT", `${path}${preview ? "?preview=true" : ""}`, body);
+  }
+
+  private async request<T>(method: "GET" | "POST" | "PUT", path: string, body?: unknown): Promise<T> {
     const headers: Record<string, string> = { authorization: this.options.authorization };
     if (body !== undefined) headers["content-type"] = "application/json";
     const res = await this.fetch(`${this.base}${path}`, {

@@ -7,6 +7,7 @@ import type { Authenticate, Principal } from "./auth";
 import { ApiError } from "./problems";
 import { ModelService } from "./service";
 import { changeRoutes } from "./routes/changes";
+import { metamodelRoutes } from "./routes/metamodel";
 import { modelRoutes } from "./routes/model";
 import { repositoryRoutes } from "./routes/repositories";
 import { LiveHub } from "./live/hub";
@@ -93,6 +94,7 @@ export function buildApp(options: AppOptions): FastifyInstance & { service: Mode
       repositoryRoutes(api, routes);
       modelRoutes(api, routes);
       changeRoutes(api, routes);
+      metamodelRoutes(api, routes);
       if (hub) liveRoutes(api, routes, hub, tickets);
     },
     { prefix: "/api/v1" },

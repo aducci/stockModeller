@@ -7,6 +7,9 @@ export {
   scenarioAncestry,
   loadMetamodel,
   loadMetamodelPackage,
+  saveRelationshipRules,
+  METAMODEL_CHANNEL,
+  type MetamodelNotice,
   type NewRepository,
 } from "./repositories";
 export { loadState, writeTouchedRows, markWritten } from "./model-state";

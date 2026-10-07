@@ -10,7 +10,7 @@ import { Dock } from "./Dock";
 import { Toasts } from "./Toasts";
 import { DeleteObjectDialog } from "./DeleteObjectDialog";
 import { MenuBar } from "./Menu";
-import { fileMenu } from "./commands";
+import { fileMenu, metamodelMenu } from "./commands";
 
 export function Workbench({ repositoryId, scenarioId }: { repositoryId: string; scenarioId: string | null }) {
   const signIn = useAuth((s) => s.signIn)!;
@@ -100,7 +100,12 @@ function TopBar() {
       >
         ◧ {repository.name}
       </button>
-      <MenuBar menus={[{ label: "File", entries: () => fileMenu(session.store.state) }]} />
+      <MenuBar
+        menus={[
+          { label: "File", entries: () => fileMenu(session.store.state) },
+          { label: "Metamodel", entries: metamodelMenu },
+        ]}
+      />
       <label className="scenario">
         Scenario
         <select

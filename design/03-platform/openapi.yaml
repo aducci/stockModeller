@@ -217,6 +217,27 @@ paths:
       responses:
         '201': { description: Undone, content: { application/json: { schema: { $ref: '#/components/schemas/ChangeResult' } } } }
 
+  /repositories/{repo}/metamodel/relationship-rules:
+    parameters: [ { $ref: '#/components/parameters/repo' } ]
+    put:
+      summary: Replace the relationship rules and publish them as the next metamodel version (02-model/notation-and-metamodel-admin.md §10). Existing relationships are kept; those the new rules refuse are listed. 409 when baseVersion is not the current version
+      parameters:
+        - { name: preview, in: query, schema: { type: boolean, default: false }, description: 'Report the outcome without publishing' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [baseVersion, relationshipRules]
+              properties:
+                baseVersion: { type: string, description: The metamodel version the rules were edited from }
+                relationshipRules: { type: array, items: { $ref: '#/components/schemas/RelationshipRule' } }
+      responses:
+        '200': { description: Published (or previewed), content: { application/json: { schema: { $ref: '#/components/schemas/RulesResult' } } } }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
   /repositories/{repo}/diagrams/{id}:
     parameters: [ { $ref: '#/components/parameters/repo' }, { $ref: '#/components/parameters/scenario' }, { $ref: '#/components/parameters/id' } ]
     get:
@@ -275,6 +296,31 @@ components:
                 type: array
                 items: { type: object, properties: { editIndex: { type: integer }, property: { type: string }, rule: { type: string }, message: { type: string }, itemId: { type: string }, changedBy: { type: string } } }
   schemas:
+    RelationshipRule:
+      type: object
+      required: [relationshipType, sourceType, targetType]
+      properties:
+        relationshipType: { type: string }
+        sourceType: { type: string, description: 'An object type key (its subtypes included) or *' }
+        targetType: { type: string }
+        cardinality: { type: string, enum: ['0..1', '0..*', '1..1', '1..*'] }
+        enforcement: { type: string, enum: [block, warn], default: block }
+    RulesResult:
+      type: object
+      required: [version, preview, newlyRefused]
+      properties:
+        version: { type: string }
+        preview: { type: boolean }
+        newlyRefused:
+          type: array
+          items:
+            type: object
+            required: [relationshipType, sourceType, targetType, count]
+            properties:
+              relationshipType: { type: string }
+              sourceType: { type: string }
+              targetType: { type: string }
+              count: { type: integer }
     Repository:
       type: object
       required: [id, name, seq, baselineScenarioId]

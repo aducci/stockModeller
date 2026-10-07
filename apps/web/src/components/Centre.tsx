@@ -3,6 +3,7 @@ import type { ModelState } from "@connectome/engine";
 import { useModel, useWorkbench, type Tab } from "../state/workbench";
 import { ObjectProperties } from "./Properties";
 import { DiagramEditor } from "./DiagramEditor";
+import { MetamodelAdmin } from "./MetamodelAdmin";
 
 export function Centre() {
   const { state } = useModel();
@@ -24,7 +25,7 @@ export function Centre() {
             className={`tab${t.id === activeTab ? " active" : ""}`}
             onClick={() => activate(t.id)}
           >
-            <span aria-hidden>{t.kind === "diagram" ? "⧉" : "▭"}</span>
+            <span aria-hidden>{t.kind === "diagram" ? "⧉" : t.kind === "metamodel" ? "◇" : "▭"}</span>
             <span>{tabName(state, t)}</span>
             {changedTabs.has(t.id) && <span className="change-dot" title="Changed by someone else" />}
             <button
@@ -52,12 +53,14 @@ export function Centre() {
           </div>
         )}
         {active?.kind === "diagram" && <DiagramEditor key={active.id} id={active.id} />}
+        {active?.kind === "metamodel" && <MetamodelAdmin />}
       </div>
     </main>
   );
 }
 
 function tabName(state: ModelState, tab: Tab): string {
+  if (tab.kind === "metamodel") return "Metamodel";
   const item = tab.kind === "diagram" ? state.diagrams.get(tab.id) : state.objects.get(tab.id);
   return item?.name ?? "(deleted)";
 }

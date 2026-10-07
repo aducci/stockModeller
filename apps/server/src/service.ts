@@ -1,5 +1,13 @@
 // The model service: the write path (architecture.md §6) and scenario-aware reads, over the state cache.
-import { applyChange, invertLog, type Metamodel, type ModelState } from "@connectome/engine";
+import {
+  Metamodel,
+  MetamodelError,
+  applyChange,
+  invertLog,
+  newlyRefused,
+  type Combination,
+  type ModelState,
+} from "@connectome/engine";
 import {
   changeLog,
   changeLogSince,
@@ -8,17 +16,26 @@ import {
   getRepository,
   listScenarios,
   loadMetamodel,
+  loadMetamodelPackage,
   loadState,
   lockRepository,
   markWritten,
   repositorySeq,
+  saveRelationshipRules,
   withWorkspace,
   type Connection,
   type RepositorySummary,
   type ScenarioSummary,
   type Tx,
 } from "@connectome/db";
-import { parseChange, ulid, type ChangeSource, type Edit, type RuleFinding } from "@connectome/model";
+import {
+  parseChange,
+  ulid,
+  type ChangeSource,
+  type Edit,
+  type MetamodelPackage,
+  type RuleFinding,
+} from "@connectome/model";
 import { ZodError } from "zod";
 import type { Principal } from "./auth";
 import { StateCache, type RepositoryEntry, type ScenarioView } from "./cache";
@@ -45,6 +62,20 @@ export interface SubmitOptions {
   preview?: boolean;
   source?: ChangeSource;
   undoesChangeId?: string;
+}
+
+export interface RulesResult {
+  /** The version published, or the one a publish would create (preview). */
+  version: string;
+  preview: boolean;
+  /** Combinations the baseline uses that the old rules allow and the new ones refuse; they stay, flagged. */
+  newlyRefused: Combination[];
+}
+
+/** The next patch version: 1.4.0 → 1.4.1. */
+export function nextVersion(version: string): string {
+  const m = /^(\d+)\.(\d+)\.(\d+)$/.exec(version);
+  return m ? `${m[1]}.${m[2]}.${Number(m[3]) + 1}` : `${version}.1`;
 }
 
 export class ModelService {
@@ -168,6 +199,56 @@ export class ModelService {
       if (mutated) entry.views.clear();
       throw error;
     }
+  }
+
+  /**
+   * Replaces the repository's relationship rules (design/02-model/notation-and-metamodel-admin.md §10) and
+   * publishes them as a new metamodel version. Existing relationships are kept; those the new rules refuse are
+   * reported. `baseVersion` must be the version the caller edited, so two admins cannot overwrite each other.
+   */
+  async publishRelationshipRules(
+    principal: Principal,
+    repositoryId: string,
+    body: { baseVersion: string; relationshipRules: NonNullable<MetamodelPackage["relationshipRules"]> },
+    preview: boolean,
+  ): Promise<RulesResult> {
+    const entry = this.cache.entry(repositoryId);
+    return entry.mutex.run(() =>
+      withWorkspace(this.conn, principal.workspaceId, async (tx) => {
+        const { repository } = await this.resolve(tx, repositoryId, undefined);
+        const seq = await lockRepository(tx, repositoryId);
+        const current = await loadMetamodelPackage(tx, repositoryId);
+        if (current.metamodel.version !== body.baseVersion) {
+          throw new ApiError(
+            409,
+            "conflict",
+            `The metamodel is at version ${current.metamodel.version} now; reload to see what changed`,
+          );
+        }
+        let after: Metamodel;
+        try {
+          after = Metamodel.compile(
+            { ...current.metamodel, relationshipRules: body.relationshipRules },
+            current.diagramTypes,
+          );
+        } catch (error) {
+          if (error instanceof MetamodelError)
+            throw invalid(
+              "The rules do not fit the metamodel",
+              error.problems.slice(0, 20).map((message) => ({ property: "relationshipRules", message })),
+            );
+          throw error;
+        }
+        const before = Metamodel.compile(current.metamodel, current.diagramTypes);
+        const view = await this.current(tx, entry, repositoryId, repository.baselineScenarioId, seq);
+        const version = nextVersion(current.metamodel.version);
+        const result = { version, preview, newlyRefused: newlyRefused(view.state, before, after) };
+        if (preview) return result;
+        await saveRelationshipRules(tx, principal.workspaceId, repositoryId, body.relationshipRules, version);
+        entry.metamodel = undefined;
+        return result;
+      }),
+    );
   }
 
   /** Undoes one of the caller's own changes with a new change built from its stored inverses. */
