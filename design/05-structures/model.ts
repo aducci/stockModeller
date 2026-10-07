@@ -27,6 +27,18 @@ export type DataType =
 
 export interface ValueList { key: string; values: Array<{ key: string; label: string; color?: string; order?: number }> }
 
+/** build: an editor hint on a property type; "auto" picks one from the data type and the value list. */
+export type PropertyEditor =
+  | "auto"
+  | "dropdown"
+  | "segmented"
+  | "radio"
+  | "rating"
+  | "switch"
+  | "checkbox"
+  | "checkboxes"
+  | "chips";
+
 export interface PropertyType {
   key: PropertyKey; name: string; group: string; dataType: DataType;
   unit?: string; valueList?: string; objectTypes?: TypeKey[];
@@ -34,6 +46,8 @@ export interface PropertyType {
   validation?: { min?: number; max?: number; pattern?: string; maxLength?: number; decimals?: number };
   formula?: { expression: string; resultType: Exclude<DataType, "calculated" | "richText"> };
   role?: string;                                // e.g. "lifecycle.activeFrom", "owner"
+  /** build: how the properties panel edits the value (design/04-ux/workbench.md "Properties panel"); default auto. */
+  editor?: PropertyEditor;
   master?: string;                              // external system that owns the value
 }
 
@@ -60,6 +74,13 @@ export type SemanticCategory =
 export type SemanticLevel = "conceptual" | "logical" | "physical" | "implementation";
 export type PayloadUse = "none" | "optional" | "expected";      // semantics §2.2
 
+/** build: a named, ordered selection of a type's properties (design/04-ux/workbench.md "Properties panel"). */
+export interface PropertySet {
+  key: string;
+  name: string;
+  properties: PropertyKey[];
+}
+
 export interface ObjectType {
   key: TypeKey; name: string; plural?: string;
   extends?: TypeKey; abstract?: boolean; layer?: string;
@@ -71,6 +92,8 @@ export interface ObjectType {
   category?: SemanticCategory;                  // 02-model/semantics.md §4.1; inherited through extends
   level?: SemanticLevel;                        // default semantic.level of its objects
   levelFixed?: boolean;                         // objects always have the type's level
+  /** build: named selections of its properties (properties panel, review pages); inherited, replaced by key. */
+  propertySets?: PropertySet[];
 }
 
 export interface RelationshipType {
@@ -108,7 +131,11 @@ interface ModelItem {
 export interface ModelObject extends ModelItem {
   name: string; key: string | null; folderId: Id; description: string;
   rank?: string;                                // build: place among its siblings in the explorer
+  confirmations?: Record<PropertyKey, Confirmation>; // build: who last confirmed each property's value, and when
 }
+
+/** build: "this value is still right", as of a commit (edit `confirmProperties`). */
+export interface Confirmation { by: Id; at: IsoDateTime }
 
 export interface Relationship extends ModelItem {
   sourceId: Id; targetId: Id; name: string;

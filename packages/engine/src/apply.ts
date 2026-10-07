@@ -8,6 +8,7 @@ import {
   type Actor,
   type Annotation,
   type Change,
+  type Confirmation,
   type DiagramEdit,
   type Edit,
   type Id,
@@ -139,12 +140,15 @@ class Transaction {
   /** Versioned items touched by this change: their row when the change started (undefined if new). */
   private readonly startRows = new Map<string, Rows[VersionedCollection] | undefined>();
   private readonly changedFields = new Map<string, Set<string>>();
+  /** One commit time for the whole change, so audit stamps and confirmations agree. */
+  private readonly now: string;
 
   constructor(
     private readonly state: ModelState,
     private readonly ctx: ApplyContext,
   ) {
     this.mm = ctx.metamodel;
+    this.now = ctx.now ?? new Date().toISOString();
   }
 
   apply(edit: Edit, index: number): void {
@@ -158,7 +162,7 @@ class Transaction {
 
   finish(): { log: LogEntry[]; versions: Record<Id, number>; findings: RuleFinding[] } {
     const versions: Record<Id, number> = {};
-    const now = this.ctx.now ?? new Date().toISOString();
+    const now = this.now;
     for (const [key, start] of this.startRows) {
       const [collection, id] = splitKey(key);
       const row = this.state.collection(collection).getAny(id)!;
@@ -196,6 +200,12 @@ class Transaction {
         return this.renameObject(edit);
       case "setTags":
         return this.setTags(edit);
+      case "setDescription":
+        return this.setDescription(edit);
+      case "confirmProperties":
+        return this.confirmProperties(edit);
+      case "setConfirmations":
+        return this.setConfirmations(edit);
       case "moveToFolder":
         return this.moveToFolder(edit);
       case "changeObjectType":
@@ -273,6 +283,7 @@ class Transaction {
       properties,
       tags: this.checkTags(e.tags ?? []),
       externalIds: e.externalIds ?? {},
+      ...(e.confirmations && Object.keys(e.confirmations).length > 0 ? { confirmations: e.confirmations } : {}),
       version: tombstone?.version ?? 0,
       fieldVersions: {},
       deleted: false,
@@ -317,6 +328,77 @@ class Transaction {
     this.write("objects", { ...obj, tags: this.checkTags(e.tags) });
     this.markChanged("objects", obj.id, ["tags"]);
     this.step({ edit: "setTags", id: obj.id, baseVersion: PENDING_VERSION, tags: obj.tags });
+    return obj.id;
+  }
+
+  private setDescription(e: Extract<ModelEdit, { edit: "setDescription" }>): Id {
+    const obj = this.requireLive("objects", e.id);
+    this.checkBase("objects", obj, e.baseVersion, ["description"]);
+    if (e.description.length > 10000) this.invalid("description", "A description can be at most 10,000 characters");
+    this.write("objects", { ...obj, description: e.description });
+    this.markChanged("objects", obj.id, ["description"]);
+    this.step({ edit: "setDescription", id: obj.id, baseVersion: PENDING_VERSION, description: obj.description });
+    return obj.id;
+  }
+
+  /** Confirms values as still right (design/04-ux/workbench.md "Confirmations"); refused if one changed meanwhile. */
+  private confirmProperties(e: Extract<ModelEdit, { edit: "confirmProperties" }>): Id {
+    const obj = this.requireLive("objects", e.id);
+    const keys = [...new Set(e.keys)];
+    if (keys.length !== e.keys.length) this.invalid("keys", "A property is listed twice");
+    const allowed = this.mm.objectType(obj.type)?.properties ?? new Set<string>();
+    for (const k of keys) if (!allowed.has(k)) this.invalid("keys", `${obj.type} has no property ${k}`);
+    // Confirming a value someone has just changed would confirm the wrong value.
+    this.checkBase(
+      "objects",
+      obj,
+      e.baseVersion,
+      keys.map((k) => `properties.${k}`),
+    );
+    const stamp = { by: this.ctx.actor.id, at: this.now };
+    const before = obj.confirmations ?? {};
+    this.write("objects", withConfirmations(obj, { ...before, ...Object.fromEntries(keys.map((k) => [k, stamp])) }));
+    this.markChanged(
+      "objects",
+      obj.id,
+      keys.map((k) => `confirmations.${k}`),
+    );
+    this.step({
+      edit: "setConfirmations",
+      id: obj.id,
+      baseVersion: PENDING_VERSION,
+      set: Object.fromEntries(keys.map((k) => [k, before[k] ?? null])),
+    });
+    return obj.id;
+  }
+
+  private setConfirmations(e: Extract<ModelEdit, { edit: "setConfirmations" }>): Id {
+    const obj = this.requireLive("objects", e.id);
+    const keys = Object.keys(e.set);
+    this.checkBase(
+      "objects",
+      obj,
+      e.baseVersion,
+      keys.map((k) => `confirmations.${k}`),
+    );
+    const before = obj.confirmations ?? {};
+    const next: Record<string, Confirmation> = { ...before };
+    for (const [k, c] of Object.entries(e.set)) {
+      if (c === null) delete next[k];
+      else next[k] = c;
+    }
+    this.write("objects", withConfirmations(obj, next));
+    this.markChanged(
+      "objects",
+      obj.id,
+      keys.map((k) => `confirmations.${k}`),
+    );
+    this.step({
+      edit: "setConfirmations",
+      id: obj.id,
+      baseVersion: PENDING_VERSION,
+      set: Object.fromEntries(keys.map((k) => [k, before[k] ?? null])),
+    });
     return obj.id;
   }
 
@@ -445,6 +527,7 @@ class Transaction {
         properties: this.storedProperties(current),
         tags: current.tags,
         externalIds: current.externalIds,
+        ...(current.confirmations ? { confirmations: current.confirmations } : {}),
       },
       ...this.restoreRank("object", current),
     );
@@ -1620,4 +1703,10 @@ function splitKey(key: string): [VersionedCollection, Id] {
 
 function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** An object with these confirmations; none leaves the field out, as a fresh object has it. */
+function withConfirmations(obj: ObjectRow, confirmations: Record<string, Confirmation>): ObjectRow {
+  const { confirmations: _drop, ...rest } = obj;
+  return Object.keys(confirmations).length > 0 ? { ...rest, confirmations } : rest;
 }

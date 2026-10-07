@@ -112,6 +112,7 @@ export interface ObjectTable extends ScenarioRow {
   base_version: number | null;
   updated_at: Timestamp;
   updated_by: string | null;
+  confirmations: Json<Record<string, { by: string; at: string }>> | null;
 }
 
 export interface RelationshipTable extends ScenarioRow {

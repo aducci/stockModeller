@@ -110,6 +110,8 @@ Edit types added in [changes.ts](../05-structures/changes.ts) (marked `build:`):
 | `setPayload` | New (slice Sem-3): replaces what a relationship carries |
 | `createRelationship` | Optional `payload`, `parentId` and `rank` (slice Sem-3); a message's `rank` defaults to after its interaction's last message |
 | `deleteObject` | Optional `contents: "moveUp" \| "deleteContents"` (slice Sem-2). The inverse list restores contents and their containment relationships, deepest first |
+| `setDescription` | New (slice P-1): sets an object's description, which `createObject` could set but nothing could change. Conflicts per field like `renameObject`; at most 10,000 characters |
+| `confirmProperties`, `setConfirmations` | New (slice P-3): `confirmProperties` stamps the listed property keys with the change's author and time in the object's `confirmations` (migration 007, column `confirmations jsonb`, NULL = none); it conflicts on `properties.<key>`, so a value changed since the reviewer's version cannot be confirmed. Its inverse `setConfirmations` puts the previous entries back (`null` removes one). `createObject` takes optional `confirmations` so restoring a deleted object is exact |
 | `setRank` | New (slice 0.8b): places a folder, object or diagram among its siblings. Last writer wins (no base version), like layout. Deleting a ranked item logs a `setRank` after the re-create in its inverse, so restoring it is exact |
 
 

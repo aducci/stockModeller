@@ -7,6 +7,7 @@ test.use({ viewport: { width: 1600, height: 1000 } });
 
 const explorer = (page: Page) => page.getByRole("navigation", { name: "Explorer" });
 const properties = (page: Page) => page.getByRole("complementary", { name: "Properties" });
+const relations = (page: Page) => page.getByRole("complementary", { name: "Relations" });
 const canvas = (page: Page) => page.getByRole("application", { name: "Diagram Claims landscape" });
 const symbol = (page: Page, name: string) => canvas(page).locator(`.occ[data-name="${name}"]`);
 const row = (page: Page, name: string) => explorer(page).locator(".row", { hasText: new RegExp(`^\\W*${name}$`) });
@@ -49,7 +50,7 @@ async function box(page: Page, name: string) {
 test("groups relationships by kind and keeps a level set on an object", async ({ page }) => {
   await signIn(page);
   await select(page, "Payments Hub");
-  const relationships = properties(page).locator(".group", { hasText: "Relationships" });
+  const relationships = relations(page);
   // Earlier specs may add relationships to Payments Hub, so only these groups are checked.
   await expect(relationships.locator('.rel-group[data-kind="realisation"] h4')).toHaveText("What this implements");
   await expect(relationships.locator('.rel-group[data-kind="flow"] h4')).toHaveText("Upstream");
@@ -156,7 +157,7 @@ test("an interaction holds its request and response with their payloads, and del
   await page.reload();
   await saved(page);
   await select(page, "Quote Engine");
-  const calls = properties(page).locator('.rel-group[data-kind="interaction"]');
+  const calls = relations(page).locator('.rel-group[data-kind="interaction"]');
   await expect(calls.locator('li[data-role="request"]')).toContainText("Claim Intake");
   await expect(calls.locator('li[data-role="response"]')).toContainText("Handle Claim");
 });
@@ -170,7 +171,8 @@ test("traces upstream by meaning, highlights the result on the diagram and shows
   await explorer(page).getByLabel("Filter the explorer").fill("");
   await select(page, "Payments Hub");
 
-  const tracePanel = properties(page).locator(".group.trace");
+  await relations(page).getByRole("tab", { name: "Trace" }).click();
+  const tracePanel = relations(page).locator(".trace");
   await tracePanel.getByLabel("Trace").selectOption({ label: "Upstream" });
   await expect(tracePanel.locator('.trace-level[data-level="implementation"]')).toContainText("Claims Manager");
   await expect(tracePanel.locator('.trace-level[data-level="implementation"]')).toContainText("Legacy CRM");

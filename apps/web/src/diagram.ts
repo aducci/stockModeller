@@ -5,6 +5,7 @@ import {
   DEFAULT_SEMANTIC_ZOOM,
   RENDITIONS,
   isRendition,
+  type Edit,
   type Id,
   type PropertyValue,
   type RelationshipType,
@@ -242,4 +243,50 @@ export function deletionImpact(state: ModelState, metamodel: Metamodel, objectId
     .filter((r) => metamodel.relationshipType(r.type)?.semantic === "containment")
     .map((r) => r.targetId);
   return { relationships, children, contents, diagrams };
+}
+
+/**
+ * Adds an object to a diagram from outside the editor (the Relations window's "Add to open diagram"): one occurrence
+ * at the left edge, below everything already drawn. An error when the diagram type does not admit the object's type.
+ */
+export function addToDiagramPlan(
+  state: ModelState,
+  metamodel: Metamodel,
+  diagramId: Id,
+  objectId: Id,
+  occurrenceId: Id,
+): { label: string; edits: Edit[] } | { error: string } {
+  const diagram = state.diagrams.get(diagramId);
+  const object = state.objects.get(objectId);
+  if (!diagram || !object) return { error: "That diagram or object was deleted meanwhile." };
+  const diagramType = metamodel.diagramType(diagram.diagramType);
+  if (diagramType && !metamodel.diagramAllowsObjectType(diagramType, object.type)) {
+    const typeName = metamodel.objectType(object.type)?.definition.name ?? object.type;
+    return { error: `${diagram.name} does not show objects of type ${typeName}.` };
+  }
+  const symbol = symbolFor(metamodel, diagram, object.type);
+  const occurrences = state.objectOccurrences.find("byDiagram", diagramId);
+  const bottom = Math.max(0, ...[...layoutBoxes(state, diagramId).values()].map((b) => b.y + b.h));
+  return {
+    label: `Add ${object.name} to ${diagram.name}`,
+    edits: [
+      {
+        edit: "addObjectOccurrence",
+        diagramId,
+        occurrence: {
+          id: occurrenceId,
+          objectId,
+          parentOccurrenceId: null,
+          x: GRID * 5,
+          y: snap(bottom + GRID * 5),
+          w: symbol.width,
+          h: symbol.height,
+          z: Math.max(0, ...occurrences.map((o) => o.z)) + 1,
+          style: {},
+          drillDownDiagramId: null,
+          pinned: false,
+        },
+      },
+    ],
+  };
 }

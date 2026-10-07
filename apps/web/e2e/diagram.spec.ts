@@ -15,6 +15,7 @@ async function signIn(page: Page, userId = "dev@example.com") {
 
 const explorer = (page: Page) => page.getByRole("navigation", { name: "Explorer" });
 const properties = (page: Page) => page.getByRole("complementary", { name: "Properties" });
+const relations = (page: Page) => page.getByRole("complementary", { name: "Relations" });
 const canvas = (page: Page) => page.getByRole("application", { name: "Diagram Claims landscape" });
 const symbol = (page: Page, name: string) => canvas(page).locator(`.occ[data-name="${name}"]`);
 const saved = (page: Page) => expect(page.getByTestId("save-state")).toHaveText("All changes saved");
@@ -119,7 +120,7 @@ test("connects two symbols with a relationship type the rules allow", async ({ p
   await expect(menu.getByRole("menuitem")).toHaveText(["contains", "flows to"]);
   await menu.getByRole("menuitem", { name: "flows to" }).click();
   await expect(canvas(page).locator('.line[data-relationship="flows to"]')).toHaveCount(3);
-  await expect(properties(page).locator(".group", { hasText: "Relationships" })).toContainText("Payments Hub");
+  await expect(relations(page)).toContainText("Payments Hub");
   await saved(page);
 });
 

@@ -23,6 +23,8 @@ export const propertyValueSchema = z.union([
 const properties = z.record(propertyKey, propertyValueSchema);
 const tags = z.array(z.string().min(1).max(100)).max(100);
 const externalIds = z.record(z.string().min(1).max(64), z.string().min(1).max(256));
+const confirmation = z.strictObject({ by: id, at: z.iso.datetime({ offset: true }) });
+const confirmations = z.record(propertyKey, confirmation);
 
 const shape = z.enum(["rect", "roundRect", "ellipse", "hexagon", "cylinder", "person", "icon"]);
 const arrow = z.enum(["none", "arrow", "diamond", "circle"]);
@@ -120,10 +122,22 @@ export const editSchema = z.discriminatedUnion("edit", [
     properties: properties.optional(),
     tags: tags.optional(),
     externalIds: externalIds.optional(),
+    confirmations: confirmations.optional(),
   }),
   z.strictObject({ edit: z.literal("setProperties"), ...onExisting, set: properties }),
   z.strictObject({ edit: z.literal("renameObject"), ...onExisting, name: z.string() }),
   z.strictObject({ edit: z.literal("setTags"), ...onExisting, tags }),
+  z.strictObject({ edit: z.literal("setDescription"), ...onExisting, description: z.string() }),
+  z.strictObject({
+    edit: z.literal("confirmProperties"),
+    ...onExisting,
+    keys: z.array(propertyKey).min(1).max(1000),
+  }),
+  z.strictObject({
+    edit: z.literal("setConfirmations"),
+    ...onExisting,
+    set: z.record(propertyKey, confirmation.nullable()),
+  }),
   z.strictObject({ edit: z.literal("moveToFolder"), ...onExisting, folderId: id }),
   z.strictObject({
     edit: z.literal("changeObjectType"),
