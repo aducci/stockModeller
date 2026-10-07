@@ -11,3 +11,4 @@ export { checkValue } from "./properties";
 export { Collection, ModelState, type TouchedRow } from "./state";
 export * from "./rows";
 export { snapshotRows, stateFromSnapshot, type RepositorySnapshot, type SnapshotRows } from "./snapshot";
+export { newlyRefused, relationshipCombinations, unallowedCombinations, type Combination } from "./rule-usage";

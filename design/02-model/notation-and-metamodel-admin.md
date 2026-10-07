@@ -376,7 +376,15 @@ A sandbox panel: pick (or drag in) two types and see exactly what a modeller wil
 
 Rule endpoints therefore become: a type key, `*`, an abstract type (inherited through `extends`) or `category:<name>`. The most specific matching rule decides enforcement; the matrix shows which rule a cell inherits from.
 
-### 10.6 Notation studio
+### 10.6 Built in slice A-1
+
+- **Where:** a **Metamodel** menu in the top bar (Types, Connection matrix, Rule sentences, Try a connection) opens one *Metamodel* tab with those four views on a strip.
+- **Draft:** every edit changes a draft of the relationship rules kept in the browser; a bar says "n changes not published" with *Discard* and *Review and publish…*. The review lists the rules added, removed and changed, and the combinations in use that the new rules would refuse (they stay and are flagged; nothing is deleted).
+- **Matrix:** rows and columns are every object type in tree order (an abstract parent such as *Application (any)* above its subtypes). A rule on a parent or on `*` shows as a lighter, inherited dot that can only be changed where it is written. Dots are coloured by kind family: structure (containment, composition, aggregation, specialisation), dependency (realisation, representation, serving, assignment, access, association), behaviour and flow (flow, trigger, interaction), influence; hollow means warn only.
+- **Publishing:** `PUT /repositories/{repo}/metamodel/relationship-rules` with the version the draft was edited from (409 if someone published meanwhile; `?preview=true` reports without publishing). It replaces the `relationship` rows of the `rule` table, sets the next patch version and notifies `connectome_metamodel`; every server instance drops its compiled metamodel and asks its open sessions to reload (`resync`).
+- **Not yet:** the map, learning from data, category and level endpoints (A-2); editing types (A-1b); cardinality is kept but not shown.
+
+### 10.7 Notation studio
 
 The notation lives on the type editor, not in a separate tool:
 - **Glyph editor**: a 16×16 grid with snap, line, arc and dot tools, live byte count against the 256-byte budget, preview at 12, 16, 24 and 48 px in both themes; paste or drop an SVG to convert it.
@@ -435,7 +443,8 @@ The engine stays pure: style rules, markers, decorations, compartment queries an
 | **N-5** | Stencils and patterns; save selection as pattern | N-2 |
 | **N-6** | Zones | N-5 |
 | **N-7** | Ports: anchors bound to objects by a path, `side: auto`, connecting straight to a port | N-2a, N-2b |
-| **A-1** | Metamodel editor: connection matrix, sentences, try-it | M1 metamodel stream |
+| **A-1** ✅ | Metamodel menu and tab: types (read-only), connection matrix, rule sentences, try a connection, over one draft of the relationship rules; review with the effect on existing relationships; publish as the next version, picked up by every open session | Nothing new: the rules are rows of the `rule` table |
+| **A-1b** | Editing types: new object and relationship types, rename, parent, category, level, properties; breaking edits with a migration preview ([metamodel §7](metamodel.md#7-versions-and-packages)) | A-1 |
 | **A-2** | Metamodel map; learn from data; category and level rule endpoints | A-1 |
 | **A-3** | Notation studio (glyph editor, rendition and rule previews) | N-3, A-1 |
 

@@ -62,6 +62,8 @@ All property groups, relationships (with inline add), hierarchy position, "Occur
 | Packages | Installed packages and versions; upgrade with migration preview |
 | Publish | Pending metamodel edits; "Publish 1.4.0" shows the migration plan |
 
+Built so far (slice A-1): a **Metamodel** menu in the top bar opening one tab with Types, Connection matrix, Rule sentences and Try a connection, and publishing relationship rules (notation-and-metamodel-admin.md §10.6).
+
 Additions (the metamodel map, the connection matrix, sentences, try-it and the notation studio): [notation and metamodel administration §8](../02-model/notation-and-metamodel-admin.md#8-administering-the-metamodel).
 
 ## 7. Scenario compare and change request review

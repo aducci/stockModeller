@@ -49,7 +49,10 @@ export interface StoreOptions {
 }
 
 export class ModelStore {
-  readonly metamodel: Metamodel;
+  /** Replaced when a snapshot brings a newly published metamodel. */
+  metamodel: Metamodel;
+  /** The package the metamodel was compiled from, for metamodel administration. */
+  metamodelPackage: RepositorySnapshot["metamodel"];
   readonly repository: RepositorySnapshot["repository"];
   readonly scenario: RepositorySnapshot["scenario"];
   /** The view: confirmed state plus pending changes. Read it, never write it. */
@@ -65,6 +68,7 @@ export class ModelStore {
     private readonly options: StoreOptions,
   ) {
     this.metamodel = Metamodel.compile(snapshot.metamodel.package, snapshot.metamodel.diagramTypes);
+    this.metamodelPackage = snapshot.metamodel;
     this.repository = snapshot.repository;
     this.scenario = snapshot.scenario;
     this.state = stateFromSnapshot(snapshot.rows);
@@ -140,6 +144,10 @@ export class ModelStore {
     if (snapshot.scenario.id !== this.scenario.id) throw new Error("The snapshot is of another scenario");
     this.state = stateFromSnapshot(snapshot.rows);
     this.seq = snapshot.seq;
+    if (snapshot.metamodel.package.version !== this.metamodelPackage.package.version) {
+      this.metamodel = Metamodel.compile(snapshot.metamodel.package, snapshot.metamodel.diagramTypes);
+      this.metamodelPackage = snapshot.metamodel;
+    }
     for (const p of this.pending) p.touched = null;
     this.rebase(() => {});
     this.emit({ type: "changed" });
