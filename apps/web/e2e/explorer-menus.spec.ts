@@ -90,7 +90,7 @@ test("the File menu creates a diagram, renames it and closes its tab", async ({ 
   await page.keyboard.press("Escape");
   await file.click();
   await menuItem(page, "Close all tabs").click();
-  await expect(page.getByRole("tab")).toHaveCount(0);
+  await expect(page.getByRole("tablist", { name: "Open items" }).getByRole("tab")).toHaveCount(0);
 
   await row(page, "Menu Map").click();
   await file.click();

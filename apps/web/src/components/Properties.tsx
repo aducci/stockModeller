@@ -1,10 +1,10 @@
-// The properties panel (design/04-ux/workbench.md): the generic inspector (Inspector.tsx) filled for each kind of
-// selection: header, property groups, tags, relationships, trace and "occurs on". Every edit is one change, shown at once.
+// The Properties window (design/04-ux/workbench.md "Properties panel"): the generic inspector (Inspector.tsx) filled
+// for each kind of selection: header, property sets and groups, tags. Every edit is one change, shown at once.
 import { useState } from "react";
-import type { ModelState, ObjectRow, Metamodel, RelationshipRow } from "@connectome/engine";
+import type { ModelState, Metamodel, RelationshipRow } from "@connectome/engine";
 import { LEVEL_PROPERTY, type Id } from "@connectome/model";
 import { useModel, useWorkbench } from "../state/workbench";
-import { fieldGroups } from "../inspector";
+import { confirmationOf, fieldGroups, mySet, toggleInSet } from "../inspector";
 import {
   InspectorHeader,
   InspectorToolbar,
@@ -13,37 +13,63 @@ import {
   TextField,
   usePanelPrefs,
   type GridContext,
+  type SetPicker,
 } from "./Inspector";
-import { trace, traceByLevel, type TraceDirection, type TraceKind } from "@connectome/semantics";
-import { addPayloadPlan, messagePlan, messagesOf, payloadChoices, payloadText, relationshipGroups } from "../semantics";
-import { byName, folderPath } from "../text";
+import { RelationsSections } from "./Relations";
+import { addPayloadPlan, messagePlan, messagesOf, payloadChoices } from "../semantics";
+import { folderPath } from "../text";
 
-export function Properties() {
+/** The Properties tab of the Properties window: the selection's inspector. */
+export function PropertiesTabContent() {
   useModel();
   const selection = useWorkbench((s) => s.selection);
   return (
-    <aside className="properties" aria-label="Properties">
-      <div className="pane-title">
-        <span>Properties</span>
-      </div>
+    <>
       {!selection && <p className="muted pad">Select something in the explorer to see its properties.</p>}
       {selection?.kind === "object" && <ObjectProperties id={selection.id} />}
       {selection?.kind === "folder" && <FolderProperties id={selection.id} />}
       {selection?.kind === "diagram" && <DiagramProperties id={selection.id} />}
       {selection?.kind === "relationship" && <RelationshipProperties id={selection.id} />}
-    </aside>
+    </>
   );
 }
 
-export function ObjectProperties({ id }: { id: Id }) {
+/** An object's inspector; `withRelations` adds the Relations window's views as sections (the object page). */
+export function ObjectProperties({ id, withRelations = false }: { id: Id; withRelations?: boolean }) {
   const { state, metamodel } = useModel();
   const edit = useWorkbench((s) => s.edit);
-  const hideEmpty = usePanelPrefs((s) => s.hideEmpty);
+  const prefs = usePanelPrefs();
   const [filter, setFilter] = useState("");
+  const [editingSet, setEditingSet] = useState<string | null>(null);
   const object = state.objects.get(id);
   if (!object) return <p className="muted pad">This object was deleted.</p>;
   const type = metamodel.objectType(object.type);
-  const { groups, hidden } = fieldGroups(metamodel, type?.properties ?? [], object.properties, { filter, hideEmpty });
+  const shared = type?.propertySets ?? [];
+  const mine = prefs.mySets[object.type] ?? [];
+  const chosenKey = prefs.chosenSets[object.type] ?? "";
+  const chosen = [...shared, ...mine].find((x) => x.key === chosenKey);
+  const editing = editingSet ? mine.find((x) => x.key === editingSet) : undefined;
+  const { groups, hidden } = fieldGroups(metamodel, type?.properties ?? [], object.properties, {
+    filter,
+    hideEmpty: prefs.hideEmpty && !editing,
+    set: editing ? undefined : chosen,
+  });
+  const sets: SetPicker = {
+    shared,
+    mine,
+    chosen: chosen?.key ?? "",
+    editing: editing?.key ?? null,
+    onChoose: (key) => prefs.chooseSet(object.type, key),
+    onSaveAs: (name) => {
+      // The new set holds what is shown now: the chosen set's properties, or every property.
+      const shown = chosen ? chosen.properties : [...(type?.properties ?? [])];
+      const created = mySet(name, shown);
+      prefs.saveMySet(object.type, created);
+      prefs.chooseSet(object.type, created.key);
+    },
+    onEdit: setEditingSet,
+    onDelete: (key) => prefs.deleteMySet(object.type, key),
+  };
   const levelList = metamodel.valueList("semanticLevel");
   const typeLevel = type?.level && levelList?.values.find((v) => v.key === type.level)?.label;
   const ctx: GridContext = {
@@ -53,11 +79,37 @@ export function ObjectProperties({ id }: { id: Id }) {
     // The level falls back to the type's default, and a type can fix it (semantics.md §4.2).
     placeholder: (f) => (f.pt.key === LEVEL_PROPERTY && typeLevel ? `${typeLevel} (type default)` : undefined),
     readOnly: (f) => f.pt.key === LEVEL_PROPERTY && (type?.levelFixed ?? false),
+    // While reviewing, a value set is a value confirmed: one change, one undo.
     commit: (f, value) =>
       edit(`Set ${f.pt.name} of ${object.name}`, [
         { edit: "setProperties", id, baseVersion: object.version, set: { [f.pt.key]: value } },
+        ...(prefs.review
+          ? [{ edit: "confirmProperties" as const, id, baseVersion: object.version, keys: [f.pt.key] }]
+          : []),
       ]),
   };
+  const now = new Date().toISOString();
+  const confirm = (keys: string[]) =>
+    keys.length > 0 &&
+    edit(
+      keys.length === 1
+        ? `Confirm ${metamodel.propertyType(keys[0]!)?.name ?? keys[0]} of ${object.name}`
+        : `Confirm ${keys.length} values of ${object.name}`,
+      [{ edit: "confirmProperties", id, baseVersion: object.version, keys }],
+    );
+  const shownFields = groups.flatMap((g) => g.fields).filter((f) => f.editor !== "calculated" && !ctx.readOnly?.(f));
+  const due = shownFields.filter((f) => confirmationOf(object, f.pt.key, now).state !== "current");
+  if (prefs.review && !editing)
+    ctx.review = {
+      now,
+      info: (f) => confirmationOf(object, f.pt.key, now),
+      confirm: (f) => confirm([f.pt.key]),
+    };
+  if (editing)
+    ctx.picking = {
+      has: (key) => editing.properties.includes(key),
+      toggle: (key) => prefs.saveMySet(object.type, toggleInSet(editing, key)),
+    };
   const prefix = `object:${object.type}`;
   const filtering = filter.trim() !== "";
 
@@ -84,8 +136,15 @@ export function ObjectProperties({ id }: { id: Id }) {
         hidden={hidden}
         sectionIds={[
           ...groups.map((g) => `${prefix}:${g.key}`),
-          ...["tags", "relationships", "trace", "occurs"].map((s) => `object:${s}`),
+          ...["tags", ...(withRelations ? ["relationships", "trace", "occurs"] : [])].map((s) => `object:${s}`),
         ]}
+        sets={sets}
+        review={{
+          on: prefs.review && !editing,
+          due: due.length,
+          toggle: () => prefs.setReview(!prefs.review),
+          confirmAll: () => confirm(due.map((f) => f.pt.key)),
+        }}
       />
       <PropertyGroups groups={groups} ctx={ctx} prefix={prefix} />
       {filtering && groups.length === 0 && <p className="muted pad">No properties match “{filter.trim()}”.</p>}
@@ -117,71 +176,10 @@ export function ObjectProperties({ id }: { id: Id }) {
               }
             />
           </Section>
-          <Relationships object={object} state={state} metamodel={metamodel} />
-          <Trace key={object.id} object={object} state={state} metamodel={metamodel} />
-          <OccursOn id={id} state={state} />
+          {withRelations && <RelationsSections object={object} />}
         </>
       )}
     </div>
-  );
-}
-
-/** Relationships grouped by what they mean (design/02-model/semantics.md §9.1), each row in the type's own words. */
-function Relationships({ object, state, metamodel }: { object: ObjectRow; state: ModelState; metamodel: Metamodel }) {
-  const select = useWorkbench((s) => s.select);
-  const groups = relationshipGroups(state, metamodel, object.id);
-  return (
-    <Section
-      id="object:relationships"
-      title="Relationships"
-      count={groups.reduce((n, g) => n + g.rows.length, 0) || undefined}
-    >
-      {groups.length === 0 && <p className="muted">None yet.</p>}
-      {groups.map((g) => (
-        <div key={`${g.kind}:${g.direction}`} className="rel-group" data-kind={g.kind}>
-          <h4>{g.label}</h4>
-          <ul className="plain">
-            {g.rows.map(({ relationship, verb, other, arrow }) => (
-              <li key={relationship.id} data-relationship={relationship.id}>
-                <button
-                  className="link muted"
-                  title="Show this relationship"
-                  onClick={() => select({ kind: "relationship", id: relationship.id })}
-                >
-                  {verb} {arrow}
-                </button>{" "}
-                <button className="link" onClick={() => select({ kind: "object", id: other })}>
-                  {state.objects.get(other)?.name ?? other}
-                </button>
-                {relationship.payload.length > 0 && (
-                  <span className="payload-text"> · {payloadText(state, relationship)}</span>
-                )}
-                {g.kind === "interaction" && <MessageList interaction={relationship} state={state} />}
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
-    </Section>
-  );
-}
-
-/** An interaction's messages, each with its direction and payload (semantics.md §6). */
-function MessageList({ interaction, state }: { interaction: RelationshipRow; state: ModelState }) {
-  const select = useWorkbench((s) => s.select);
-  const messages = messagesOf(state, interaction);
-  if (messages.length === 0) return null;
-  return (
-    <ul className="plain messages">
-      {messages.map(({ message, role }) => (
-        <li key={message.id} data-role={role}>
-          <button className="link muted" onClick={() => select({ kind: "relationship", id: message.id })}>
-            {role === "request" ? "Request →" : "Response ←"}
-          </button>
-          {message.payload.length > 0 && <span className="payload-text"> {payloadText(state, message)}</span>}
-        </li>
-      ))}
-    </ul>
   );
 }
 
@@ -320,96 +318,6 @@ function PayloadEditor(props: { relationship: RelationshipRow; state: ModelState
         ))}
       </select>
     </div>
-  );
-}
-
-/** The traces offered for an object (semantics.md §9.3), in the words of the framework's questions. */
-const TRACES: { key: string; label: string; kind: TraceKind; direction: TraceDirection; contents?: boolean }[] = [
-  { key: "down", label: "Implementations (down the levels)", kind: "levels", direction: "forward" },
-  { key: "up", label: "What this implements (up the levels)", kind: "levels", direction: "backward" },
-  { key: "downstream", label: "Downstream", kind: "flow", direction: "forward", contents: true },
-  { key: "upstream", label: "Upstream", kind: "flow", direction: "backward", contents: true },
-  { key: "receivers", label: "Who receives this information", kind: "payload", direction: "forward" },
-  { key: "senders", label: "Who sends this information", kind: "payload", direction: "backward" },
-  { key: "dependsOn", label: "What this depends on", kind: "dependency", direction: "forward" },
-  { key: "usedBy", label: "What depends on this", kind: "dependency", direction: "backward" },
-];
-
-/** Trace ▸: follows relationships by meaning, lays the result out by level and highlights it on diagrams. */
-function Trace({ object, state, metamodel }: { object: ObjectRow; state: ModelState; metamodel: Metamodel }) {
-  const select = useWorkbench((s) => s.select);
-  const current = useWorkbench((s) => s.trace);
-  const showTrace = useWorkbench((s) => s.showTrace);
-  // Keyed by object, so selecting another object starts afresh; coming back keeps the trace shown.
-  const [chosen, setChosen] = useState(() =>
-    current?.startId === object.id ? (TRACES.find((t) => t.label === current.label)?.key ?? "") : "",
-  );
-  const option = TRACES.find((t) => t.key === chosen);
-  const result = option
-    ? trace(state, metamodel, object.id, option.kind, option.direction, { contents: option.contents ?? false })
-    : undefined;
-  const levels = metamodel.valueList("semanticLevel");
-  const levelName = (level: string | null) =>
-    level ? (levels?.values.find((v) => v.key === level)?.label ?? level) : "No level";
-  const choose = (key: string) => {
-    setChosen(key);
-    const next = TRACES.find((t) => t.key === key);
-    if (!next) return showTrace(null);
-    const ids = trace(state, metamodel, object.id, next.kind, next.direction, {
-      contents: next.contents ?? false,
-    }).steps.map((s) => s.objectId);
-    showTrace({ startId: object.id, label: next.label, objectIds: new Set([object.id, ...ids]) });
-  };
-  return (
-    <Section id="object:trace" title="Trace" className="trace">
-      <select aria-label="Trace" value={chosen} onChange={(e) => choose(e.target.value)}>
-        <option value="">Choose a trace…</option>
-        {TRACES.map((t) => (
-          <option key={t.key} value={t.key}>
-            {t.label}
-          </option>
-        ))}
-      </select>
-      {result && result.steps.length === 0 && <p className="muted">Nothing found.</p>}
-      {result &&
-        traceByLevel(state, metamodel, result).map((column) => (
-          <div key={column.level ?? "none"} className="trace-level" data-level={column.level ?? "none"}>
-            <h4>{levelName(column.level)}</h4>
-            <ul className="plain">
-              {column.objectIds.map((id) => (
-                <li key={id}>
-                  <button className="link" onClick={() => select({ kind: "object", id })}>
-                    {state.objects.get(id)?.name ?? id}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      {result?.truncated && <p className="muted">Showing the first {result.steps.length}.</p>}
-    </Section>
-  );
-}
-
-function OccursOn({ id, state }: { id: Id; state: ModelState }) {
-  const openTab = useWorkbench((s) => s.openTab);
-  const diagrams = [...new Set(state.objectOccurrences.find("byObject", id).map((o) => o.diagramId))]
-    .map((d) => state.diagrams.get(d))
-    .filter((d) => d !== undefined)
-    .sort(byName);
-  return (
-    <Section id="object:occurs" title="Occurs on" count={diagrams.length}>
-      <ul className="plain">
-        {diagrams.map((d) => (
-          <li key={d.id}>
-            <button className="link" onClick={() => openTab({ kind: "diagram", id: d.id })}>
-              ⧉ {d.name}
-            </button>
-          </li>
-        ))}
-      </ul>
-      {diagrams.length === 0 && <p className="muted">Not on any diagram yet.</p>}
-    </Section>
   );
 }
 

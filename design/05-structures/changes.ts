@@ -5,6 +5,7 @@ import type {
   TypeKey,
   PropertyKey,
   PropertyValue,
+  Confirmation,
   ObjectOccurrence,
   RelationshipOccurrence,
   Annotation,
@@ -34,12 +35,18 @@ export type ModelEdit =
       properties?: Record<PropertyKey, PropertyValue>;
       tags?: string[];
       externalIds?: Record<string, string>;
+      /** build: so that restoring a deleted object is exact. */
+      confirmations?: Record<PropertyKey, Confirmation>;
     }
   | ({ edit: "setProperties"; set: Record<PropertyKey, PropertyValue> } & OnExisting) // null clears a value
   | ({ edit: "renameObject"; name: string } & OnExisting)
   | ({ edit: "setTags"; tags: string[] } & OnExisting)
   /** build: an object's description; "" clears it. */
   | ({ edit: "setDescription"; description: string } & OnExisting)
+  /** build: confirms that the values of `keys` are still right, stamped with the change's author and time. */
+  | ({ edit: "confirmProperties"; keys: PropertyKey[] } & OnExisting)
+  /** build: puts confirmations back as they were (the inverse of confirmProperties); null removes one. */
+  | ({ edit: "setConfirmations"; set: Record<PropertyKey, Confirmation | null> } & OnExisting)
   | ({ edit: "moveToFolder"; folderId: Id } & OnExisting)
   | ({ edit: "changeObjectType"; type: TypeKey; propertyMap?: Record<PropertyKey, PropertyKey> } & OnExisting)
   /**

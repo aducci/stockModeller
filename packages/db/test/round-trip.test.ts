@@ -162,6 +162,23 @@ describeDb("engine + database", () => {
     expect(target.state.objects.get("O-SRV-1")!.name).toBe("SRV-APP-01 (DC1)");
   });
 
+  it("stores confirmations and reads them back exactly", async () => {
+    const before = await withWorkspace(t.conn, WS, (tx) => loadState(tx, REPO, BASELINE));
+    const server = before.state.objects.get("O-SRV-1")!;
+    const result = await submit(t.conn, {
+      id: "C-CONFIRM",
+      scenarioId: BASELINE,
+      label: "Confirm",
+      edits: [{ edit: "confirmProperties", id: "O-SRV-1", baseVersion: server.version, keys: ["semantic.level"] }],
+    });
+    if (!result.ok) throw new Error(JSON.stringify(result.reasons));
+    const after = await withWorkspace(t.conn, WS, (tx) => loadState(tx, REPO, BASELINE));
+    expect(after.state.objects.get("O-SRV-1")!.confirmations).toEqual({
+      "semantic.level": { by: "U-DANA", at: result.state.objects.get("O-SRV-1")!.updatedAt },
+    });
+    expect(snapshot(after.state)).toEqual(snapshot(result.state));
+  });
+
   it("undoes a committed change from the inverses stored in change_log", async () => {
     const before = await withWorkspace(t.conn, WS, (tx) => loadState(tx, REPO, BASELINE));
     const deleted = await submit(t.conn, {

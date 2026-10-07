@@ -69,7 +69,7 @@ test("filters properties, hides empty ones and remembers collapsed sections", as
 
   await panel.getByLabel("Filter properties").fill("fit");
   await expect(rows).toHaveCount(2);
-  await expect(panel.locator(".group", { hasText: "Relationships" })).toHaveCount(0);
+  await expect(panel.locator(".group", { hasText: "Tags" })).toHaveCount(0);
   await panel.getByLabel("Filter properties").fill("");
   await expect(rows).toHaveCount(all);
 
@@ -87,4 +87,129 @@ test("filters properties, hides empty ones and remembers collapsed sections", as
   await expect(panel.locator('[data-property="lifecycle.status"]')).toHaveCount(0);
   await panel.getByRole("button", { name: "Lifecycle" }).click();
   await expect(panel.locator("#prop-lifecycle\\.status")).toBeVisible();
+});
+
+test("shows a shared property set, saves and edits one of my own, and edits a link", async ({ page }) => {
+  await signIn(page);
+  await select(page, "Legacy CRM");
+  const panel = properties(page);
+  const picker = panel.getByLabel("Property set");
+
+  await picker.selectOption({ label: "Quarterly review" });
+  await expect(panel.locator(".prop-row label")).toHaveText(
+    ["Status*", "Criticality", "Business owner", "Technical owner", "Business fit"].map(
+      (t) => new RegExp(`^${t.replace("*", "\\*?")}$`),
+    ),
+  );
+
+  // Save as set keeps what is shown; editing ticks properties in or out.
+  await picker.selectOption({ label: "Save as set…" });
+  await panel.getByLabel("Name of the new property set").fill("Lab view");
+  await panel.getByLabel("Name of the new property set").press("Enter");
+  await expect(picker).toHaveValue(/^my/);
+  await picker.selectOption({ label: "Edit this set…" });
+  await panel.getByLabel("Include Business fit in the set").uncheck();
+  await panel.getByLabel("Include Documentation in the set").check();
+  await panel.getByRole("button", { name: "Done" }).click();
+  await expect(panel.locator(".prop-row")).toHaveCount(5);
+  await expect(panel.locator('[data-property="assessment.businessFit"]')).toHaveCount(0);
+
+  // A link: typed without a scheme, shown as a link, edited with the pencil.
+  await panel.getByLabel("Documentation").fill("wiki.example.com/apps/legacy-crm");
+  await panel.getByLabel("Documentation").press("Enter");
+  const link = panel.locator(".link-value");
+  await expect(link).toHaveAttribute("href", "https://wiki.example.com/apps/legacy-crm");
+  await expect(link).toHaveText("wiki.example.com/apps/legacy-crm");
+  await saved(page);
+  await page.reload();
+  await saved(page);
+  await select(page, "Legacy CRM");
+  await expect(panel.getByLabel("Property set")).toHaveValue(/^my/);
+  await expect(panel.locator(".link-value")).toHaveAttribute("href", "https://wiki.example.com/apps/legacy-crm");
+  await panel.getByRole("button", { name: "Edit Documentation" }).click();
+  await panel.getByLabel("Documentation").fill("");
+  await panel.getByLabel("Documentation").press("Enter");
+  await expect(panel.locator(".link-value")).toHaveCount(0);
+  await saved(page);
+});
+
+test("the Relations window shows relationships by view, traces and where an object occurs", async ({ page }) => {
+  await signIn(page);
+  await select(page, "Payments Hub");
+  const relations = page.getByRole("complementary", { name: "Relations" });
+  await expect(relations.getByRole("tab", { name: "Relationships" })).toHaveAttribute("aria-selected", "true");
+  await expect(relations.locator('.rel-group[data-kind="flow"]')).toContainText("Claims Manager");
+
+  await relations.getByLabel("Filter relationships").fill("zzz");
+  await expect(relations).toContainText("Nothing matches.");
+  await relations.getByLabel("Filter relationships").fill("");
+
+  await relations.getByLabel("Relationship view").selectOption({ label: "By object" });
+  await expect(relations.locator("li[data-object]").first()).toBeVisible();
+  await relations.getByLabel("Relationship view").selectOption({ label: "Data flows (2 steps)" });
+  await expect(relations.locator('[data-direction="backward"] h4')).toHaveText("Upstream");
+  await expect(relations.locator('[data-direction="backward"]')).toContainText("Claims Manager");
+  await relations.getByLabel("Relationship view").selectOption({ label: "By meaning" });
+
+  // Occurs on: open a diagram from the list; an object not on it can be added to it.
+  await relations.getByRole("tab", { name: "Occurs on" }).click();
+  await relations.locator("li[data-diagram] button").first().click();
+  await expect(page.getByRole("tablist", { name: "Open items" }).getByRole("tab")).toHaveCount(1);
+
+  await explorer(page).getByLabel("Filter the explorer").fill("");
+  await explorer(page).locator(".row", { hasText: "Diagrams" }).first().click();
+  await page.getByRole("menubar").getByRole("menuitem", { name: "File" }).click();
+  await page.getByRole("menuitem", { name: "New diagram", exact: true }).click();
+  await explorer(page).getByLabel("New diagram name").fill("Relations Lab");
+  await explorer(page).getByLabel("New diagram name").press("Enter");
+  await expect(page.getByRole("tab", { name: /Relations Lab/ })).toBeVisible();
+  await select(page, "Payments Hub");
+  await relations.getByRole("button", { name: "Add to Relations Lab" }).click();
+  await expect(relations.locator("li[data-diagram]", { hasText: "Relations Lab" })).toBeVisible();
+  await expect(page.locator(".canvas .occ", { hasText: "Payments Hub" })).toHaveCount(1);
+  await saved(page);
+});
+
+test("reviews an object: confirms values, a changed value is due again, and it all survives a reload", async ({
+  page,
+}) => {
+  await signIn(page);
+  await select(page, "Legacy CRM");
+  const panel = properties(page);
+  await panel.getByLabel("Property set").selectOption({ label: "Quarterly review" });
+  await panel.getByRole("button", { name: "Review", exact: true }).click();
+  await expect(panel.getByRole("status")).toHaveText(/5 to confirm this quarter/);
+
+  // One value confirmed on its own, then the rest at once.
+  await panel.getByRole("button", { name: "Confirm Criticality" }).click();
+  await expect(panel.locator('[data-property="assessment.criticality"] .confirm')).toHaveAttribute(
+    "data-state",
+    "current",
+  );
+  await expect(panel.getByRole("status")).toHaveText(/4 to confirm/);
+  await panel.getByRole("button", { name: "Confirm all shown" }).click();
+  await expect(panel.getByRole("status")).toHaveText("Every value shown is confirmed this quarter.");
+  await saved(page);
+
+  // Someone changes a value outside review: it is due again, marked as changed since it was confirmed.
+  await panel.getByRole("button", { name: "Review", exact: true }).click();
+  await panel.locator("#prop-assessment\\.criticality").selectOption("low");
+  await panel.getByRole("button", { name: "Review", exact: true }).click();
+  await expect(panel.locator('[data-property="assessment.criticality"] .confirm')).toHaveAttribute(
+    "data-state",
+    "changed",
+  );
+  // Setting a value while reviewing confirms it in the same change.
+  await panel.locator("#prop-assessment\\.criticality").selectOption("medium");
+  await expect(panel.locator('[data-property="assessment.criticality"] .confirm')).toHaveAttribute(
+    "data-state",
+    "current",
+  );
+  await saved(page);
+
+  await page.reload();
+  await saved(page);
+  await select(page, "Legacy CRM");
+  await expect(panel.getByRole("status")).toHaveText("Every value shown is confirmed this quarter.");
+  await expect(panel.locator('[data-property="lifecycle.status"] .confirm')).toHaveText(/^✓ \d+ \w{3}$/);
 });

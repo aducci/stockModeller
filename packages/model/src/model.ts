@@ -128,6 +128,13 @@ export type SemanticLevel = "conceptual" | "logical" | "physical" | "implementat
 /** Whether a relationship type carries a payload (semantics §2.2). */
 export type PayloadUse = "none" | "optional" | "expected";
 
+/** build: a named, ordered selection of a type's properties (design/04-ux/workbench.md "Properties panel"). */
+export interface PropertySet {
+  key: string;
+  name: string;
+  properties: PropertyKey[];
+}
+
 export interface ObjectType {
   key: TypeKey;
   name: string;
@@ -143,6 +150,8 @@ export interface ObjectType {
   category?: SemanticCategory; // design/02-model/semantics.md §4.1; inherited through extends
   level?: SemanticLevel; // default semantic.level of its objects
   levelFixed?: boolean; // objects always have the type's level
+  /** build: named selections of its properties (properties panel, review pages); inherited, replaced by key. */
+  propertySets?: PropertySet[];
 }
 
 export interface RelationshipType {
@@ -193,6 +202,14 @@ export interface ModelObject extends ModelItem {
   description: string;
   /** build: place among its siblings (in its folder, or its container) in the explorer. */
   rank?: string;
+  /** build: who last confirmed each property's value, and when (reviews in the properties panel); absent = none. */
+  confirmations?: Record<PropertyKey, Confirmation>;
+}
+
+/** build: "this value is still right", as of a commit (edit `confirmProperties`). */
+export interface Confirmation {
+  by: Id;
+  at: IsoDateTime;
 }
 
 export interface Relationship extends ModelItem {

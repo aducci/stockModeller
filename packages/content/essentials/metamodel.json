@@ -1,6 +1,6 @@
 {
   "name": "Essentials",
-  "version": "1.2.0",
+  "version": "1.4.0",
   "layers": [
     {
       "key": "strategy",
@@ -204,6 +204,13 @@
       }
     },
     {
+      "key": "documentation.link",
+      "name": "Documentation",
+      "group": "documentation",
+      "dataType": "url",
+      "help": "Where the application is documented"
+    },
+    {
       "key": "technical.users",
       "name": "Number of users",
       "group": "technical",
@@ -329,7 +336,31 @@
         "assessment.criticality",
         "cost.runCost",
         "cost.totalCost",
-        "technical.users"
+        "technical.users",
+        "documentation.link"
+      ],
+      "propertySets": [
+        {
+          "key": "review",
+          "name": "Quarterly review",
+          "properties": [
+            "lifecycle.status",
+            "assessment.criticality",
+            "ownership.businessOwner",
+            "ownership.technicalOwner",
+            "assessment.businessFit"
+          ]
+        },
+        {
+          "key": "ownership",
+          "name": "Ownership",
+          "properties": ["ownership.businessOwner", "ownership.technicalOwner", "documentation.link"]
+        },
+        {
+          "key": "cost",
+          "name": "Cost",
+          "properties": ["cost.runCost", "cost.totalCost", "technical.users"]
+        }
       ],
       "symbol": {
         "shape": "rect",

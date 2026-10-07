@@ -356,6 +356,10 @@ components:
         properties: { $ref: '#/components/schemas/Properties' }
         tags: { type: array, items: { type: string } }
         externalIds: { type: object, additionalProperties: { type: string } }
+        confirmations:
+          type: object
+          description: 'Who last confirmed each property value and when (edit confirmProperties); absent when none'
+          additionalProperties: { type: object, required: [by, at], properties: { by: { type: string }, at: { type: string } } }
         version: { type: integer }
     Relationship:
       type: object
@@ -407,7 +411,7 @@ components:
                  createDiagram, updateDiagram, deleteDiagram,
                  addObjectOccurrence, moveObjectOccurrence, styleOccurrence, removeOccurrence,
                  addRelationshipOccurrence, routeRelationshipOccurrence, addAnnotation, updateAnnotation, removeAnnotation,
-                 setTags, setDescription]
+                 setTags, setDescription, confirmProperties, setConfirmations]
       additionalProperties: true
     ChangeRequestBody:
       type: object
