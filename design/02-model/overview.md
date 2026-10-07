@@ -102,3 +102,4 @@ flowchart LR
 | Scenarios and lifecycle | [scenarios-and-time.md](scenarios-and-time.md) |
 | Validation, calculations, derived relationships | [rules-and-calculations.md](rules-and-calculations.md) |
 | Semantic kinds, containment, payloads, interactions, tracing | [semantics.md](semantics.md) |
+| Glyphs, renditions, style rules, markers, lenses, stencils; administering the rules | [notation-and-metamodel-admin.md](notation-and-metamodel-admin.md)  |

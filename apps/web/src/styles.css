@@ -12,6 +12,23 @@
   --removed: #b0322a;
   --canvas: #fbfcfd;
   --grid: #edf0f4;
+  /* Notation hues (02-model/notation-and-metamodel-admin.md §2): a fill and an ink value per hue. */
+  --sky-fill: #dbe9f8;
+  --sky-ink: #2c5d98;
+  --teal-fill: #d6efec;
+  --teal-ink: #1d6b66;
+  --green-fill: #dcefdc;
+  --green-ink: #2f6b33;
+  --amber-fill: #fbe9cf;
+  --amber-ink: #8a5208;
+  --sand-fill: #f3ead9;
+  --sand-ink: #6e5a36;
+  --rose-fill: #f8dcdc;
+  --rose-ink: #9a3434;
+  --violet-fill: #e7e0f6;
+  --violet-ink: #5a4596;
+  --slate-fill: #e3e7ec;
+  --slate-ink: #4d5b6a;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -28,6 +45,22 @@
     --removed: #f08a80;
     --canvas: #121922;
     --grid: #1a232e;
+    --sky-fill: #1c3350;
+    --sky-ink: #9cc4f0;
+    --teal-fill: #163c3a;
+    --teal-ink: #84d6cd;
+    --green-fill: #1d3a22;
+    --green-ink: #9ad39f;
+    --amber-fill: #3d2c12;
+    --amber-ink: #f0c27a;
+    --sand-fill: #352d20;
+    --sand-ink: #d9c49c;
+    --rose-fill: #3f1f22;
+    --rose-ink: #f2a3a3;
+    --violet-fill: #2a2342;
+    --violet-ink: #c3b2f0;
+    --slate-fill: #252e39;
+    --slate-ink: #b3c0ce;
     color-scheme: dark;
   }
 }
@@ -488,9 +521,12 @@ ul.plain li {
   user-select: none;
 }
 .palette-item .swatch {
-  width: 14px;
-  height: 10px;
-  border: 1px solid #5b6b7c;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 16px;
+  border: 1px solid var(--line);
   border-radius: 2px;
 }
 .canvas {
@@ -528,7 +564,7 @@ ul.plain li {
 }
 .canvas text {
   font-size: 12px;
-  fill: #1d2733;
+  fill: var(--occ-ink, var(--fg));
   pointer-events: none;
 }
 .canvas .container-label {
@@ -536,7 +572,35 @@ ul.plain li {
 }
 .canvas .repeat {
   font-size: 10px;
-  fill: #5b6b7c;
+  opacity: 0.7;
+}
+.canvas text.on-canvas {
+  fill: var(--fg);
+  stroke: var(--canvas);
+  stroke-width: 3px;
+  paint-order: stroke;
+}
+.canvas .card-label {
+  font-size: 11px;
+  opacity: 0.7;
+}
+.canvas .occ .divider {
+  stroke-width: 1;
+  opacity: 0.5;
+}
+.palette .zoom {
+  display: flex;
+  margin-left: auto;
+  gap: 2px;
+}
+.palette .zoom button {
+  min-width: 28px;
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--pane);
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
 }
 .canvas .line {
   stroke: var(--fg-2);
@@ -1204,6 +1268,26 @@ ul.messages li {
 .row.renaming input {
   flex: 1;
   min-width: 0;
+}
+
+/* Glyphs: one sprite, one <use> per icon (02-model/notation-and-metamodel-admin.md §2). */
+.glyph-sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+svg.glyph {
+  display: inline-block;
+  vertical-align: -2px;
+  flex: none;
+}
+/* The explorer's row icon mixes a disclosure triangle with a glyph. */
+.row .icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--fg-2);
 }
 
 /* Explorer semantic groups (workbench.md, "Explorer: a semantic navigator") */

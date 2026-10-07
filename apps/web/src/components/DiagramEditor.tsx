@@ -1,17 +1,32 @@
 // The diagram editor v0 (design/04-ux/diagram-editor.md): palette, add a new or an existing object, connect with
 // the relationship types the rules allow, move, remove from the diagram vs delete the object, rename. Every
 // gesture is one change; layout edits are last-writer-wins, so moving never conflicts with someone's rename.
-import { useEffect, useRef, useState, type DragEvent, type KeyboardEvent, type PointerEvent } from "react";
-import { ulid, type Edit, type Id } from "@connectome/model";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type DragEvent,
+  type KeyboardEvent,
+  type PointerEvent,
+} from "react";
+import { RENDITIONS, ulid, type Edit, type Id } from "@connectome/model";
 import type { DiagramRow, ObjectOccurrenceRow } from "@connectome/engine";
 import { useModel, useWorkbench } from "../state/workbench";
+import { ON_LITERAL_FILL, lineFor, notationFor } from "../notation";
+import { Glyph, GlyphUse } from "./Glyph";
+import { ContextMenu, type MenuEntry } from "./Menu";
+import { OccurrenceShape } from "./OccurrenceShape";
 import {
   connectChoices,
   defaultFolderFor,
   edgePoint,
   layoutBoxes,
   paletteTypes,
+  renditionFor,
+  renditionSize,
   snap,
+  stepZoom,
   symbolFor,
   type Box,
   type ConnectChoice,
@@ -21,6 +36,51 @@ import { addPayloadPlan, messageType, payloadText } from "../semantics";
 /** Drag-and-drop payloads: an object type from the palette, or an existing object from the explorer. */
 export const DRAG_TYPE = "application/x-connectome-type";
 export const DRAG_OBJECT = "application/x-connectome-object";
+
+/**
+ * Arrowheads for the semantic kinds (design/02-model/notation-and-metamodel-admin.md §3). Open heads are filled
+ * with the canvas colour so a line never shows through them.
+ */
+const ARROW_MARKERS = (
+  <>
+    <marker id="a-arrowOpen" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M1,1 L9,5 L1,9" fill="none" stroke="currentColor" strokeWidth={1.5} />
+    </marker>
+    <marker id="a-arrowSmall" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+    </marker>
+    <marker id="a-triangleOpen" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="10" markerHeight="10" orient="auto">
+      <path d="M1,1 L11,6 L1,11 z" fill="var(--canvas)" stroke="currentColor" strokeWidth={1.2} />
+    </marker>
+    <marker id="a-diamond" viewBox="0 0 14 8" refX="1" refY="4" markerWidth="12" markerHeight="7" orient="auto">
+      <path d="M1,4 L7,1 L13,4 L7,7 z" fill="currentColor" />
+    </marker>
+    <marker id="a-diamondOpen" viewBox="0 0 14 8" refX="1" refY="4" markerWidth="12" markerHeight="7" orient="auto">
+      <path d="M1,4 L7,1 L13,4 L7,7 z" fill="var(--canvas)" stroke="currentColor" strokeWidth={1.2} />
+    </marker>
+    <marker id="a-dot" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+      <circle cx={4} cy={4} r={3} fill="currentColor" />
+    </marker>
+  </>
+);
+
+/** `arrow` keeps the existing marker, so a pending connection and a flow look the same. */
+function markerUrl(head: string) {
+  if (head === "none") return undefined;
+  return head === "arrow" ? "url(#arrow)" : `url(#a-${head})`;
+}
+
+/** The order R steps through an occurrence's renditions. */
+const RENDITION_ORDER = Object.keys(RENDITIONS);
+const RENDITION_NAMES: Record<string, string> = {
+  box: "Box",
+  card: "Card",
+  glyph: "Glyph",
+  chip: "Chip",
+  container: "Container",
+};
+const MIN_ZOOM = 0.25;
+const MAX_ZOOM = 2;
 
 /** Room around the drawing, so there is always space to drop something new. */
 const MARGIN = 200;
@@ -44,6 +104,8 @@ export function DiagramEditor({ id }: { id: Id }) {
   const [renaming, setRenaming] = useState<Id | null>(null);
   const [menu, setMenu] = useState<{ from: Id; to: Id; at: Point; choices: ConnectChoice[] } | null>(null);
   const [flash, setFlash] = useState<ReadonlySet<Id>>(new Set());
+  const [occMenu, setOccMenu] = useState<{ x: number; y: number; occId: Id } | null>(null);
+  const [zoom, setZoom] = useState(1);
   const canvas = useRef<HTMLDivElement>(null);
 
   const diagram = state.diagrams.get(id);
@@ -62,6 +124,20 @@ export function DiagramEditor({ id }: { id: Id }) {
     const timer = setTimeout(() => setFlash(new Set()), FLASH_MS);
     return () => clearTimeout(timer);
   }, [flash]);
+
+  // Ctrl/⌘ + wheel zooms the diagram rather than the page; React's wheel listener is passive, so it is added here.
+  const hasDiagram = !!diagram;
+  useEffect(() => {
+    const el = canvas.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      setZoom((z) => clampZoom(z * Math.exp(-e.deltaY / 500)));
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [hasDiagram]);
 
   if (!diagram) return <p className="muted pad">This diagram was deleted.</p>;
 
@@ -116,7 +192,7 @@ export function DiagramEditor({ id }: { id: Id }) {
 
   const toCanvas = (clientX: number, clientY: number): Point => {
     const rect = canvas.current!.getBoundingClientRect();
-    return { x: clientX - rect.left, y: clientY - rect.top };
+    return { x: (clientX - rect.left) / zoom, y: (clientY - rect.top) / zoom };
   };
   const occAt = (clientX: number, clientY: number): Id | null => {
     const el = document.elementFromPoint(clientX, clientY)?.closest<SVGElement>("[data-occ]");
@@ -214,7 +290,7 @@ export function DiagramEditor({ id }: { id: Id }) {
   const onPointerMove = (e: PointerEvent) => {
     if (!gesture) return;
     if (gesture.kind === "move") {
-      setGesture({ ...gesture, dx: e.clientX - gesture.start.x, dy: e.clientY - gesture.start.y });
+      setGesture({ ...gesture, dx: (e.clientX - gesture.start.x) / zoom, dy: (e.clientY - gesture.start.y) / zoom });
     } else {
       setGesture({ ...gesture, to: toCanvas(e.clientX, e.clientY) });
     }
@@ -356,6 +432,63 @@ export function DiagramEditor({ id }: { id: Id }) {
     ];
   };
 
+  // ---------------------------------------------------------------- renditions
+
+  /** Switches an occurrence to a rendition and to that rendition's size, in one change (so one undo). */
+  const showAs = (occId: Id, key: string) => {
+    const occ = state.objectOccurrences.get(occId);
+    const rendition = RENDITIONS[key];
+    if (!occ || !rendition) return;
+    const object = state.objects.get(occ.objectId);
+    const size = renditionSize(rendition, symbolFor(metamodel, diagram, object?.type ?? ""));
+    // A container keeps room for what is nested inside it.
+    const nested = state.objectOccurrences.count("byParent", occ.id) > 0;
+    const w = nested ? Math.max(size.w, occ.w) : size.w;
+    const h = nested ? Math.max(size.h, occ.h) : size.h;
+    const current = occ.style.rendition ?? "box";
+    if (current === key && w === occ.w && h === occ.h) return;
+    edit(`Show ${nameOf(occ.objectId)} as ${RENDITION_NAMES[key]?.toLowerCase() ?? key}`, [
+      {
+        edit: "styleOccurrence",
+        diagramId: id,
+        occurrenceId: occ.id,
+        style: { rendition: key === "box" ? null : key },
+      },
+      { edit: "moveObjectOccurrence", diagramId: id, occurrenceId: occ.id, x: occ.x, y: occ.y, w, h },
+    ]);
+  };
+
+  const occMenuEntries = (occId: Id): MenuEntry[] => {
+    const occ = state.objectOccurrences.get(occId);
+    if (!occ) return [];
+    const current = occ.style.rendition ?? "box";
+    const objectId = occ.objectId;
+    return [
+      {
+        label: "Show as",
+        submenu: RENDITION_ORDER.map((key) => ({
+          label: `${key === current ? "✓ " : ""}${RENDITION_NAMES[key] ?? key}`,
+          run: () => showAs(occId, key),
+        })),
+      },
+      { label: "Rename", shortcut: "F2", run: () => setRenaming(occId) },
+      "separator",
+      {
+        label: "Remove from diagram",
+        shortcut: "Del",
+        run: () => {
+          if (
+            edit(`Remove ${nameOf(objectId)} from ${diagram.name}`, [
+              { edit: "removeOccurrence", diagramId: id, occurrenceId: occId },
+            ])
+          )
+            choose(null);
+        },
+      },
+      { label: "Delete object…", shortcut: "⇧Del", danger: true, run: () => askDeleteObject(objectId) },
+    ];
+  };
+
   // ---------------------------------------------------------------- keyboard
 
   const onKeyDown = (e: KeyboardEvent) => {
@@ -364,7 +497,27 @@ export function DiagramEditor({ id }: { id: Id }) {
       setMenu(null);
       return choose(null);
     }
+    const mod = e.ctrlKey || e.metaKey;
+    if (e.key === "=" || e.key === "+") {
+      e.preventDefault();
+      return setZoom((z) => stepZoom(z, 1));
+    }
+    if (e.key === "-") {
+      e.preventDefault();
+      return setZoom((z) => stepZoom(z, -1));
+    }
+    if (e.key === "0" && (mod || !selectedOcc)) {
+      e.preventDefault();
+      return setZoom(1);
+    }
     if (!selectedOcc) return;
+    if ((e.key === "r" || e.key === "R") && !mod) {
+      e.preventDefault();
+      const current = RENDITION_ORDER.indexOf(selectedOcc.style.rendition ?? "box");
+      const step = e.shiftKey ? -1 : 1;
+      const next = RENDITION_ORDER[(current + step + RENDITION_ORDER.length) % RENDITION_ORDER.length]!;
+      return showAs(selectedOcc.id, next);
+    }
     if (e.key === "F2") {
       e.preventDefault();
       setRenaming(selectedOcc.id);
@@ -394,14 +547,15 @@ export function DiagramEditor({ id }: { id: Id }) {
 
   return (
     <div className="diagram-editor">
-      <Palette diagram={diagram} />
+      <Palette diagram={diagram} zoom={zoom} onZoom={(z) => setZoom(clampZoom(z))} />
       <div
         ref={canvas}
         className="canvas"
         tabIndex={0}
         role="application"
         aria-label={`Diagram ${diagram.name}`}
-        style={{ width, height }}
+        style={{ width: width * zoom, height: height * zoom }}
+        data-zoom={zoom}
         onDragOver={onDragOver}
         onDrop={onDrop}
         onPointerMove={onPointerMove}
@@ -415,7 +569,7 @@ export function DiagramEditor({ id }: { id: Id }) {
         }}
         onKeyDown={onKeyDown}
       >
-        <svg width={width} height={height}>
+        <svg width={width * zoom} height={height * zoom} viewBox={`0 0 ${width} ${height}`}>
           <defs>
             <pattern id="grid" width={16} height={16} patternUnits="userSpaceOnUse">
               <path d="M16 0H0V16" fill="none" className="grid-line" />
@@ -423,6 +577,7 @@ export function DiagramEditor({ id }: { id: Id }) {
             <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto">
               <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
             </marker>
+            {ARROW_MARKERS}
           </defs>
           <rect width={width} height={height} fill="url(#grid)" pointerEvents="none" />
           {/* Lines are picked (and dropped on) beneath the symbols, so they never take a symbol's clicks. */}
@@ -450,7 +605,13 @@ export function DiagramEditor({ id }: { id: Id }) {
             const b = boxes.get(o.id)!;
             const object = state.objects.get(o.objectId);
             const symbol = symbolFor(metamodel, diagram, object?.type ?? "", o.style);
+            const typeNotation = notationFor(object ? metamodel.objectType(object.type) : undefined);
+            // A literal fill (set by a diagram type or on the occurrence) is light in either theme, so it takes dark ink.
+            const notation = symbol.fill ? { ...typeNotation, ink: ON_LITERAL_FILL } : typeNotation;
+            const ink = symbol.fill ? ON_LITERAL_FILL : "var(--fg)";
             const container = state.objectOccurrences.count("byParent", o.id) > 0;
+            // Semantic zoom never collapses a container: what is nested inside it stays visible.
+            const rendition = renditionFor(metamodel, diagram, symbol, container ? 1 : zoom);
             const count = repeats.get(o.objectId) ?? 1;
             const classes = [
               "occ",
@@ -464,26 +625,30 @@ export function DiagramEditor({ id }: { id: Id }) {
                 key={o.id}
                 data-occ={o.id}
                 data-name={object?.name}
+                data-rendition={rendition.key}
+                style={{ "--occ-ink": ink } as CSSProperties}
                 className={classes.join(" ")}
                 onPointerDown={(e) => onOccPointerDown(e, o.id)}
                 onDoubleClick={() => setRenaming(o.id)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  choose(o.id);
+                  setMenu(null);
+                  setOccMenu({ x: e.clientX, y: e.clientY, occId: o.id });
+                }}
               >
-                <rect
-                  x={b.x}
-                  y={b.y}
-                  width={b.w}
-                  height={b.h}
-                  rx={symbol.shape === "rect" ? 0 : symbol.shape === "ellipse" ? b.h / 2 : 4}
-                  fill={symbol.fill ?? "#ffffff"}
-                  stroke={symbol.stroke ?? "#5b6b7c"}
+                <OccurrenceShape
+                  box={b}
+                  form={rendition.form}
+                  rows={rendition.rows ?? 3}
+                  object={object}
+                  notation={notation}
+                  fill={symbol.fill ?? notation.fill}
+                  stroke={symbol.stroke ?? notation.stroke}
+                  shape={symbol.shape}
+                  container={container}
+                  zoom={zoom}
                 />
-                <text
-                  x={b.x + 6}
-                  y={b.y + (container ? 16 : b.h / 2 + 4)}
-                  className={container ? "container-label" : ""}
-                >
-                  {object?.name ?? "(deleted)"}
-                </text>
                 {count > 1 && (
                   <text
                     x={b.x + b.w - 4}
@@ -498,31 +663,45 @@ export function DiagramEditor({ id }: { id: Id }) {
               </g>
             );
           })}
-          {drawn.map(({ l, p, q, rel, type, interaction, label, chosen }) => (
-            <g key={l.id}>
-              <line
-                className={["line", interaction && "interaction", chosen && "selected"].filter(Boolean).join(" ")}
-                data-relationship={type?.verb}
-                x1={p.x}
-                y1={p.y}
-                x2={q.x}
-                y2={q.y}
-                markerEnd="url(#arrow)"
-              />
-              {label && rel && (
-                <text className="line-label" x={(p.x + q.x) / 2} y={(p.y + q.y) / 2 - 4}>
-                  {label}
-                </text>
-              )}
-            </g>
-          ))}
+          {drawn.map(({ l, p, q, rel, type, interaction, label, chosen }) => {
+            const line = lineFor(metamodel, rel?.type);
+            return (
+              <g key={l.id}>
+                <line
+                  className={["line", interaction && "interaction", chosen && "selected"].filter(Boolean).join(" ")}
+                  data-relationship={type?.verb}
+                  x1={p.x}
+                  y1={p.y}
+                  x2={q.x}
+                  y2={q.y}
+                  strokeDasharray={line.dash}
+                  markerStart={markerUrl(line.start)}
+                  markerEnd={markerUrl(line.end)}
+                />
+                {line.mid && !label && (
+                  <GlyphUse
+                    glyph={line.mid}
+                    x={(p.x + q.x) / 2 - 8}
+                    y={(p.y + q.y) / 2 - 8}
+                    size={16}
+                    colour="var(--fg-2)"
+                  />
+                )}
+                {label && rel && (
+                  <text className="line-label" x={(p.x + q.x) / 2} y={(p.y + q.y) / 2 - 4}>
+                    {label}
+                  </text>
+                )}
+              </g>
+            );
+          })}
           {handleBox && (
             <circle
               className="handle"
               aria-label="Connect"
               cx={handleBox.x + handleBox.w}
               cy={handleBox.y + handleBox.h / 2}
-              r={6}
+              r={6 / Math.max(zoom, 0.5)}
               onPointerDown={(e) => onHandlePointerDown(e, selectedOcc!.id)}
             />
           )}
@@ -540,7 +719,7 @@ export function DiagramEditor({ id }: { id: Id }) {
 
         {naming && (
           <NameBox
-            at={naming.at}
+            at={{ x: naming.at.x * zoom, y: naming.at.y * zoom }}
             label={`Name of the new ${metamodel.objectType(naming.type)?.definition.name ?? naming.type}`}
             initial=""
             onCommit={(name) => (name ? createObject(naming.type, naming.at, name) : true)}
@@ -553,7 +732,7 @@ export function DiagramEditor({ id }: { id: Id }) {
         {renaming && boxes.get(renaming) && (
           <RenameBox
             occurrence={state.objectOccurrences.get(renaming)!}
-            box={boxes.get(renaming)!}
+            box={scaleBox(boxes.get(renaming)!, zoom)}
             onDone={() => {
               setRenaming(null);
               canvas.current?.focus();
@@ -561,7 +740,12 @@ export function DiagramEditor({ id }: { id: Id }) {
           />
         )}
         {menu && (
-          <ul className="menu" role="menu" aria-label="Relationship type" style={{ left: menu.at.x, top: menu.at.y }}>
+          <ul
+            className="menu"
+            role="menu"
+            aria-label="Relationship type"
+            style={{ left: menu.at.x * zoom, top: menu.at.y * zoom }}
+          >
             {menu.choices.map((c) => (
               <li key={c.existingId ?? c.type.key}>
                 <button role="menuitem" onClick={() => connect(c)}>
@@ -573,17 +757,30 @@ export function DiagramEditor({ id }: { id: Id }) {
           </ul>
         )}
       </div>
+      {occMenu && (
+        <ContextMenu
+          x={occMenu.x}
+          y={occMenu.y}
+          label="Occurrence"
+          entries={occMenuEntries(occMenu.occId)}
+          onClose={() => setOccMenu(null)}
+        />
+      )}
     </div>
   );
 }
 
-function Palette({ diagram }: { diagram: DiagramRow }) {
+const clampZoom = (z: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(z * 100) / 100));
+const scaleBox = (b: Box, zoom: number): Box => ({ x: b.x * zoom, y: b.y * zoom, w: b.w * zoom, h: b.h * zoom });
+
+function Palette({ diagram, zoom, onZoom }: { diagram: DiagramRow; zoom: number; onZoom(zoom: number): void }) {
   const { metamodel } = useModel();
   const types = paletteTypes(metamodel, diagram);
   return (
     <div className="palette" aria-label="Palette" role="toolbar">
       {types.map((t) => {
         const symbol = symbolFor(metamodel, diagram, t.definition.key);
+        const notation = notationFor(t);
         return (
           <div
             key={t.definition.key}
@@ -595,11 +792,24 @@ function Palette({ diagram }: { diagram: DiagramRow }) {
               e.dataTransfer.effectAllowed = "copy";
             }}
           >
-            <span className="swatch" style={{ background: symbol.fill ?? "#ffffff" }} />
+            <span className="swatch" style={{ background: symbol.fill ?? notation.fill, color: notation.ink }}>
+              <Glyph glyph={notation.glyph} size={12} />
+            </span>
             {t.definition.name}
           </div>
         );
       })}
+      <div className="zoom" role="group" aria-label="Zoom">
+        <button type="button" aria-label="Zoom out" title="Zoom out (−)" onClick={() => onZoom(stepZoom(zoom, -1))}>
+          −
+        </button>
+        <button type="button" aria-label="Reset zoom" title="Actual size (0)" onClick={() => onZoom(1)}>
+          {Math.round(zoom * 100)}%
+        </button>
+        <button type="button" aria-label="Zoom in" title="Zoom in (+)" onClick={() => onZoom(stepZoom(zoom, 1))}>
+          +
+        </button>
+      </div>
     </div>
   );
 }

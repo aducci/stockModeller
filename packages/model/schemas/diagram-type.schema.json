@@ -27,6 +27,35 @@
       "additionalProperties": { "type": "object" },
       "description": "Object type key → symbol override"
     },
+    "renditions": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Which rendition occurrences start in, and the zoom levels below which every occurrence draws smaller. See 02-model/notation-and-metamodel-admin.md §4.",
+      "properties": {
+        "default": {
+          "type": "string",
+          "description": "A rendition key: box, card, glyph, chip or container"
+        },
+        "semanticZoom": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["below", "rendition"],
+            "additionalProperties": false,
+            "properties": {
+              "below": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 1
+              },
+              "rendition": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
     "colourRules": {
       "type": "array",
       "items": {

@@ -96,6 +96,7 @@ Found while building the change engine (M0 slices 0.2–0.4). `schema.sql` stays
 | `relationship.payload text[]` (GIN index), `relationship.parent_id` (index) and `relationship.rank` (migration 006; slice Sem-3) | Payloads and interaction messages ([semantics §5–§6](../02-model/semantics.md#5-relationships-carry-meaning-payloads)). The engine indexes payloads both ways, so deleting an object finds the relationships that carry it |
 | Relationship-type `semantic`, `semanticDirection`, `cascadeDelete` and `payload`, object-type `category`, `level` and `levelFixed` are kept in `definition` (no migration; slice Sem-1) | They are definition fields like `verb` and `symbol`. The core package is never stored: every compile merges it in |
 | `rank text` on `folder`, `object` and `diagram` (migration 005; slice 0.8b) | The explorer's order. A fractional-index key, so placing an item between two others rewrites one row; `NULL` (absent in the API) sorts after ranked siblings, by name. An object's siblings are its folder's root objects, or its container's contents (semantics §3) |
+| `rendition` in an occurrence's `style`, and `renditions` (`default`, `semanticZoom`) on a diagram type (no migration; slice N-2) | `style` is already `jsonb` and diagram types live in the package. The engine accepts only the built-in keys (`box`, `card`, `glyph`, `chip`, `container`) until packages can declare their own (slice N-3) |
 
 Edit types added in [changes.ts](../05-structures/changes.ts) (marked `build:`):
 

@@ -2,6 +2,7 @@
 import {
   LEVEL_PROPERTY,
   corePackage,
+  isRendition,
   semanticKindInfo,
   type DiagramType,
   type MetamodelPackage,
@@ -294,6 +295,9 @@ export class Metamodel {
       for (const t of dt.relationshipTypes ?? []) {
         if (!mm.relationshipTypes.has(t))
           problems.push(`Diagram type "${dt.key}" uses unknown relationship type "${t}"`);
+      }
+      for (const r of [dt.renditions?.default, ...(dt.renditions?.semanticZoom ?? []).map((z) => z.rendition)]) {
+        if (r !== undefined && !isRendition(r)) problems.push(`Diagram type "${dt.key}" uses unknown rendition "${r}"`);
       }
       mm.diagramTypes.set(dt.key, { definition: dt, nesting: dt.nesting ?? "nested" });
     }

@@ -173,7 +173,7 @@ function candidates(state: ModelState, next: () => number, n: number): Edit[] {
           edit: "styleOccurrence",
           diagramId: occ.diagramId,
           occurrenceId: occ.id,
-          style: { fill: "#123456", shape: null },
+          style: { fill: "#123456", shape: null, rendition: n % 2 ? "card" : null },
           z: n,
         }
       : null,

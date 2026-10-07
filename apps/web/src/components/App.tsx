@@ -2,14 +2,24 @@ import { useEffect, useState, type FormEvent } from "react";
 import { ApiClient } from "@connectome/client";
 import { authorization, useAuth } from "../state/auth";
 import { navigate, useRoute } from "../route";
+import { GlyphSprite } from "./Glyph";
 import { Workbench } from "./Workbench";
 
 export function App() {
   const signIn = useAuth((s) => s.signIn);
   const route = useRoute();
-  if (!signIn) return <SignInPage />;
-  if (!route.repositoryId) return <RepositoryList />;
-  return <Workbench repositoryId={route.repositoryId} scenarioId={route.scenarioId} />;
+  return (
+    <>
+      <GlyphSprite />
+      {!signIn ? (
+        <SignInPage />
+      ) : !route.repositoryId ? (
+        <RepositoryList />
+      ) : (
+        <Workbench repositoryId={route.repositoryId} scenarioId={route.scenarioId} />
+      )}
+    </>
+  );
 }
 
 /** Development sign-in: the server must run with CONNECTOME_DEV_AUTH=1 (`npm run seed` prints these values). */

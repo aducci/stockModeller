@@ -53,7 +53,7 @@ export interface PropertyType {
 
 export interface SymbolStyle {
   shape: "rect" | "roundRect" | "ellipse" | "hexagon" | "cylinder" | "person" | "icon";
-  fill: string; stroke: string; icon?: string; width: number; height: number; label: string;
+  fill: string; stroke: string; icon?: string; rendition?: string; width: number; height: number; label: string;
 }
 
 export interface LineStyle {

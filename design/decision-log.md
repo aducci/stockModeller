@@ -49,6 +49,33 @@ From the [connection framework](01-product/connection_framework.md), designed in
 | S15 | Explorer groups (decision B22 in the explorer slice): which kind is `groups`? | **Aggregation**: members stay where they are and may be in several groups | Containment (members would move into the group's folder) |
 | S16 | Relationship types without a kind | Treated as `association` | Refused when the metamodel is published |
 
+## Notation decisions
+
+From [notation and metamodel administration](02-model/notation-and-metamodel-admin.md). The product owner accepted every default on 2026-10-06 ("continue" after N1–N20 were posted). N13–N19 follow the product owner's comments on PR #11 (connection points, stretching, labels, property rendering and UML-style compartments).
+
+| # | Question | Decision | Alternative not taken |
+|---|---|---|---|
+| N1 | Icon format | One stroke-only SVG path on a 16×16 grid, at most 256 bytes; uploaded SVG is converted to it | Store sanitised SVG documents (richer, but a sanitiser to maintain and much larger) |
+| N2 | Colours in packages | Named hues from a 12-hue palette with light and dark values; hex allowed with a contrast warning | Hex only (today's `fill`) |
+| N3 | Look of relationship types without a `line` | Derived from the semantic kind (notation §3), ArchiMate-like | One neutral line for every type |
+| N4 | Where several representations live | Renditions on the object type, chosen per occurrence (`rendition` on the occurrence) | Per diagram type only |
+| N5 | Zoomed-out drawing | Diagram types set renditions per zoom band (semantic zoom) | Generic simplified symbols |
+| N6 | `colourRules` | Generalised into `styleRules` on types, diagram types and lenses, with a cascade; existing colour rules load unchanged | Keep colour rules on diagram types only |
+| N7 | Name for conditional annotations | **Markers**, so "annotation" keeps meaning free text that is not model | Call them conditional annotations |
+| N8 | Lenses | Repository lenses (versioned with the metamodel) and personal lenses (preferences) | Repository lenses only |
+| N9 | "Stencils that contain occurrences" | Read as **patterns**: palette items that drop several occurrences, relationships and nesting at once, binding to new or existing objects. Lanes that set properties are **zones** | A stencil is a frame on the diagram that only groups occurrences visually |
+| N10 | Rule endpoints | A type, `*`, an abstract type or `category:<name>`; the most specific rule decides | Types and `*` only |
+| N11 | Rules found in data but not allowed | The metamodel map and matrix show them with **Allow**; nothing changes until accepted | Only listed as validation findings |
+| N12 | Who evaluates style rules and markers? | The web app (and export), never the server; the engine stays pure | The server sends computed styles |
+| N13 | Where may a line attach to a symbol? | An **anchor set** per rendition (`sides`, `sides:n`, `corners`, `ring:n`, `named`, `free`), default `sides`; a user may add an anchor to one occurrence, and an owner may promote it to the type | Free attachment anywhere, with the router choosing (simpler, but routing gets expensive and lines wander) |
+| N14 | Interfaces drawn on a parent's edge | **Ports**: an anchor bound to an object by a path (`-composedOf-> type:interface`); connecting to it connects to that object | A port as a new kind of thing in the model |
+| N15 | Resizing | Shapes are functions of width and height (custom paths use nine-slice); each rendition sets `minSize`, `maxSize` and `grow` (`free`, `width`, `fit`, `locked`); the glyph never stretches | Scale the whole symbol, glyph included |
+| N16 | Labels | **Label zones** per rendition (`centre`, `header`, `below`, `inlineGlyph`, `edge`) with wrap, shrink and max lines; text never silently clips | One label position for every shape |
+| N17 | "A class has attributes": are those related elements? | **Compartments**, with three sources: `properties`, `related` (a path query, so attributes and operations are ordinary objects) and `payload`. Rows are live and editable in place; nothing is duplicated | Attributes as a special storage on the object |
+| N18 | Rendering a property onto a shape | **Decorations**: `swatch`, `dot`, `pips`, `gauge`, `ring`, `icon`, `text`, `bars`, plus fill and stroke, in the marker slots and on compartment rows, with a per-rendition budget | Only colour-by-property, as the diagram types do today |
+| N20 | Where does the default notation live, and what does Essentials carry? | With the product (the core notation), because it is what the semantic layer means; **Essentials 1.3.0** drops its hand-set lines and fills so every type draws from its kind and category | Keep the defaults in the Essentials package (then every package repeats them, and two packages disagree) |
+| N19 | Where do a decoration's colours, icons and ranges come from? | The value list (its `glyph` and colours) and the property type (its `scale` with bands), so one definition serves chips, cells, legends and diagrams | Per diagram type, as part of the style rule |
+
 ## Found while building (M0)
 
 Questions the build raised. Each has a provisional answer in the code; change the code if the product owner decides otherwise.

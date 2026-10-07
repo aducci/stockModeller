@@ -66,7 +66,7 @@ Every gesture has a clear effect on the model, and the editor always says what i
 ## 7. Rendering
 
 - SVG up to 2,000 occurrences; canvas above that.
-- Simplified symbols when zoomed out below 40%.
+- Simplified symbols when zoomed out below 40%: each occurrence draws as its glyph, or as the diagram type's own semantic zoom renditions ([notation §4](../02-model/notation-and-metamodel-admin.md#4-renditions-any-number-of-representations-per-object); built in slice N-2, where zoom is Ctrl/⌘ + wheel, `+`, `-` and `0`).
 - Off-screen culling; layout runs in a background worker.
 
 ## 8. Semantic gestures
