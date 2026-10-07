@@ -64,6 +64,8 @@ export interface CompiledRule extends RelationshipRule {
 export interface ResolvedDiagramType {
   definition: DiagramType;
   nesting: "nested" | "lines";
+  /** Property types diagrams of this type carry. */
+  properties: ReadonlySet<string>;
 }
 
 export class Metamodel {
@@ -120,6 +122,16 @@ export class Metamodel {
 
   propertyType(key: string): PropertyType | undefined {
     return this.propertyTypes.get(key);
+  }
+
+  /** Every property type, the core package's first. */
+  allPropertyTypes(): PropertyType[] {
+    return [...this.propertyTypes.values()];
+  }
+
+  /** Every value list, the core package's first. */
+  allValueLists(): ValueList[] {
+    return [...this.valueLists.values()];
   }
 
   valueList(key: string): ValueList | undefined {
@@ -319,7 +331,14 @@ export class Metamodel {
           if (!mm.relationshipTypes.has(t)) problems.push(`${where} uses unknown relationship type "${t}"`);
         }
       }
-      mm.diagramTypes.set(dt.key, { definition: dt, nesting: dt.nesting ?? "nested" });
+      for (const p of dt.properties ?? []) {
+        if (!mm.propertyTypes.has(p)) problems.push(`Diagram type "${dt.key}" uses unknown property type "${p}"`);
+      }
+      mm.diagramTypes.set(dt.key, {
+        definition: dt,
+        nesting: dt.nesting ?? "nested",
+        properties: new Set(dt.properties ?? []),
+      });
     }
     // Document templates last: their linked diagrams may name any diagram type.
     for (const dt of diagramTypes) if (dt.document) checkDocument(mm, dt.key, dt.document, typeRef, problems);

@@ -144,22 +144,3 @@ describe("documents", () => {
     ).toThrow(/not a linked diagram[\s\S]*unknown property "nope"[\s\S]*not one of its columns/);
   });
 });
-
-describe("relationship properties", () => {
-  it("are set against the type's and the kind's properties, with an exact inverse", () => {
-    const state = exampleState();
-    const r = () => state.relationships.get("R-08")!;
-    const result = applyOk(state, [
-      { edit: "setProperties", id: "R-08", baseVersion: r().version, set: { "flow.protocol": "gRPC" } },
-    ]);
-    expect(r().properties["flow.protocol"]).toBe("gRPC");
-    expect(result.log[0]!.inverse).toEqual([
-      { edit: "setProperties", id: "R-08", baseVersion: r().version, set: { "flow.protocol": "REST" } },
-    ]);
-    expect(
-      apply(state, [
-        { edit: "setProperties", id: "R-08", baseVersion: r().version, set: { "interaction.protocol": "x" } },
-      ]),
-    ).toMatchObject({ ok: false, reasons: [{ property: "properties.interaction.protocol" }] });
-  });
-});

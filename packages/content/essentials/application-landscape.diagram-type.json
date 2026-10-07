@@ -4,6 +4,7 @@
   "description": "Capabilities as nested boxes with the applications that realise them, coloured by technical fit.",
   "objectTypes": ["capability", "application", "saasApplication", "interface"],
   "relationshipTypes": ["contains", "realizes", "flowsTo", "calls"],
+  "properties": ["documentation.link"],
   "nesting": "nested",
   "showExistingRelationships": true,
   "symbols": {

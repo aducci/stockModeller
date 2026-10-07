@@ -732,7 +732,7 @@ function TableRowView(props: {
   const n = row.counterpart ? notationFor(metamodel.objectType(row.counterpart.type)) : undefined;
   const set = (key: string, value: PropertyValue | null) =>
     edit(`Set ${metamodel.propertyType(key)?.name ?? key} of ${row.counterpart?.name ?? "row"}`, [
-      { edit: "setProperties", id: rel.id, baseVersion: rel.version, set: { [key]: value } },
+      { edit: "setRelationshipProperties", id: rel.id, baseVersion: rel.version, set: { [key]: value } },
     ]);
   return (
     <tr data-relationship={rel.id} className={row.toDescribe.length ? "to-describe" : undefined}>

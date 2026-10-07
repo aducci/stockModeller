@@ -7,6 +7,7 @@ export {
   scenarioAncestry,
   loadMetamodel,
   loadMetamodelPackage,
+  saveMetamodel,
   saveRelationshipRules,
   METAMODEL_CHANNEL,
   type MetamodelNotice,

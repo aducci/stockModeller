@@ -38,8 +38,7 @@ export type ModelEdit =
       /** build: so that restoring a deleted object is exact. */
       confirmations?: Record<PropertyKey, Confirmation>;
     }
-  /** null clears a value. build (slice V-2): `id` may name a relationship too, checked against its type's properties. */
-  | ({ edit: "setProperties"; set: Record<PropertyKey, PropertyValue> } & OnExisting)
+  | ({ edit: "setProperties"; set: Record<PropertyKey, PropertyValue> } & OnExisting) // null clears a value
   | ({ edit: "renameObject"; name: string } & OnExisting)
   | ({ edit: "setTags"; tags: string[] } & OnExisting)
   /** build: an object's description; "" clears it. */
@@ -84,6 +83,8 @@ export type ModelEdit =
     } & OnExisting)
   /** build: replaces what a relationship carries (semantics §5). */
   | ({ edit: "setPayload"; payload: Id[] } & OnExisting)
+  /** build: a relationship's property values, as setProperties does for objects; null clears a value. */
+  | ({ edit: "setRelationshipProperties"; set: Record<PropertyKey, PropertyValue> } & OnExisting)
   /** Deleting an interaction deletes its messages too (semantics §6). */
   | ({ edit: "deleteRelationship" } & OnExisting)
   | { edit: "createFolder"; id: Id; parentId: Id | null; name: string }
@@ -108,6 +109,8 @@ export type DiagramEdit =
       description?: string;
       /** build (slice V-1): a view's definition (02-model/views-and-design-artifacts.md); absent = {}. */
       definition?: Record<string, unknown>;
+      /** build: so that restoring a deleted diagram is exact (slice A-1b). */
+      properties?: Record<PropertyKey, PropertyValue>;
     }
   | {
       edit: "updateDiagram";
@@ -115,6 +118,8 @@ export type DiagramEdit =
       baseVersion: number;
       set: { name?: string; description?: string; folderId?: Id; diagramType?: TypeKey };
     }
+  /** build: a diagram's property values (its diagram type's `properties`); null clears a value. */
+  | ({ edit: "setDiagramProperties"; set: Record<PropertyKey, PropertyValue> } & OnExisting)
   | { edit: "deleteDiagram"; id: Id }
   /**
    * build (slice V-1): patches a view's definition key by key; a value of null removes that key, so the inverse is

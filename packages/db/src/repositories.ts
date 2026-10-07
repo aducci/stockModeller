@@ -252,6 +252,50 @@ export async function loadMetamodel(tx: Tx, repositoryId: string): Promise<Metam
   return Metamodel.compile(metamodel, diagramTypes);
 }
 
+/**
+ * Replaces a repository's whole metamodel (types, property types, value lists, rules and diagram types) and sets its
+ * version (slice A-1b). The caller has compiled the new metamodel, checked its impact and locked the repository.
+ */
+export async function saveMetamodel(
+  tx: Tx,
+  workspaceId: string,
+  repositoryId: string,
+  pkg: MetamodelPackage,
+  diagramTypes: DiagramType[],
+): Promise<void> {
+  for (const table of [
+    "value_list",
+    "property_type",
+    "object_type",
+    "relationship_type",
+    "rule",
+    "diagram_type",
+  ] as const)
+    await tx.deleteFrom(table).where("repository_id", "=", repositoryId).execute();
+  await installMetamodel(tx, workspaceId, repositoryId, pkg, diagramTypes);
+  const repo = await tx
+    .selectFrom("repository")
+    .select("settings")
+    .where("id", "=", repositoryId)
+    .executeTakeFirstOrThrow();
+  const { name, layers, exchangeMappings } = pkg;
+  await tx
+    .updateTable("repository")
+    .set({
+      metamodel_version: pkg.version,
+      settings: json({ ...(repo.settings as object), metamodel: { name, layers, exchangeMappings } }),
+    })
+    .where("id", "=", repositoryId)
+    .execute();
+  await notifyMetamodel(tx, workspaceId, repositoryId, pkg.version);
+}
+
+async function notifyMetamodel(tx: Tx, workspaceId: string, repositoryId: string, version: string) {
+  await sql`select pg_notify(${METAMODEL_CHANNEL}, ${JSON.stringify({ workspaceId, repositoryId, version } satisfies MetamodelNotice)})`.execute(
+    tx,
+  );
+}
+
 /** Notified (on commit) when a repository's metamodel is published, so every instance reloads it. */
 export const METAMODEL_CHANNEL = "connectome_metamodel";
 
@@ -287,7 +331,5 @@ export async function saveRelationshipRules(
       )
       .execute();
   await tx.updateTable("repository").set({ metamodel_version: version }).where("id", "=", repositoryId).execute();
-  await sql`select pg_notify(${METAMODEL_CHANNEL}, ${JSON.stringify({ workspaceId, repositoryId, version } satisfies MetamodelNotice)})`.execute(
-    tx,
-  );
+  await notifyMetamodel(tx, workspaceId, repositoryId, version);
 }

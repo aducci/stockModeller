@@ -2,9 +2,9 @@
 // for each kind of selection: header, property sets and groups, tags. Every edit is one change, shown at once.
 import { useState } from "react";
 import type { ModelState, Metamodel, RelationshipRow } from "@connectome/engine";
-import { LEVEL_PROPERTY, type Id } from "@connectome/model";
+import { LEVEL_PROPERTY, type Id, type PropertyValue } from "@connectome/model";
 import { useModel, useWorkbench } from "../state/workbench";
-import { confirmationOf, fieldGroups, mySet, toggleInSet } from "../inspector";
+import { confirmationOf, fieldGroups, mySet, strandedValues, toggleInSet } from "../inspector";
 import {
   InspectorHeader,
   InspectorToolbar,
@@ -148,6 +148,18 @@ export function ObjectProperties({ id, withRelations = false }: { id: Id; withRe
       />
       <PropertyGroups groups={groups} ctx={ctx} prefix={prefix} />
       {filtering && groups.length === 0 && <p className="muted pad">No properties match “{filter.trim()}”.</p>}
+      {!filtering && (
+        <StrandedSection
+          id={`${prefix}:stranded`}
+          values={object.properties}
+          carried={type?.properties ?? new Set()}
+          onClear={(key, name) =>
+            edit(`Clear ${name} of ${object.name}`, [
+              { edit: "setProperties", id, baseVersion: object.version, set: { [key]: null } },
+            ])
+          }
+        />
+      )}
 
       {!filtering && (
         <>
@@ -195,20 +207,16 @@ function RelationshipProperties({ id }: { id: Id }) {
   const name = (objectId: Id) => state.objects.get(objectId)?.name ?? "(deleted)";
   const parent = relationship.parentId ? state.relationships.get(relationship.parentId) : undefined;
   const messages = type?.semantic === "interaction" ? messagesOf(state, relationship) : [];
-  const { groups } = fieldGroups(
-    metamodel,
-    metamodel.relationshipTypeProperties(relationship.type),
-    relationship.properties,
-  );
+  const carried = metamodel.relationshipTypeProperties(relationship.type);
+  const { groups } = fieldGroups(metamodel, carried, relationship.properties);
+  const title = `${name(relationship.sourceId)} ${type?.verb ?? relationship.type} ${name(relationship.targetId)}`;
+  const setValue = (key: string, label: string, value: PropertyValue | null) =>
+    edit(label, [{ edit: "setRelationshipProperties", id, baseVersion: relationship.version, set: { [key]: value } }]);
   const ctx: GridContext = {
     state,
     metamodel,
     itemId: id,
-    commit: (f, value) =>
-      edit(
-        `Set ${f.pt.name} of ${name(relationship.sourceId)} ${type?.verb ?? relationship.type} ${name(relationship.targetId)}`,
-        [{ edit: "setProperties", id, baseVersion: relationship.version, set: { [f.pt.key]: value } }],
-      ),
+    commit: (f, value) => setValue(f.pt.key, `Set ${f.pt.name} of ${title}`, value),
   };
   const run = (plan: ReturnType<typeof messagePlan>) =>
     "error" in plan ? notify(plan.error, "error") : edit(plan.label, plan.edits);
@@ -225,7 +233,7 @@ function RelationshipProperties({ id }: { id: Id }) {
   return (
     <div className="props">
       <InspectorHeader
-        name={`${name(relationship.sourceId)} ${type?.verb ?? relationship.type} ${name(relationship.targetId)}`}
+        name={title}
         title={
           <h2 className="name">
             <button className="link" onClick={() => select({ kind: "object", id: relationship.sourceId })}>
@@ -247,8 +255,13 @@ function RelationshipProperties({ id }: { id: Id }) {
         )}
       </InspectorHeader>
 
-      {/* Relationship properties are shown read-only until setProperties covers relationships (Sem-3 "Not yet"). */}
       <PropertyGroups groups={groups} ctx={ctx} prefix={`relationship:${relationship.type}`} />
+      <StrandedSection
+        id={`relationship:${relationship.type}:stranded`}
+        values={relationship.properties}
+        carried={carried}
+        onClear={(key, label) => setValue(key, `Clear ${label} of ${title}`, null)}
+      />
 
       {type && type.payload !== "none" && (
         <Section id="relationship:payload" title="Payload" count={relationship.payload.length || undefined}>
@@ -362,6 +375,17 @@ function DiagramProperties({ id }: { id: Id }) {
   const edit = useWorkbench((s) => s.edit);
   const diagram = state.diagrams.get(id);
   if (!diagram) return <p className="muted pad">This diagram was deleted.</p>;
+  const carried = metamodel.diagramType(diagram.diagramType)?.properties ?? new Set<string>();
+  const values = diagram.properties ?? {};
+  const { groups } = fieldGroups(metamodel, carried, values);
+  const setValue = (key: string, label: string, value: PropertyValue | null) =>
+    edit(label, [{ edit: "setDiagramProperties", id, baseVersion: diagram.version, set: { [key]: value } }]);
+  const ctx: GridContext = {
+    state,
+    metamodel,
+    itemId: id,
+    commit: (f, value) => setValue(f.pt.key, `Set ${f.pt.name} of ${diagram.name}`, value),
+  };
   return (
     <div className="props">
       <InspectorHeader
@@ -380,6 +404,13 @@ function DiagramProperties({ id }: { id: Id }) {
           ])
         }
       />
+      <PropertyGroups groups={groups} ctx={ctx} prefix={`diagram:${diagram.diagramType}`} />
+      <StrandedSection
+        id={`diagram:${diagram.diagramType}:stranded`}
+        values={values}
+        carried={carried}
+        onClear={(key, label) => setValue(key, `Clear ${label} of ${diagram.name}`, null)}
+      />
       <Section id="diagram:contents" title="Contents">
         <p className="muted">
           {state.objectOccurrences.count("byDiagram", id)} shapes ·{" "}
@@ -387,5 +418,33 @@ function DiagramProperties({ id }: { id: Id }) {
         </p>
       </Section>
     </div>
+  );
+}
+
+/** Values the item's type no longer carries (a metamodel publish keeps them): listed so they can be cleared. */
+function StrandedSection(props: {
+  id: string;
+  values: Readonly<Record<string, PropertyValue>>;
+  carried: ReadonlySet<string>;
+  onClear(key: string, name: string): void;
+}) {
+  const { metamodel } = useModel();
+  const stranded = strandedValues(metamodel, props.carried, props.values);
+  if (stranded.length === 0) return null;
+  return (
+    <Section id={props.id} title="Not on this type" count={stranded.length} className="stranded">
+      <p className="muted small">The metamodel no longer gives this type these properties. Their values are kept.</p>
+      <ul className="plain stranded-values">
+        {stranded.map((v) => (
+          <li key={v.key}>
+            <span className="name">{v.name}</span>
+            <span className="value">{v.display}</span>
+            <button className="link" aria-label={`Clear ${v.name}`} onClick={() => props.onClear(v.key, v.name)}>
+              Clear
+            </button>
+          </li>
+        ))}
+      </ul>
+    </Section>
   );
 }

@@ -75,10 +75,10 @@ function candidates(state: ModelState, next: () => number, n: number): Edit[] {
       : null,
     interaction
       ? {
-          edit: "setProperties",
+          edit: "setRelationshipProperties",
           id: interaction.id,
           baseVersion: interaction.version,
-          set: pick([{ "interaction.protocol": `HTTPS ${n}` }, { "interaction.protocol": null }])!,
+          set: { "interaction.protocol": pick([`HTTP/${n}`, null])! },
         }
       : null,
     o && f ? { edit: "moveToFolder", id: o.id, baseVersion: o.version, folderId: f.id } : null,
@@ -159,6 +159,14 @@ function candidates(state: ModelState, next: () => number, n: number): Edit[] {
             { rows: { from: { type: ["capability"] } }, hideEmpty: null },
             ...(o ? [{ subject: o.id, summary: { paragraphs: [["See ", { mention: o.id }]] } }] : []),
           ])!,
+        }
+      : null,
+    d
+      ? {
+          edit: "setDiagramProperties",
+          id: d.id,
+          baseVersion: d.version,
+          set: { "documentation.link": pick([`https://docs.example/${n}`, null])! },
         }
       : null,
     d ? { edit: "deleteDiagram", id: d.id } : null,

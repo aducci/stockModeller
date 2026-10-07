@@ -182,6 +182,7 @@ export const editSchema = z.discriminatedUnion("edit", [
     set: properties.optional(),
   }),
   z.strictObject({ edit: z.literal("setPayload"), ...onExisting, payload: z.array(id).max(1000) }),
+  z.strictObject({ edit: z.literal("setRelationshipProperties"), ...onExisting, set: properties }),
   z.strictObject({ edit: z.literal("deleteRelationship"), ...onExisting }),
   z.strictObject({ edit: z.literal("createFolder"), id, parentId: id.nullable(), name: z.string() }),
   z.strictObject({ edit: z.literal("renameFolder"), id, name: z.string() }),
@@ -202,6 +203,7 @@ export const editSchema = z.discriminatedUnion("edit", [
     folderId: id,
     description: z.string().max(100_000).optional(),
     definition: viewDefinition.optional(),
+    properties: properties.optional(),
   }),
   z.strictObject({
     edit: z.literal("updateDiagram"),
@@ -214,6 +216,7 @@ export const editSchema = z.discriminatedUnion("edit", [
       diagramType: typeKey.optional(),
     }),
   }),
+  z.strictObject({ edit: z.literal("setDiagramProperties"), ...onExisting, set: properties }),
   z.strictObject({ edit: z.literal("deleteDiagram"), id }),
   z.strictObject({ edit: z.literal("setViewDefinition"), diagramId: id, baseVersion: version, set: viewDefinition }),
   z.strictObject({ edit: z.literal("addObjectOccurrence"), diagramId: id, occurrence: objectOccurrenceSchema }),

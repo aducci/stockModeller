@@ -203,9 +203,10 @@ export function fileMenu(state: ModelState): MenuEntry[] {
 /** The Metamodel menu (design/02-model/notation-and-metamodel-admin.md §10): each item opens the metamodel tab. */
 export function metamodelMenu(): MenuEntry[] {
   const open = (view: Parameters<ReturnType<typeof store>["openMetamodel"]>[0]) => () => store().openMetamodel(view);
-  const pending = store().ruleDraft;
+  const pending = store().metamodelDraft;
   return [
     { label: "Types", run: open("types") },
+    { label: "Properties", run: open("properties") },
     { label: "Connection matrix", run: open("matrix") },
     { label: "Rule sentences", run: open("sentences") },
     { label: "Try a connection", run: open("try") },
@@ -213,7 +214,7 @@ export function metamodelMenu(): MenuEntry[] {
     {
       label: "Discard unpublished changes",
       disabled: pending ? null : "There are no unpublished changes",
-      run: () => store().setRuleDraft(null),
+      run: () => store().setMetamodelDraft(null),
     },
   ];
 }

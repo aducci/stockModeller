@@ -244,6 +244,8 @@ export interface Diagram {
   generatedBy: { rule: string; focusObjectId: Id } | null;
   /** build (slice V-1): what a matrix or other view shows (02-model/views-and-design-artifacts.md); absent = {}. */
   definition?: Record<string, unknown>;
+  /** build: values of its diagram type's `properties` (slice A-1b); absent means none. */
+  properties?: Record<PropertyKey, PropertyValue>;
   objectOccurrences: ObjectOccurrence[];
   relationshipOccurrences: RelationshipOccurrence[];
   annotations: Annotation[];

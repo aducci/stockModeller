@@ -2166,3 +2166,220 @@ button.toggle .badge {
     padding: 16px;
   }
 }
+
+/* Property administration (slice A-1b): the Properties view, a type's properties, values not on their type. */
+.mm-types.with-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 16px;
+  align-items: start;
+}
+.mm-types-tables {
+  min-width: 0;
+  overflow-x: auto;
+}
+.mm-table.selectable td {
+  white-space: nowrap;
+}
+.mm-table.selectable tbody tr {
+  cursor: pointer;
+}
+.mm-table.selectable tbody tr:hover {
+  background: var(--pane-2);
+}
+.mm-table.selectable tbody tr.picked {
+  background: var(--sky-fill);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.mm-type-panel,
+.mm-prop-list,
+.mm-prop-editor {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--pane);
+}
+.mm-type-panel {
+  position: sticky;
+  top: 52px;
+  padding: 10px 12px;
+  max-height: calc(100vh - 160px);
+  overflow: auto;
+}
+.mm-type-panel header,
+.mm-prop-form header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.mm-type-panel h3,
+.mm-prop-form h3 {
+  margin: 0;
+  font-size: 14px;
+}
+.mm-type-panel h4,
+.mm-prop-form h4,
+.mm-prop-list h4 {
+  margin: 12px 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.mm-type-props li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--line);
+}
+.mm-type-props.inherited li {
+  color: var(--fg-2);
+}
+.mm-type-add {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.mm-type-add select {
+  flex: 1;
+  min-width: 0;
+}
+.mm-props {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.mm-prop-list {
+  position: sticky;
+  top: 52px;
+  max-height: calc(100vh - 160px);
+  overflow: auto;
+  padding: 8px;
+}
+.mm-prop-tools {
+  display: flex;
+  gap: 6px;
+}
+.mm-prop-tools input {
+  flex: 1;
+  min-width: 0;
+}
+.mm-prop-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 6px;
+  width: 100%;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--fg);
+  text-align: left;
+}
+.mm-prop-item:hover {
+  background: var(--pane-2);
+}
+.mm-prop-item.active {
+  background: var(--sky-fill);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.mm-prop-item .small {
+  flex-basis: 100%;
+}
+.mm-prop-editor {
+  padding: 12px 16px;
+  min-height: 240px;
+}
+.mm-prop-form fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.mm-form-grid {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 420px);
+  gap: 6px 12px;
+  align-items: center;
+  margin: 10px 0;
+}
+.mm-form-grid > label:not(.check) {
+  color: var(--fg-2);
+}
+.mm-value-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+}
+.mm-value-list input[type="color"] {
+  width: 28px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--line);
+}
+.mm-value-list input:not([type]) {
+  width: 200px;
+}
+.mm-value-list .small {
+  min-width: 70px;
+}
+.mm-add-value {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+.mm-used-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+.mm-used-columns fieldset {
+  margin: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+.mm-used-columns legend {
+  padding: 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-2);
+}
+.mm-used-columns label.check {
+  display: block;
+  padding: 1px 0;
+}
+.mm-used-columns fieldset + fieldset {
+  margin-top: 12px;
+}
+.mm-draft .error {
+  color: var(--removed);
+}
+.dialog.mm-publish {
+  max-height: calc(100vh - 80px);
+  overflow: auto;
+}
+.stranded-values li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 2px 0;
+}
+.stranded-values .name {
+  color: var(--fg-2);
+}
+@media (max-width: 900px) {
+  .mm-types.with-panel,
+  .mm-props {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .mm-type-panel,
+  .mm-prop-list {
+    position: static;
+    max-height: none;
+  }
+}

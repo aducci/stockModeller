@@ -1,19 +1,22 @@
-// The metamodel tab (design/02-model/notation-and-metamodel-admin.md §10): types, the connection matrix, rule
-// sentences and "try a connection", all over one draft of the relationship rules that is published as a new
-// metamodel version.
-import { useMemo, useState, type ReactNode } from "react";
-import { newlyRefused, relationshipCombinations, type Combination, type Metamodel } from "@connectome/engine";
+// The metamodel tab (design/02-model/notation-and-metamodel-admin.md §10): types, properties, the connection
+// matrix, rule sentences and "try a connection", all over one draft of the metamodel that is published as a new
+// metamodel version (slices A-1 and A-1b).
+import { useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
+import {
+  metamodelImpact,
+  newlyRefused,
+  relationshipCombinations,
+  type Combination,
+  type Metamodel,
+} from "@connectome/engine";
 import type { TypeKey } from "@connectome/model";
 import { useModel, useWorkbench, type MetamodelView } from "../state/workbench";
 import { lineFor, notationFor, type Line } from "../notation";
 import {
   KIND_FAMILY,
-  compileDraft,
-  countChanges,
   enforcementOf,
   matrixCell,
   pairUsage,
-  ruleChanges,
   ruleKey,
   ruleUsage,
   setRule,
@@ -25,11 +28,22 @@ import {
   type KindFamily,
   type Rule,
 } from "../metamodel-admin";
+import {
+  compileDraft,
+  countDraftChanges,
+  draftChanges,
+  sameAsPublished,
+  type CarrierKind,
+  type Draft,
+  type DraftChanges,
+} from "../property-admin";
 import { Glyph } from "./Glyph";
 import { MatrixGrid } from "./MatrixGrid";
+import { PropertiesView, TypePropertiesPanel } from "./PropertyAdmin";
 
 const VIEWS: { view: MetamodelView; label: string }[] = [
   { view: "types", label: "Types" },
+  { view: "properties", label: "Properties" },
   { view: "matrix", label: "Connection matrix" },
   { view: "sentences", label: "Rule sentences" },
   { view: "try", label: "Try a connection" },
@@ -46,23 +60,29 @@ export function MetamodelAdmin() {
   const { store, state } = useModel();
   const view = useWorkbench((s) => s.metamodelView);
   const openMetamodel = useWorkbench((s) => s.openMetamodel);
-  const draft = useWorkbench((s) => s.ruleDraft);
-  const setDraft = useWorkbench((s) => s.setRuleDraft);
+  const saved = useWorkbench((s) => s.metamodelDraft);
+  const setDraft = useWorkbench((s) => s.setMetamodelDraft);
   const [reviewing, setReviewing] = useState(false);
 
   const published = store.metamodelPackage;
   const version = published.package.version;
+  const publishedDraft: Draft = useMemo(
+    () => ({ package: published.package, diagramTypes: published.diagramTypes }),
+    [published],
+  );
+  const draft: Draft = saved ?? publishedDraft;
   const publishedRules = published.package.relationshipRules ?? [];
-  const rules = draft?.rules ?? publishedRules;
-  const compiled = useMemo(() => compileDraft(published, rules), [published, rules]);
-  // The draft always compiles (edits only pick existing types), but fall back to the published one if not.
+  const rules = draft.package.relationshipRules ?? [];
+  const compiled = useMemo(() => compileDraft(draft), [draft]);
+  // A draft that does not compile (a list property without its list, say) is shown over the published types.
   const metamodel = compiled.metamodel ?? store.metamodel;
   const combinations = useMemo(() => relationshipCombinations(state), [state]);
-  const changes = ruleChanges(publishedRules, rules);
-  const pending = countChanges(changes);
+  const changes = useMemo(() => draftChanges(publishedDraft, draft), [publishedDraft, draft]);
+  const pending = countDraftChanges(changes);
 
-  const update = (next: Rule[]) =>
-    setDraft(countChanges(ruleChanges(publishedRules, next)) === 0 ? null : { baseVersion: version, rules: next });
+  const update = (next: Draft) =>
+    setDraft(sameAsPublished(publishedDraft, next) ? null : { baseVersion: saved?.baseVersion ?? version, ...next });
+  const updateRules = (next: Rule[]) => update({ ...draft, package: { ...draft.package, relationshipRules: next } });
 
   return (
     <div className="metamodel-admin">
@@ -87,15 +107,20 @@ export function MetamodelAdmin() {
           ))}
         </div>
       </header>
-      {draft && draft.baseVersion !== version && (
+      {saved && saved.baseVersion !== version && (
         <div className="banner error" role="alert">
           Someone published version {version} while you were editing. Discard your changes to see theirs.
         </div>
       )}
       <div className="mm-body">
-        {view === "types" && <TypesView metamodel={metamodel} combinations={combinations} rules={rules} />}
+        {view === "types" && (
+          <TypesView metamodel={metamodel} combinations={combinations} rules={rules} draft={draft} onChange={update} />
+        )}
+        {view === "properties" && (
+          <PropertiesView draft={draft} published={publishedDraft} metamodel={metamodel} onChange={update} />
+        )}
         {view === "matrix" && (
-          <MatrixView metamodel={metamodel} rules={rules} published={publishedRules} onChange={update} />
+          <MatrixView metamodel={metamodel} rules={rules} published={publishedRules} onChange={updateRules} />
         )}
         {view === "sentences" && (
           <SentencesView
@@ -103,7 +128,7 @@ export function MetamodelAdmin() {
             rules={rules}
             published={publishedRules}
             combinations={combinations}
-            onChange={update}
+            onChange={updateRules}
           />
         )}
         {view === "try" && <TryView metamodel={metamodel} rules={rules} />}
@@ -113,17 +138,23 @@ export function MetamodelAdmin() {
           <span>
             {pending} change{pending === 1 ? "" : "s"} not published
           </span>
+          {compiled.problems.length > 0 && (
+            <span className="error" role="status">
+              {compiled.problems[0]}
+              {compiled.problems.length > 1 ? ` (and ${compiled.problems.length - 1} more)` : ""}
+            </span>
+          )}
           <span className="spacer" />
           <button onClick={() => setDraft(null)}>Discard</button>
-          <button className="primary" onClick={() => setReviewing(true)}>
+          <button className="primary" disabled={!compiled.metamodel} onClick={() => setReviewing(true)}>
             Review and publish…
           </button>
         </div>
       )}
       {reviewing && compiled.metamodel && (
         <PublishDialog
+          draft={draft}
           draftMetamodel={compiled.metamodel}
-          rules={rules}
           changes={changes}
           onClose={() => setReviewing(false)}
         />
@@ -134,85 +165,148 @@ export function MetamodelAdmin() {
 
 // ------------------------------------------------------------------ types
 
-function TypesView(props: { metamodel: Metamodel; combinations: Combination[]; rules: Rule[] }) {
-  const { metamodel, combinations, rules } = props;
+function TypesView(props: {
+  metamodel: Metamodel;
+  combinations: Combination[];
+  rules: Rule[];
+  draft: Draft;
+  onChange(draft: Draft): void;
+}) {
+  const { metamodel, combinations, rules, draft, onChange } = props;
   const { state } = useModel();
+  const [picked, setPicked] = useState<{ kind: CarrierKind; type: TypeKey } | null>(null);
   const objectsByType = new Map<string, number>();
   for (const o of state.objects.live()) objectsByType.set(o.type, (objectsByType.get(o.type) ?? 0) + 1);
   const relsByType = new Map<string, number>();
   for (const c of combinations) relsByType.set(c.relationshipType, (relsByType.get(c.relationshipType) ?? 0) + c.count);
   const rulesByType = new Map<string, number>();
   for (const r of rules) rulesByType.set(r.relationshipType, (rulesByType.get(r.relationshipType) ?? 0) + 1);
+  const diagramsByType = new Map<string, number>();
+  for (const d of state.diagrams.live())
+    diagramsByType.set(d.diagramType, (diagramsByType.get(d.diagramType) ?? 0) + 1);
+  const isPicked = (kind: CarrierKind, type: TypeKey) => picked?.kind === kind && picked.type === type;
+  const row = (kind: CarrierKind, type: TypeKey, name: string) => ({
+    "data-type": type,
+    className: isPicked(kind, type) ? "picked" : undefined,
+    "aria-selected": isPicked(kind, type),
+    tabIndex: 0,
+    title: `Show the properties of ${name}`,
+    onClick: () => setPicked(isPicked(kind, type) ? null : { kind, type }),
+    onKeyDown: (e: KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        setPicked(isPicked(kind, type) ? null : { kind, type });
+      }
+    },
+  });
 
   return (
-    <div className="mm-types">
-      <section>
-        <h3>Object types</h3>
-        <table className="mm-table">
-          <thead>
-            <tr>
-              <th>Type</th>
-              <th>Key</th>
-              <th>Category</th>
-              <th>Level</th>
-              <th className="num">Properties</th>
-              <th className="num">Objects</th>
-            </tr>
-          </thead>
-          <tbody>
-            {typeTree(metamodel).map(({ type: t, depth }) => {
-              const notation = notationFor(t);
-              return (
-                <tr key={t.definition.key} data-type={t.definition.key}>
-                  <td style={{ paddingLeft: 8 + depth * 16 }}>
-                    <span className="mm-type">
-                      <Glyph glyph={notation.glyph} colour={notation.ink} />
-                      {t.definition.name}
-                      {t.definition.abstract && <span className="chip">abstract</span>}
-                    </span>
-                  </td>
-                  <td className="muted mono">{t.definition.key}</td>
-                  <td>{t.category}</td>
-                  <td>{t.level ?? <span className="muted">—</span>}</td>
-                  <td className="num">{t.properties.size}</td>
-                  <td className="num">{objectsByType.get(t.definition.key) ?? 0}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </section>
-      <section>
-        <h3>Relationship types</h3>
-        <table className="mm-table">
-          <thead>
-            <tr>
-              <th>Type</th>
-              <th>Line</th>
-              <th>Reads</th>
-              <th>Kind</th>
-              <th className="num">Rules</th>
-              <th className="num">Relationships</th>
-            </tr>
-          </thead>
-          <tbody>
-            {metamodel.allRelationshipTypes().map((rt) => (
-              <tr key={rt.key} data-type={rt.key}>
-                <td>{rt.name}</td>
-                <td>
-                  <LineSample line={lineFor(metamodel, rt.key)} />
-                </td>
-                <td>
-                  {rt.verb} <span className="muted">/ {rt.inverseVerb}</span>
-                </td>
-                <td>{rt.semantic}</td>
-                <td className="num">{rulesByType.get(rt.key) ?? 0}</td>
-                <td className="num">{relsByType.get(rt.key) ?? 0}</td>
+    <div className={`mm-types${picked ? " with-panel" : ""}`}>
+      <div className="mm-types-tables">
+        <p className="muted small">Select a type to see and change its properties.</p>
+        <section>
+          <h3>Object types</h3>
+          <table className="mm-table selectable" aria-label="Object types">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Key</th>
+                <th>Category</th>
+                <th>Level</th>
+                <th className="num">Properties</th>
+                <th className="num">Objects</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+            </thead>
+            <tbody>
+              {typeTree(metamodel).map(({ type: t, depth }) => {
+                const notation = notationFor(t);
+                return (
+                  <tr key={t.definition.key} {...row("object", t.definition.key, t.definition.name)}>
+                    <td style={{ paddingLeft: 8 + depth * 16 }}>
+                      <span className="mm-type">
+                        <Glyph glyph={notation.glyph} colour={notation.ink} />
+                        {t.definition.name}
+                        {t.definition.abstract && <span className="chip">abstract</span>}
+                      </span>
+                    </td>
+                    <td className="muted mono">{t.definition.key}</td>
+                    <td>{t.category}</td>
+                    <td>{t.level ?? <span className="muted">—</span>}</td>
+                    <td className="num">{t.properties.size}</td>
+                    <td className="num">{objectsByType.get(t.definition.key) ?? 0}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </section>
+        <section>
+          <h3>Relationship types</h3>
+          <table className="mm-table selectable" aria-label="Relationship types">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Line</th>
+                <th>Reads</th>
+                <th>Kind</th>
+                <th className="num">Properties</th>
+                <th className="num">Rules</th>
+                <th className="num">Relationships</th>
+              </tr>
+            </thead>
+            <tbody>
+              {metamodel.allRelationshipTypes().map((rt) => (
+                <tr key={rt.key} {...row("relationship", rt.key, rt.name)}>
+                  <td>{rt.name}</td>
+                  <td>
+                    <LineSample line={lineFor(metamodel, rt.key)} />
+                  </td>
+                  <td>
+                    {rt.verb} <span className="muted">/ {rt.inverseVerb}</span>
+                  </td>
+                  <td>{rt.semantic}</td>
+                  <td className="num">{metamodel.relationshipTypeProperties(rt.key).size}</td>
+                  <td className="num">{rulesByType.get(rt.key) ?? 0}</td>
+                  <td className="num">{relsByType.get(rt.key) ?? 0}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+        <section>
+          <h3>Diagram types</h3>
+          <table className="mm-table selectable" aria-label="Diagram types">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Key</th>
+                <th className="num">Properties</th>
+                <th className="num">Diagrams</th>
+              </tr>
+            </thead>
+            <tbody>
+              {metamodel.allDiagramTypes().map((dt) => (
+                <tr key={dt.definition.key} {...row("diagram", dt.definition.key, dt.definition.name)}>
+                  <td>{dt.definition.name}</td>
+                  <td className="muted mono">{dt.definition.key}</td>
+                  <td className="num">{dt.properties.size}</td>
+                  <td className="num">{diagramsByType.get(dt.definition.key) ?? 0}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      </div>
+      {picked && (
+        <TypePropertiesPanel
+          kind={picked.kind}
+          type={picked.type}
+          draft={draft}
+          metamodel={metamodel}
+          onChange={onChange}
+          onClose={() => setPicked(null)}
+        />
+      )}
     </div>
   );
 }
@@ -648,33 +742,39 @@ function Block({ title, children }: { title: string; children: ReactNode }) {
 
 // ------------------------------------------------------------------ publishing
 
-function PublishDialog(props: {
-  draftMetamodel: Metamodel;
-  rules: Rule[];
-  changes: ReturnType<typeof ruleChanges>;
-  onClose(): void;
-}) {
-  const { draftMetamodel, rules, changes, onClose } = props;
+function PublishDialog(props: { draft: Draft; draftMetamodel: Metamodel; changes: DraftChanges; onClose(): void }) {
+  const { draft, draftMetamodel, changes, onClose } = props;
   const { store, state, metamodel } = useModel();
   const session = useWorkbench((s) => s.session)!;
-  const draft = useWorkbench((s) => s.ruleDraft);
-  const setDraft = useWorkbench((s) => s.setRuleDraft);
+  const saved = useWorkbench((s) => s.metamodelDraft);
+  const setDraft = useWorkbench((s) => s.setMetamodelDraft);
   const notify = useWorkbench((s) => s.notify);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const refused = useMemo(() => newlyRefused(state, metamodel, draftMetamodel), [state, metamodel, draftMetamodel]);
+  const impact = useMemo(() => metamodelImpact(state, metamodel, draftMetamodel), [state, metamodel, draftMetamodel]);
   const name = (k: TypeKey | "*") => typeLabel(draftMetamodel, k);
   const verb = (k: TypeKey) => draftMetamodel.relationshipType(k)?.verb ?? k;
   const sentence = (r: { relationshipType: TypeKey; sourceType: TypeKey; targetType: TypeKey }) =>
     `${name(r.sourceType)} · ${verb(r.relationshipType)} · ${name(r.targetType)}`;
+  const propertyName = (key: string) =>
+    draftMetamodel.propertyType(key)?.name ?? metamodel.propertyType(key)?.name ?? key;
+  const typeName = (kind: CarrierKind, key: TypeKey) =>
+    (kind === "object"
+      ? draftMetamodel.objectType(key)?.definition.name
+      : kind === "relationship"
+        ? draftMetamodel.relationshipType(key)?.name
+        : draftMetamodel.diagramType(key)?.definition.name) ?? key;
 
   const publish = async () => {
     setBusy(true);
     setError(null);
     try {
-      const result = await session.api.publishRelationshipRules(store.repository.id, {
-        baseVersion: draft?.baseVersion ?? store.metamodelPackage.package.version,
-        relationshipRules: rules,
+      const { version: _, ...pkg } = draft.package;
+      const result = await session.api.publishMetamodel(store.repository.id, {
+        baseVersion: saved?.baseVersion ?? store.metamodelPackage.package.version,
+        metamodel: pkg,
+        diagramTypes: draft.diagramTypes,
       });
       setDraft(null);
       onClose();
@@ -685,26 +785,31 @@ function PublishDialog(props: {
     }
   };
 
-  const list = (title: string, items: Rule[], className: string) =>
+  const section = (title: string, items: ReactNode[], className: string) =>
     items.length > 0 && (
       <section>
         <h3>
           {title} ({items.length})
         </h3>
-        <ul className={`plain ${className}`}>
-          {items.map((r) => (
-            <li key={ruleKey(r)}>
-              {sentence(r)} <span className="muted small">{enforcementOf(r) === "warn" ? "warns" : "blocks"}</span>
-            </li>
-          ))}
-        </ul>
+        <ul className={`plain ${className}`}>{items}</ul>
       </section>
     );
+  const rule = (r: Rule) => (
+    <li key={ruleKey(r)}>
+      {sentence(r)} <span className="muted small">{enforcementOf(r) === "warn" ? "warns" : "blocks"}</span>
+    </li>
+  );
+  const carriage = (c: { kind: CarrierKind; type: TypeKey; property: string }) => (
+    <li key={`${c.kind}|${c.type}|${c.property}`}>
+      {typeName(c.kind, c.type)} · <strong>{propertyName(c.property)}</strong>
+    </li>
+  );
+  const goneProps = new Set(changes.properties.removed.map((p) => p.key));
 
   return (
     <div className="backdrop" onClick={onClose}>
       <div
-        className="dialog"
+        className="dialog mm-publish"
         role="dialog"
         aria-modal="true"
         aria-label="Publish the metamodel"
@@ -713,17 +818,87 @@ function PublishDialog(props: {
       >
         <h2>Publish the metamodel?</h2>
         <p>
-          Everyone working in {store.repository.name} gets the new rules at once, in every scenario. Nothing in the
+          Everyone working in {store.repository.name} gets the new metamodel at once, in every scenario. Nothing in the
           model is changed or deleted.
         </p>
-        {list("Rules added", changes.added, "added")}
-        {list("Rules removed", changes.removed, "removed")}
-        {list("Rules changed", changes.changed, "changed")}
+        {section(
+          "Properties added",
+          changes.properties.added.map((p) => (
+            <li key={p.key}>
+              <strong>{p.name}</strong> <span className="muted small">{p.key}</span>
+            </li>
+          )),
+          "added",
+        )}
+        {section(
+          "Properties changed",
+          changes.properties.changed.map((p) => (
+            <li key={p.key}>
+              <strong>{p.name}</strong> <span className="muted small">{p.key}</span>
+            </li>
+          )),
+          "changed",
+        )}
+        {section(
+          "Properties removed",
+          changes.properties.removed.map((p) => (
+            <li key={p.key}>
+              <strong>{p.name}</strong> <span className="muted small">{p.key}</span>
+            </li>
+          )),
+          "removed",
+        )}
+        {section(
+          "Lists changed",
+          changes.lists.changed.map((l) => (
+            <li key={l.key}>
+              {l.key} <span className="muted small">{l.values.map((v) => v.label).join(", ")}</span>
+            </li>
+          )),
+          "changed",
+        )}
+        {section("Given to types", changes.carried.added.map(carriage), "added")}
+        {section(
+          "Taken from types",
+          changes.carried.removed.filter((c) => !goneProps.has(c.property)).map(carriage),
+          "removed",
+        )}
+        {section("Rules added", changes.rules.added.map(rule), "added")}
+        {section("Rules removed", changes.rules.removed.map(rule), "removed")}
+        {section("Rules changed", changes.rules.changed.map(rule), "changed")}
         <section>
-          <h3>Effect on existing relationships</h3>
-          {refused.length === 0 ? (
-            <p className="muted">Every existing relationship is still allowed.</p>
-          ) : (
+          <h3>Effect on the model</h3>
+          {impact.problems.length > 0 && (
+            <div className="error" role="alert">
+              <p>This cannot be published yet:</p>
+              <ul>
+                {impact.problems.map((p) => (
+                  <li key={p}>{p}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {refused.length === 0 && impact.stranded.length === 0 && impact.problems.length === 0 && (
+            <p className="muted">
+              Every existing relationship is still allowed, and every value still has its property.
+            </p>
+          )}
+          {impact.stranded.length > 0 && (
+            <>
+              <p>
+                Values kept but no longer on their type. The properties panel lists them under “Not on this type” so
+                they can be cleared:
+              </p>
+              <ul className="plain removed" aria-label="Values kept">
+                {impact.stranded.map((v) => (
+                  <li key={v.propertyType}>
+                    {propertyName(v.propertyType)} <span className="muted small">× {v.count}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          {refused.length > 0 && (
             <>
               <p>
                 {refused.reduce((n, c) => n + c.count, 0)} relationships will no longer be allowed. They stay in the
@@ -746,7 +921,7 @@ function PublishDialog(props: {
         )}
         <div className="actions">
           <button onClick={onClose}>Cancel</button>
-          <button className="primary" disabled={busy} onClick={() => void publish()}>
+          <button className="primary" disabled={busy || impact.problems.length > 0} onClick={() => void publish()}>
             {busy ? "Publishing…" : "Publish"}
           </button>
         </div>

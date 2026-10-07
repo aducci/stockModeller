@@ -110,7 +110,7 @@ describe("documents", () => {
     const state = withContext();
     apply(state, [
       {
-        edit: "setProperties",
+        edit: "setRelationshipProperties",
         id: "R-08",
         baseVersion: state.relationships.get("R-08")!.version,
         set: { "flow.protocol": null },

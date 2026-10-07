@@ -2,6 +2,7 @@
 // Shapes follow design/05-structures/metamodel.schema.json and diagram-type.schema.json.
 import type {
   ObjectType,
+  PropertyKey,
   PropertyType,
   RelationshipRule,
   RelationshipType,
@@ -86,6 +87,8 @@ export interface DiagramType {
   document?: DocumentTemplate;
   objectTypes: TypeKey[];
   relationshipTypes?: TypeKey[];
+  /** build: property types diagrams of this type carry (slice A-1b). */
+  properties?: PropertyKey[];
   nesting?: "nested" | "lines";
   showExistingRelationships?: boolean;
   symbols?: Record<TypeKey, Partial<SymbolStyle>>;
