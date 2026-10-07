@@ -1471,3 +1471,330 @@ button.toggle .badge {
   font-size: 10.5px;
   font-variant-numeric: tabular-nums;
 }
+
+/* Metamodel administration (02-model/notation-and-metamodel-admin.md §10). */
+.metamodel-admin {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  background: var(--pane);
+}
+.mm-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 8px 12px;
+  background: var(--pane-2);
+  border-bottom: 1px solid var(--line);
+}
+.mm-header h2 {
+  margin: 0;
+  font-size: 15px;
+}
+.mm-views {
+  display: flex;
+  gap: 2px;
+}
+.mm-views button {
+  padding: 3px 10px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  color: var(--fg);
+}
+.mm-views button.active {
+  border-color: var(--line);
+  background: var(--pane);
+  font-weight: 600;
+}
+.metamodel-admin .banner {
+  grid-area: auto;
+}
+.mm-body {
+  flex: 1;
+  padding: 12px;
+}
+.mm-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-bottom: 10px;
+}
+.mm-filters label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--fg-2);
+}
+.mm-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.mm-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+}
+.mm-table th,
+.mm-table td {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+.mm-table th {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.mm-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
+.small {
+  font-size: 11px;
+}
+.mm-types h3,
+.mm-block h3 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--fg-2);
+}
+.line-sample {
+  vertical-align: middle;
+  color: var(--fg-2);
+  flex: none;
+}
+
+/* The connection matrix */
+.mm-matrix-scroll {
+  overflow: auto;
+}
+.mm-matrix {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.mm-matrix th {
+  font-weight: 400;
+  text-align: left;
+  white-space: nowrap;
+  background: var(--pane);
+}
+.mm-matrix tbody th {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  padding-right: 10px;
+  border-right: 1px solid var(--line);
+}
+.mm-matrix th.col {
+  height: 120px;
+  vertical-align: bottom;
+  padding: 0 0 6px;
+}
+.mm-matrix .vertical {
+  display: inline-block;
+  width: 34px;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  text-align: left;
+  line-height: 34px;
+  max-height: 112px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mm-matrix td.cell {
+  position: relative;
+  width: 34px;
+  height: 30px;
+  padding: 0;
+  border-right: 1px solid var(--grid, var(--line));
+  border-bottom: 1px solid var(--grid, var(--line));
+}
+.mm-matrix td.cell.used {
+  background: var(--pane-2);
+}
+.mm-matrix td.cell.open {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.cell-button {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  height: 100%;
+  padding: 2px;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+.cell-button:hover {
+  background: var(--pane-2);
+}
+.dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  background: currentColor;
+  flex: none;
+}
+.dot.structure {
+  color: var(--violet-ink);
+}
+.dot.dependency {
+  color: var(--sky-ink);
+}
+.dot.dynamic {
+  color: var(--amber-ink);
+}
+.dot.influence {
+  color: var(--rose-ink);
+}
+.dot.warn {
+  background: transparent;
+}
+.dot.inherited {
+  opacity: 0.45;
+}
+.dot.added {
+  box-shadow: 0 0 0 2px var(--changed);
+}
+.mm-legend {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 11px;
+  color: var(--fg-2);
+}
+.mm-cell-editor {
+  position: fixed;
+  z-index: 15;
+  width: 320px;
+  max-height: 430px;
+  overflow: auto;
+  padding: 10px;
+  background: var(--pane);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.18);
+}
+.mm-cell-editor h4 {
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+.mm-cell-editor li {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 2px 0;
+}
+.mm-cell-editor label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.mm-cell-editor .actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+.chip.enforcement {
+  border: 1px solid var(--line);
+  cursor: pointer;
+  font-size: 11px;
+}
+.chip.enforcement.warn,
+.chip.warn {
+  color: var(--changed);
+  border-color: var(--changed);
+}
+.mm-offer .chip,
+.mm-rule-list .chip.new {
+  margin-left: 6px;
+}
+.chip.new {
+  color: var(--changed);
+  font-size: 11px;
+}
+
+/* Rule sentences */
+.mm-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.mm-filter {
+  width: min(320px, 100%);
+  margin-bottom: 8px;
+}
+.mm-rule-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--line);
+}
+.mm-rule-list li.added {
+  background: var(--pane-2);
+}
+.mm-rule-list .verb {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--fg-2);
+}
+
+/* Try a connection */
+.mm-try-result {
+  display: grid;
+  gap: 16px;
+  max-width: 720px;
+}
+.mm-offer {
+  margin: 0;
+  padding-left: 20px;
+}
+.mm-offer li {
+  padding: 3px 0;
+}
+.refused {
+  color: var(--removed);
+}
+
+/* The draft bar */
+.mm-draft {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--pane-2);
+  border-top: 2px solid var(--changed);
+}
+.dialog ul.removed li {
+  text-decoration: none;
+  color: var(--removed);
+}
+.dialog ul.added li {
+  color: var(--added, inherit);
+}

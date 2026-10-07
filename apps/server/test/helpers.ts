@@ -38,7 +38,7 @@ export async function setup() {
     createScenario(tx, { id: TARGET, workspaceId: WS, repositoryId: REPO, parentId: BASELINE, name: "Target 2027" }),
   );
 
-  const request = async (method: "GET" | "POST", url: string, body?: unknown, auth = token()) => {
+  const request = async (method: "GET" | "POST" | "PUT", url: string, body?: unknown, auth = token()) => {
     const res = await app.inject({
       method,
       url: `/api/v1${url}`,
@@ -58,6 +58,7 @@ export async function setup() {
     request,
     get: (url: string, auth?: string) => request("GET", url, undefined, auth),
     post: (url: string, body?: unknown, auth?: string) => request("POST", url, body, auth),
+    put: (url: string, body?: unknown, auth?: string) => request("PUT", url, body, auth),
     async close() {
       await app.close();
       await db.drop();

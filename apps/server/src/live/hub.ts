@@ -10,12 +10,14 @@
 import type { WebSocket } from "ws";
 import {
   CHANGES_CHANNEL,
+  METAMODEL_CHANNEL,
   committedChanges,
   listen,
   notify,
   scenarioAncestry,
   withWorkspace,
   type ChangeNotice,
+  type MetamodelNotice,
   type Connection,
   type Listener,
 } from "@connectome/db";
@@ -98,7 +100,7 @@ export class LiveHub {
   async start(): Promise<void> {
     this.listener = await listen({
       connectionString: this.options.connectionString,
-      channels: [CHANGES_CHANNEL, PRESENCE_CHANNEL],
+      channels: [CHANGES_CHANNEL, PRESENCE_CHANNEL, METAMODEL_CHANNEL],
       onNotify: (channel, payload) => this.onNotify(channel, payload),
       onReconnect: () => {
         // Notices sent while disconnected are lost: read whatever each followed repository missed.
@@ -217,10 +219,22 @@ export class LiveHub {
         if (this.feeds.has(notice.repositoryId)) void this.deliver(notice.repositoryId, notice.workspaceId, notice.seq);
       } else if (channel === PRESENCE_CHANNEL) {
         this.onPresence(JSON.parse(payload) as PresenceNotice);
+      } else if (channel === METAMODEL_CHANNEL) {
+        this.onMetamodel(JSON.parse(payload) as MetamodelNotice);
       }
     } catch (error) {
       this.options.log.warn({ err: error, channel }, "ignoring a malformed notification");
     }
+  }
+
+  /**
+   * A new metamodel was published (perhaps on another instance): forget the compiled one and have every open
+   * session reload, since its view was checked against the old rules.
+   */
+  private onMetamodel(notice: MetamodelNotice): void {
+    this.options.service.cache.entry(notice.repositoryId).metamodel = undefined;
+    for (const client of this.clients.get(notice.repositoryId) ?? [])
+      if (client.ready) this.send(client, { type: "resync", fromSeq: client.lastSeq });
   }
 
   /** Reads a repository's new changes up to `seq` (once per instance) and forwards them, in order. */

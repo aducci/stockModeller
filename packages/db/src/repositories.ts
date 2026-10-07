@@ -1,6 +1,7 @@
 // Workspaces, repositories, scenarios and the metamodel tables.
 import type { DiagramType, MetamodelPackage, PropertyType, ObjectType, RelationshipType } from "@connectome/model";
 import { Metamodel } from "@connectome/engine";
+import { sql } from "kysely";
 import type { Tx } from "./client";
 
 const json = (value: unknown) => JSON.stringify(value);
@@ -249,4 +250,44 @@ export async function loadMetamodelPackage(
 export async function loadMetamodel(tx: Tx, repositoryId: string): Promise<Metamodel> {
   const { metamodel, diagramTypes } = await loadMetamodelPackage(tx, repositoryId);
   return Metamodel.compile(metamodel, diagramTypes);
+}
+
+/** Notified (on commit) when a repository's metamodel is published, so every instance reloads it. */
+export const METAMODEL_CHANNEL = "connectome_metamodel";
+
+export interface MetamodelNotice {
+  workspaceId: string;
+  repositoryId: string;
+  version: string;
+}
+
+/**
+ * Replaces a repository's relationship rules and sets its metamodel version (design/02-model/
+ * notation-and-metamodel-admin.md §10). The caller has compiled the new metamodel and locked the repository.
+ */
+export async function saveRelationshipRules(
+  tx: Tx,
+  workspaceId: string,
+  repositoryId: string,
+  rules: NonNullable<MetamodelPackage["relationshipRules"]>,
+  version: string,
+): Promise<void> {
+  await tx.deleteFrom("rule").where("repository_id", "=", repositoryId).where("kind", "=", "relationship").execute();
+  if (rules.length > 0)
+    await tx
+      .insertInto("rule")
+      .values(
+        rules.map((r) => ({
+          workspace_id: workspaceId,
+          repository_id: repositoryId,
+          key: `${r.relationshipType}:${r.sourceType}->${r.targetType}`,
+          kind: "relationship",
+          definition: json(r),
+        })) as never,
+      )
+      .execute();
+  await tx.updateTable("repository").set({ metamodel_version: version }).where("id", "=", repositoryId).execute();
+  await sql`select pg_notify(${METAMODEL_CHANNEL}, ${JSON.stringify({ workspaceId, repositoryId, version } satisfies MetamodelNotice)})`.execute(
+    tx,
+  );
 }
