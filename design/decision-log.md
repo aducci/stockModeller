@@ -94,6 +94,10 @@ From [views and design artifacts](02-model/views-and-design-artifacts.md). **Pro
 | V10 | Show indirect relationships in matrices? | Opt-in per matrix (`derived: "trace"`), hatched and read-only | Never |
 | V11 | Queries before the M1 parser | Structured JSON paths (the parser's future AST), evaluated by a pure `packages/views` | Wait for the parser |
 | V12 | The unused `catalogue` and `dashboard` tables | Retire them in a later migration; a catalogue is a `list` view | Keep them alongside |
+| V13 | Is a document's context diagram generated? | **Decided by the product owner (2026-10-07): no.** It is a linked child diagram the author draws (`diagramLink`) | Generated from the subject's interactions |
+| V14 | Where do the integrations table's rows come from? | **Decided (2026-10-07):** from the context diagram's flow and interaction connectors, so every connector is a row that must be described; interactions missing from the diagram are flagged | From a model query, independent of the diagram |
+| V15 | How much can authors change a template? | Three levels (component, template/pattern, artifact) with `lock` (`fixed`, `configurable`, `free`), `allow` and palette regions; pattern bindings cannot be overridden | Templates fully fixed, or fully editable per document |
+| V16 | Can packages define new component types? | No: components are product code (a registry); packages compose them with templates and patterns. Extension-supplied components wait for extension panels (ADR-007) | Declarative custom components in packages |
 
 ## Found while building (M0)
 

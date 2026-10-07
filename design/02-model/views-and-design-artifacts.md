@@ -2,7 +2,7 @@
 
 How Connectome shows one model in many shapes: free diagrams (today), matrices, lists, specifications, hybrid sequence diagrams, and **design artifacts**: templated documents (an HLD, a solution design, an integration spec) whose sections are live views of the model. Builds on [diagrams and catalogues](diagrams-and-catalogues.md), the [semantic layer](semantics.md) and [notation](notation-and-metamodel-admin.md).
 
-Status: **proposed** (2026-10-07). Open questions V1–V12 are in the [decision log](../decision-log.md#views-decisions). Mockups: [Views framework](https://claude.ai/artifact/35pBoCFz6S1bahi9ri7v4P).
+Status: **proposed** (2026-10-07; revised the same day after review: components, patterns, linked context). Open questions V1–V16 are in the [decision log](../decision-log.md#views-decisions). Mockups: [Views framework](https://claude.ai/artifact/35pBoCFz6S1bahi9ri7v4P).
 
 ## 1. The idea in one table
 
@@ -80,7 +80,7 @@ Text form, once the parser lands: `$subject -@interaction- category:component`. 
 | Pivot, filters | Swap rows and columns; hide empty rows and columns; filter by property; heat by count | View state; *Save view* writes it to the definition |
 | Totals | Row and column counts | Read-only |
 
-The metamodel editor's **connection matrix** (notation §10.2, being built in slice A-1) is the same grid over *types* and *rules* rather than objects and relationships. Both use one grid component (sticky headers, group headers, virtualised cells, keyboard navigation); whichever slice lands first provides it.
+The metamodel editor's **connection matrix** (notation §10.2, being built in slice A-1) is the same grid over *types* and *rules* rather than objects and relationships. Both should use one grid component (sticky headers, group headers, virtualised cells, keyboard navigation). A-1 draws its matrix as a plain table, so V-1 extracts the grid from it and moves the connection matrix onto it.
 
 A matrix is also a **diagram type**, so a package can ship "Application × Capability" or "Interface × Data object (CRUD)" ready to open, and a design artifact can embed one as a section (§7).
 
@@ -131,68 +131,207 @@ Two things this gives that a drawing tool cannot: the data matrix (§4) and the 
 
 ## 7. Design artifacts: the model as a templated canvas
 
-A **design artifact** is a `document` view about one **subject** (a solution, an application, a project, a capability) built from a **template** whose sections are live, editable views scoped to that subject. An HLD stops being a Word file that copies the model and goes stale; it *is* a page of the model.
+A **design artifact** is a `document` view about one **subject** (a solution, an application, a project, a capability) built from a **template**. The template arranges **components** (prose, key facts, a linked diagram, a flow table, a matrix…) whose content is the model itself, scoped to the subject. An HLD stops being a Word file that copies the model and goes stale; it *is* a page of the model, and you can model in it.
 
-### 7.1 Template
+*Revised 2026-10-07 after the product owner's review:* the context is a **linked child diagram** (drawn by the author, not generated), the integrations table is **bound to that diagram's connectors**, and templates are **composed from components and patterns** that power users configure (§8).
 
-A template is a diagram type of kind `document`:
+### 7.1 A template, as a power user writes it
+
+A template is a diagram type of kind `document`. Its body is a list of **sections**, each one component with its configuration, or a **pattern** (a reusable group of sections, §8.4) with parameters:
 
 ```json
-{ "key": "hld", "name": "High-level design", "kind": "document",
+{ "key": "hld", "name": "High-level design", "kind": "document", "version": "1.2.0",
   "subject": { "type": ["application", "service"] },
   "sections": [
-    { "key": "summary", "title": "Summary", "kind": "prose", "guidance": "What changes and why, in five lines.", "required": true },
-    { "key": "facts", "title": "Key facts", "kind": "fields", "properties": ["lifecycle.status", "ownership.businessOwner", "semantic.level"] },
-    { "key": "context", "title": "Context", "kind": "view", "view": { "kind": "canvas", "generate": { "include": [ { "path": { "from": "$subject", "steps": [ { "kind": "interaction", "dir": "either" } ] } } ], "layout": "radial" } } },
-    { "key": "integrations", "title": "Integrations", "kind": "relationList",
-      "rows": { "from": "$subject", "steps": [ { "kind": "interaction", "dir": "either" } ] },
-      "columns": ["direction", "interaction.pattern", "interaction.protocol", "payload"],
-      "add": { "relationshipType": "calls", "pick": { "category": ["component", "interface"] } },
-      "perRow": { "title": "Sequence", "view": { "kind": "sequence", "seed": "interactionsWithRow", "name": "{subject.name} ↔ {row.name}" } },
-      "min": 1 },
-    { "key": "data", "title": "Data handled", "kind": "view", "view": { "kind": "matrix",
-      "rows": { "from": "$subject", "steps": [ { "kind": "composition", "dir": "out", "transitive": 2 } ] },
-      "columns": { "from": "$subject", "steps": [ { "kind": "access", "dir": "out" } ] },
-      "relationships": { "kinds": ["access"] }, "cell": { "show": "property", "property": "access.mode" } } },
-    { "key": "raci", "title": "Responsibilities (RACI)", "kind": "view", "view": { "kind": "matrix",
-      "rows": { "from": "$subject", "steps": [ { "type": "composedOf", "dir": "out", "to": { "type": ["processStep"] } } ] },
-      "columns": { "from": { "category": ["actor"] } , "pick": true },
-      "relationships": { "types": ["raci"], "dir": "columnToRow" },
-      "cell": { "show": "property", "property": "raci.code", "cycle": ["R", "A", "C", "I", null] },
-      "check": "exactlyOne(raci.code = A) per row" } },
-    { "key": "decisions", "title": "Decisions and risks", "kind": "relationList", "rows": { "from": "$subject", "steps": [ { "kind": "influence", "dir": "in" } ] }, "columns": ["type", "lifecycle.status"] }
+    { "key": "summary", "title": "Summary", "component": "prose",
+      "config": { "guidance": "What changes and why, in five lines.", "mentions": { "create": true } },
+      "required": true, "lock": "fixed" },
+    { "key": "facts", "title": "Key facts", "component": "facts",
+      "config": { "properties": ["lifecycle.status", "ownership.businessOwner", "semantic.level", "cost.runCost"] },
+      "allow": { "addProperties": true } },
+    { "use": "integrationPattern",
+      "with": { "diagramType": "context", "flowKinds": ["interaction", "flow"],
+                "columns": ["direction", "interaction.pattern", "interaction.protocol", "payload", "description"],
+                "requiredColumns": ["interaction.protocol", "payload"], "perRow": "sequence" } },
+    { "key": "data", "title": "Data handled", "component": "matrix",
+      "config": { "rows": { "from": "$subject", "steps": [ { "kind": "composition", "dir": "out", "transitive": 2 } ] },
+                  "columns": { "from": "$subject", "steps": [ { "kind": "access", "dir": "out" } ] },
+                  "relationships": { "kinds": ["access"] }, "cell": { "show": "property", "property": "access.mode" } } },
+    { "key": "raci", "title": "Responsibilities", "component": "matrix",
+      "config": { "rows": { "from": "$subject", "steps": [ { "type": "composedOf", "dir": "out", "to": { "type": ["processStep"] } } ] },
+                  "columns": { "from": { "category": ["actor"] }, "pick": true },
+                  "relationships": { "types": ["raci"], "dir": "columnToRow" },
+                  "cell": { "show": "property", "property": "raci.code", "cycle": ["R", "A", "C", "I", null] } },
+      "checks": [ { "rule": "exactlyOne", "cell": "A", "per": "row", "message": "{row.name} needs one A" } ] },
+    { "region": "additional", "title": "Additional sections",
+      "palette": ["prose", "diagramLink", "relationTable", "matrix", "list", "decisionLog"], "max": 6 }
   ] }
 ```
 
-### 7.2 Section kinds
+### 7.2 Context and integrations stay aligned
 
-| Kind | Shows | Edits | Stored in the artifact |
-|---|---|---|---|
-| `prose` | Rich text with guidance as placeholder; `@` mentions objects as live chips (renamed when they are) | Text | The text (V3): it is the author's words, not a model fact |
-| `fields` | The subject's chosen properties, with the properties panel's editors | Property values (model) | Nothing |
-| `relationList` | "X linked to Y" as a list: one row per related object (the path's result), columns of the row object's or the relationship's properties and payload | **+ Add** picks or creates the row object and creates the relationship in one change; removing a row deletes the relationship (offers the object) | Row order override, hidden columns |
-| `perRow` on a list | For each row Y a **child view** (a sequence, a canvas, a matrix) about the subject and Y: a link chip in the row, *Create* when it does not exist | Creating it runs the seed (e.g. the interactions between subject and Y) | The child is an ordinary diagram with `generatedBy: { rule: "<artifact id>/<section>", focusObjectId: Y }`, so the existing unique index guarantees one per row and it is findable from Y (V4) |
-| `view` | An embedded view of any kind, scoped by the subject; open full-size in its own tab | As that view kind | Either an embedded definition or a link to an existing diagram (`diagramId`) |
-| `matrix` (RACI and friends) | A `view` section whose view is a matrix with a cell property | Clicking a cell cycles its value (creates, updates or deletes the relationship) | Nothing |
-| `checklist` | Template checks: required sections filled, `min` rows, matrix checks such as one *A* per row | Nothing | Nothing (computed) |
+The context is a **child diagram** the author draws (a `diagramLink` section): the artifact keeps a link to an ordinary diagram of the template's diagram type, shown as a live preview with *Open* (or, later, edited in place). Nothing is generated; the subject is placed in the middle when the diagram is created, and the rest is the architect's picture.
 
-### 7.3 Behaviour
+The integrations table is a `relationTable` whose **source is that diagram**, not a model query: *one row per connector on the context diagram whose relationship kind is a flow or an interaction*. So the two cannot drift apart:
+
+| Event | Effect |
+|---|---|
+| Draw a connector on the context diagram | A row appears in the table at once, marked *to describe* until its required columns (protocol, payload) are filled |
+| Delete the connector from the diagram (`Delete`) | The row disappears; the relationship stays in the model |
+| **+ Add integration** in the table | Picks or creates the counterpart and the interaction (one change), and places it on the context diagram next to the subject in the same change, so the row has its connector |
+| Edit a cell (protocol, payload, description) | Edits the relationship itself (`setProperties` on relationships, `setPayload`); the context diagram's labels change too |
+| The model has interactions of the subject that are **not on the context diagram** | A banner under the table: "2 integrations in the model are missing from the context: Fraud Screening, Bank Gateway API · *Add to context* · *Ignore*". Ignored ones are remembered in the section state |
+| Per row **Sequence** | A child sequence diagram of that interaction's messages, created on demand (§6, V4) |
+
+The general rule behind this: any component's rows can come from a **path** (the model) or from a **linked diagram's members** (`source: { section: "context", relationships: { kinds: [...] } }`). Binding a table to a diagram makes "every connector must be described" a completeness check the tool enforces, which is the HLD review question architects ask by hand today.
+
+### 7.3 Modelling in the document
+
+| Where | What the author can do | Model change |
+|---|---|---|
+| **Prose** | Type `@` to mention an object (live chip, renamed when the object is); `@+` creates a new object of an allowed type from the text ("@+ Fraud Screening" as an application). *Link to subject* on a chip offers the relationship types the rules allow | Mention: none (stored in the prose). `@+`: `createObject`. Link: `createRelationship` |
+| **Key facts** | Edit values with the properties panel's editors; add another property if the template allows | `setProperties` |
+| **Tables** | Add rows (object + relationship), edit cells, remove rows | Relationship and property edits |
+| **Matrices** | Click cells | Create, delete or set the property of relationships |
+| **Linked diagrams** | Open and draw | Diagram edits |
+
+Every one of these is an ordinary change with an exact inverse: one undo step, visible in history and in every other view.
+
+### 7.4 Behaviour
 
 | Topic | Rule |
 |---|---|
 | **Live** | Every section reads the current model (or the open scenario). Two HLDs that list the same interface show the same protocol |
-| **Completeness** | The artifact header shows *7 of 9 sections complete* and lists what is missing ("Integrations: no sequence for Billing Engine"; "RACI: Settle claim has no A"). The explorer can show it as a decoration (notation §8) |
-| **Subject** | Chosen when the artifact is created (or the artifact is created from the subject's right-click menu: *New ▸ High-level design*). The subject's page lists its artifacts |
+| **Completeness** | The artifact header shows *7 of 9 sections complete* and lists what is missing ("Integrations: Billing Engine has no protocol"; "RACI: Settle claim has no A"). Components contribute their own checks (§8.1). The explorer can show completeness as a decoration (notation §8) |
+| **Subject** | Chosen when the artifact is created (or from the subject's right-click menu: *New ▸ High-level design*). The subject's page lists its artifacts |
 | **Scenarios** | Opened in a scenario, every section shows the scenario's model; a *Compare with baseline* toggle marks rows and cells that differ (M3, with scenario compare) |
 | **Issue** | *Issue v1.0* records `{ label, seq, at, by }` in the artifact; opening an issue renders the model **as of** that sequence (needs "restore a version and as of", M2). Until then an issue exports a frozen copy |
-| **Export** | Markdown, DOCX and PDF render the same section model (the sequence and canvas sections as SVG). Export is the server running `packages/views` plus the web renderers headless (M2 export path) |
+| **Export** | Markdown, DOCX and PDF render the same section model (diagram sections as SVG). Each component supplies its own export fragment (§8.1) |
 | **Template changes** | A new template version adds sections to existing artifacts and keeps prose of removed sections in an *Unplaced text* section, never discarding words |
 
-### 7.4 Why this is not just a wiki page
+### 7.5 Why this is not just a wiki page
 
-The test is the user's own example. In a wiki, "Payments Hub calls Billing Engine, see sequence" is text and a pasted picture. Here the row *is* the `calls` interaction, its protocol column is `interaction.protocol`, its sequence link is a diagram of that interaction's messages, the data matrix finds the payloads those messages carry, and the RACI cells are `raci` relationships the people's own pages list. Changing the protocol in the matrix, the sequence or the explorer changes it in the HLD.
+In a wiki, "Payments Hub calls Billing Engine, see sequence" is text and a pasted picture. Here the connector on the context diagram *is* the `calls` interaction, its row in the integrations table edits `interaction.protocol`, its sequence link is a diagram of that interaction's messages, the data matrix finds the payloads those messages carry, and the RACI cells are `raci` relationships the people's own pages list. Changing the protocol in the table, the sequence or the explorer changes it everywhere.
 
-## 8. Storage and engine
+## 8. The component framework
+
+How documents (and, later, dashboards) are assembled, and what a power user configures versus what a developer builds.
+
+### 8.1 A component
+
+A component is one registered block type. The same definition serves the document, the template designer, completeness and export:
+
+| Part | What it is | Lives in |
+|---|---|---|
+| `key`, `name`, `icon` | Identity in the designer palette | `packages/views` |
+| `config` | A JSON Schema for its settings (paths, columns, cell property, guidance). The designer's settings form is generated from it, so a new component needs no designer code | `packages/views` |
+| `state` | What one artifact stores for this section instance: prose text, the linked diagram id, row order, hidden columns, ignored rows | The artifact's `definition` |
+| `bind` | Its data sources: `$subject`, a path (§3), another section (`{ section: "context" }`), or `$row` inside a repeater | Resolved by `packages/views` |
+| `project` | A **pure** function `(model rows, config, state, bindings) → view model` (rows, cells, chips, findings) | `packages/views` (runs in the browser, the server's export and tests) |
+| `checks` | Completeness findings from the view model (required section empty, a row missing a required column, a matrix rule) | `packages/views` |
+| `render` | The React component that draws the view model and turns gestures into **edits** submitted through the store | `apps/web` (renderer registry) |
+| `export` | Markdown and DOCX fragments from the same view model | `packages/views` (SVG for diagrams from the web renderer, headless) |
+
+Built-in components:
+
+| Component | Shows | Binds to |
+|---|---|---|
+| `prose` | Rich text with `@` mentions and `@+` creation | Subject (for *Link to subject*) |
+| `facts` | Chosen properties of the subject or of `$row` | Subject or row |
+| `diagramLink` | A live preview of a linked diagram, *Open*, *Create* | A diagram type; stores the diagram id |
+| `relationTable` | One row per relationship: counterpart, direction, properties, payload, per-row child link | A path, or a linked diagram's connectors (§7.2) |
+| `list` | One row per object, with columns | A path, or a diagram's members |
+| `matrix` | Rows × columns of relationships or a cell property | Two sources |
+| `sequenceLink` | Per-row child sequence (used inside tables and repeaters) | `$row` |
+| `repeater` | For each row of a source, a block of child sections (e.g. per integration: its facts, its sequence and a prose note) | A source; children see `$row` |
+| `decisionLog` | Decisions and risks related to the subject, as a register | A path (`<-@influence-`) |
+| `heading`, `callout` | Structure and fixed guidance text | Nothing |
+
+### 8.2 Three levels of configuration
+
+"Customisable within the patterns" means each level can change only what the level above allows:
+
+| Level | Who | Configures | Where |
+|---|---|---|---|
+| **Component** | Developer (product, later extensions) | New block types: config schema, projection, renderer, export | Code, in the registry |
+| **Template and pattern** | Power user / model owner | Which components, in which order, with which config; what is required; what authors may change (`lock`, `allow`, `region`) | Template designer (§8.5); stored in the metamodel package |
+| **Artifact** | Author | Content (prose, values, rows, diagrams) and only the freedoms the template grants: add a property to facts, show or hide optional columns, reorder optional sections, add sections from a region's palette | The document itself |
+
+Locks on a template section:
+
+| `lock` | Author may |
+|---|---|
+| `fixed` | Fill it in; nothing else (title, position and config fixed) |
+| `configurable` (default) | Change what `allow` lists (`addProperties`, `columns`, `showAs`, `hide` when not required) |
+| `free` | Change its config entirely, or remove it when not required |
+
+A **region** (`{ "region": "additional", "palette": [...] }`) is a place in the template where authors may insert components from a palette, up to `max`.
+
+### 8.3 Variables and bindings
+
+| Variable | Is |
+|---|---|
+| `$subject` | The artifact's subject object |
+| `$row` | The current row object inside a `relationTable`'s per-row content or a `repeater` (and `$rel` for the row's relationship) |
+| `{ section: "key" }` | Another section's output: a linked diagram's members or connectors, a table's rows |
+| `$template.param` | A pattern parameter (§8.4) |
+
+Name templates use the same variables: `"{subject.name} ↔ {row.name}"`.
+
+### 8.4 Patterns: reusable groups of sections
+
+A **pattern** is a parameterised group of sections, defined once in a package and used by many templates. The integration pattern of §7.2:
+
+```json
+{ "key": "integrationPattern", "name": "Context and integrations",
+  "params": { "diagramType": { "type": "string" }, "flowKinds": { "type": "array" },
+              "columns": { "type": "array" }, "requiredColumns": { "type": "array" },
+              "perRow": { "enum": ["sequence", "none"] } },
+  "sections": [
+    { "key": "context", "title": "Context", "component": "diagramLink",
+      "config": { "diagramType": "$template.diagramType", "placeSubject": "centre" }, "required": true },
+    { "key": "integrations", "title": "Integrations", "component": "relationTable",
+      "config": { "source": { "section": "context", "relationships": { "kinds": "$template.flowKinds" } },
+                  "columns": "$template.columns", "required": "$template.requiredColumns",
+                  "add": { "kinds": "$template.flowKinds", "placeOn": "context" },
+                  "missing": { "from": "$subject", "steps": [ { "kind": "interaction", "dir": "either" } ] },
+                  "perRow": { "component": "sequenceLink", "when": "$template.perRow = sequence" } },
+      "allow": { "columns": true } } ] }
+```
+
+| Rule | Effect |
+|---|---|
+| `use` + `with` | A template includes a pattern and sets its parameters; section keys are prefixed when a pattern is used twice |
+| Overrides | A template may override a pattern section's `title`, `lock` and `allow`, never its bindings (so the pattern's guarantees hold) |
+| `extends` | A template may extend another (`"extends": "hld"`) and insert, after a named section, more sections; the company HLD is the base HLD plus its own |
+| Versions | Patterns and templates are versioned with their package; existing artifacts move to a new version with the rule in §7.4 |
+| Validation | When the package loads, every path, type, property and kind a template or pattern names is checked against the metamodel, and every `add` against the rules, so a template cannot offer an edit the engine would refuse |
+
+Essentials ships the components' default patterns: *Context and integrations*, *Data handled (CRUD matrix)*, *Responsibilities (RACI)*, *Decisions and risks*, and two templates built from them: *High-level design* and *Integration specification*.
+
+### 8.5 The template designer
+
+In the metamodel editor (with A-1's draft and publish): a palette of components and patterns on the left; the template's outline in the middle, rendered live against a **sample subject** the power user picks (the real Payments Hub, so they see what authors will see, including the completeness findings); on the right, the selected section's settings, generated from the component's config schema, with its lock, `allow` and required switches. Saving writes the draft package; publishing migrates existing artifacts as in §7.4.
+
+### 8.6 How it ties into the rest
+
+```
+ metamodel package ─ templates, patterns ─┐
+                                          ▼
+ artifact (diagram, kind document) ─ definition: subject, template version, section states
+                                          │
+            packages/views  ── resolve template (extends, patterns, params) ──► sections
+                            ── bind (subject, paths, linked diagrams, $row) ──► rows
+                            ── project + checks (pure) ─────────────────────► view models, findings
+                                          │
+            apps/web        ── renderer registry ──► document page, designer preview
+                            ── gestures ──► edits ──► ModelStore ──► engine (same as every other view)
+            server          ── export: the same projections + renderers headless ──► DOCX / PDF / Markdown
+```
+
+Nothing in this chain writes except the gestures, and they go through the change engine like every other edit.
+
+## 9. Storage and engine
 
 | Item | Where | Edit |
 |---|---|---|
@@ -202,12 +341,16 @@ The test is the user's own example. In a wiki, "Payments Hub calls Billing Engin
 | Lifeline order | The occurrence's `x` | `moveObjectOccurrence` (unchanged) |
 | Fragments, self-call notes | Annotations, `content.shape: "fragment" \| "note"` | Annotation edits (unchanged) |
 | Per-row child views | Ordinary diagrams with `generatedBy` | `createDiagram` gains optional `generatedBy` |
+| Linked diagrams (`diagramLink`, e.g. the context) | Ordinary diagrams; the section state holds the id. Deleting the diagram leaves the section showing *Diagram deleted* with Restore and Create new | `setViewDefinition` on the artifact, `createDiagram` in the same change when created from the section |
+| Prose | Section state: a small rich-text tree (paragraphs, lists, emphasis, links) where a mention is `{ mention: objectId }`, so renames need no rewrite | `setViewDefinition` |
+| Ignored rows (§7.2 missing banner), hidden columns, row order | Section state | `setViewDefinition` |
 | RACI | Essentials 1.5.0: object type `role` (category `actor`), relationship type `raci` (kind `assignment`, actor → behaviour/deliverable), list property `raci.code` (R, A, C, I) on it | Needs `setProperties` on **relationships** (today objects only, semantics Sem-3 note) |
-| Templates | Diagram types of kind `document` in the package (Essentials ships an `hld` example) | Metamodel edits; the A-1 metamodel editor lists them with the other diagram types |
+| Templates and patterns | Diagram types of kind `document` (with `sections`, `extends`) and a new package section `patterns`; Essentials ships the patterns of §8.4 and the *High-level design* and *Integration specification* templates | Metamodel edits through A-1's draft and publish |
+| Relationship properties edited in tables (protocol, description) | The relationship's properties | `setProperties` extended to relationships (today objects only, semantics Sem-3 note), with its inverse |
 
 The engine stays pure and knows nothing about layouts: it validates `definition` only for size (≤ 256 kB) and that ids in it exist when they are objects or diagrams it must keep consistent (the subject: deleting it asks whether to keep the artifact, which then shows *Subject deleted* with Restore). Projections, checks and layouts run in `packages/views` and the web app.
 
-## 9. How others do it
+## 10. How others do it
 
 From public documentation, not hands-on testing.
 
@@ -221,16 +364,19 @@ From public documentation, not hands-on testing.
 
 What the comparison shows: Sparx has every view kind but generates documents one way, out of the model; nobody lets the document be the editing surface. That is the opening: the design artifact is where architects already work, so making it the model's front door is what makes the tool "helpful for design work".
 
-## 10. Slices
+## 11. Slices
+
+Reordered 2026-10-07 after the product owner's review, to reach the document view early:
 
 | Slice | Delivers | Needs |
 |---|---|---|
-| **V-1** | View framework + matrix: diagram-type `kind`, diagram `definition` and `setViewDefinition` (migration 008), `packages/views` with structured paths, the centre tab choosing a renderer by kind, *New ▸ Matrix*; the matrix view (rows and columns by type or path, cells by types or kinds, create and delete, group headers by containment, pivot, hide empty, counts); Essentials 1.5.0 *Application × Capability* matrix type | The shared grid component (from A-1 if it lands first) |
-| **V-2** | List and specification views; *Show as* list / specification / matrix on any canvas | V-1 |
-| **V-3** | Sequence view: lifelines with renditions, messages from interactions, `step`, computed activations, response pairing, add message / response gestures, reorder, fragments; *Generate from interactions*; Show as canvas / list | V-1, Sem-3 |
-| **V-4** | Design artifacts: `document` diagram types, subject, sections `prose`, `fields`, `relationList` with `perRow` child views, embedded `view`, completeness; the Essentials `hld` template; *New ▸ High-level design* from an object | V-1–V-3 |
-| **V-5** | Cell properties and RACI: `setProperties` on relationships, Essentials `role` + `raci` + `raci.code`, matrix cells that cycle a property, matrix checks | V-1 |
-| **V-6** | Issue and export: issued versions, Markdown / DOCX / PDF export of artifacts and views | V-4; "as of" from M2 for live issues |
-| **V-7** | Template designer in the metamodel editor (sections as a form with a live preview on a chosen subject) | V-4, A-1 |
+| **V-1** | View framework + matrix: diagram-type `kind`, diagram `definition` and `setViewDefinition` (migration 008), `packages/views` (structured paths, component registry, projections), the centre tab choosing a renderer by kind, *New ▸ Matrix*; the matrix view (rows and columns by type or path, cells by types or kinds, create and delete, group headers by containment, pivot, hide empty, counts), on a grid extracted from A-1's connection matrix; Essentials *Application × Capability* matrix type | A-1 merged (for the grid) |
+| **V-2** | Document core: `document` kind, subject, the components `prose` (with `@` mentions), `facts`, `diagramLink` and `relationTable` (bound to a path or to a linked diagram's connectors, missing banner, add places on the diagram), completeness; `setProperties` on relationships; the Essentials *High-level design* template written in JSON; *New ▸ High-level design* from an object | V-1 |
+| **V-3** | Sequence view (§6) and the per-row `sequenceLink` | V-1, Sem-3 |
+| **V-4** | Patterns, locks, `allow`, regions, `extends`, `repeater`, `@+` creation in prose; Essentials patterns and the *Integration specification* template | V-2 |
+| **V-5** | Template designer in the metamodel editor (palette, outline with live preview on a sample subject, settings forms from config schemas) | V-4, A-1 |
+| **V-6** | List and specification views; *Show as* on any canvas | V-1 |
+| **V-7** | Cell properties: RACI (`role`, `raci`, `raci.code`) and the CRUD data matrix; matrix checks | V-1, V-2 |
+| **V-8** | Issue and export: issued versions, Markdown / DOCX / PDF | V-2; "as of" from M2 for live issues |
 
-V-1 first: the framework pieces are small and the matrix is the view asked for by name; every later slice is then one renderer plus its gestures.
+V-1 first: the framework pieces (definition, registry, paths) are what every later slice plugs into, and the matrix proves them on the view asked for by name. V-2 follows straight after, so the document view is usable two slices in.
