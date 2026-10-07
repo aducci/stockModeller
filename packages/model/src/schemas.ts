@@ -82,6 +82,9 @@ export const objectOccurrenceSchema = z.strictObject({
   pinned: z.boolean().default(false),
 });
 
+/** A fractional-index key (slice V-3). */
+const messageStep = z.string().regex(/^[0-9A-Za-z]{1,64}$/);
+
 export const relationshipOccurrenceSchema = z.strictObject({
   id,
   relationshipId: id,
@@ -91,6 +94,7 @@ export const relationshipOccurrenceSchema = z.strictObject({
   route: route.default({ mode: "auto" }),
   labelPosition: z.number().min(0).max(1).default(0.5),
   style: lineStyle.default({}),
+  step: messageStep.optional(),
 });
 
 const annotationContent = z.union([
@@ -219,6 +223,12 @@ export const editSchema = z.discriminatedUnion("edit", [
   z.strictObject({ edit: z.literal("setDiagramProperties"), ...onExisting, set: properties }),
   z.strictObject({ edit: z.literal("deleteDiagram"), id }),
   z.strictObject({ edit: z.literal("setViewDefinition"), diagramId: id, baseVersion: version, set: viewDefinition }),
+  z.strictObject({
+    edit: z.literal("setMessageStep"),
+    diagramId: id,
+    occurrenceId: id,
+    step: messageStep.nullable(),
+  }),
   z.strictObject({ edit: z.literal("addObjectOccurrence"), diagramId: id, occurrence: objectOccurrenceSchema }),
   z.strictObject({
     edit: z.literal("moveObjectOccurrence"),

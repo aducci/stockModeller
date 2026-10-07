@@ -148,6 +148,8 @@ export type DiagramEdit =
       route: RelationshipOccurrence["route"];
       labelPosition?: number;
     }
+  /** build (slice V-3): moves a message in a sequence view; `null` drops the step. Last writer wins, like layout. */
+  | { edit: "setMessageStep"; diagramId: Id; occurrenceId: Id; step: string | null }
   | { edit: "addAnnotation"; diagramId: Id; annotation: Annotation }
   | { edit: "updateAnnotation"; diagramId: Id; annotationId: Id; set: Partial<Omit<Annotation, "id">> }
   /** build: annotations could be added and updated but not removed. */

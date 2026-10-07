@@ -74,7 +74,10 @@
             "label": "Add integration",
             "kinds": ["flow", "interaction"]
           },
-          "missing": true
+          "missing": true,
+          "perRow": {
+            "sequence": "sequence"
+          }
         }
       },
       {

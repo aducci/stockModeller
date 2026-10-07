@@ -3,8 +3,11 @@
 import type { Id, PropertyKey, SemanticCategory, SemanticKind, TypeKey } from "./model";
 
 /** What a diagram of a type shows and how it is laid out (§2). Absent = canvas. */
-export type ViewKind = "canvas" | "matrix" | "document";
-export const VIEW_KINDS: readonly ViewKind[] = ["canvas", "matrix", "document"];
+export type ViewKind = "canvas" | "matrix" | "document" | "sequence";
+export const VIEW_KINDS: readonly ViewKind[] = ["canvas", "matrix", "document", "sequence"];
+
+/** Kinds whose diagrams hold occurrences drawn by hand (lifelines and messages are occurrences in a sequence). */
+export const DRAWN_KINDS: readonly ViewKind[] = ["canvas", "sequence"];
 
 /** One step of a structured path (§3): follow relationships by type or by semantic kind, then filter what is reached. */
 export interface ScopeStep {
@@ -75,6 +78,8 @@ export interface RelationTableConfig {
   add?: { label?: string; types?: TypeKey[]; kinds?: SemanticKind[] };
   /** Warn about the subject's relationships of the source's types or kinds that are not on the linked diagram. */
   missing?: boolean;
+  /** Per row, a child sequence diagram of this type for the row's interaction, created on demand (§7.2, V4). */
+  perRow?: { sequence: TypeKey };
 }
 
 /**
@@ -101,4 +106,6 @@ export interface DiagramLinkState {
 export interface RelationTableState {
   /** Relationships the missing banner no longer mentions. */
   ignored?: Id[];
+  /** Each row's sequence diagram, by the row's relationship. */
+  sequences?: Record<Id, Id>;
 }

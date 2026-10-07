@@ -270,6 +270,8 @@ export interface RelationshipOccurrence {
   route: { mode: "auto" } | { mode: "manual"; points: Array<[number, number]> };
   labelPosition: number;
   style: Partial<LineStyle>;
+  /** build (slice V-3): a message's place in a sequence view, a fractional-index key; absent elsewhere. */
+  step?: string;
 }
 
 export interface Annotation extends Rect {

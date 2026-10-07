@@ -90,7 +90,7 @@ describeDb("engine + database", () => {
     expect(sortByKey(metamodel.valueLists)).toEqual(sortByKey(pkg.valueLists));
     expect(sortByKey(metamodel.validationRules)).toEqual(sortByKey(pkg.validationRules));
     expect(metamodel.relationshipRules).toHaveLength(pkg.relationshipRules!.length);
-    expect(diagramTypes).toEqual(essentials.diagramTypes);
+    expect(sortByKey(diagramTypes)).toEqual(sortByKey(essentials.diagramTypes));
   });
 
   let committedBaseline: ModelState;

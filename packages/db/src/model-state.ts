@@ -196,6 +196,7 @@ function fromRelationshipOccurrence(r: any): RelationshipOccurrenceRow {
     route: r.route,
     labelPosition: r.label_position,
     style: r.style,
+    ...(r.step !== null && r.step !== undefined ? { step: r.step } : {}),
     deleted: r.deleted,
     scenarioId: r.scenario_id,
   };
@@ -350,6 +351,7 @@ function toDatabase(touched: TouchedRow, ctx: WriteContext): Record<string, unkn
         route: json(r.route),
         label_position: r.labelPosition,
         style: json(r.style),
+        step: r.step ?? null,
         deleted: r.deleted,
       };
     }

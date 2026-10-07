@@ -3,3 +3,4 @@
 export * from "./scope";
 export * from "./matrix";
 export * from "./document";
+export * from "./sequence";

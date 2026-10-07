@@ -2383,3 +2383,132 @@ button.toggle .badge {
     max-height: none;
   }
 }
+
+/* ---------------------------------------------------------------- sequence view (views §6) */
+.sequence-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.sequence-toolbar .sequence-selected {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+.sequence-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--canvas);
+}
+.sequence {
+  display: block;
+  user-select: none;
+}
+.seq-stem {
+  stroke: var(--fg-2);
+  stroke-dasharray: 5 4;
+}
+.seq-hit {
+  fill: transparent;
+  cursor: crosshair;
+}
+.seq-head-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 0 6px;
+  border: 1.5px solid var(--sky-ink);
+  border-radius: 6px;
+  background: var(--sky-fill);
+  font-size: 13px;
+}
+.seq-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  color: var(--fg);
+}
+.seq-lane-actions {
+  display: none;
+}
+.seq-head-box:hover .seq-lane-actions {
+  display: inline-flex;
+}
+.seq-lane-actions button {
+  padding: 0 4px;
+  min-width: 0;
+}
+.seq-activation {
+  fill: var(--pane);
+  stroke: var(--sky-ink);
+}
+.seq-line {
+  stroke: var(--fg);
+  stroke-width: 1.5;
+}
+.seq-message.response .seq-line {
+  stroke-dasharray: 6 4;
+}
+.seq-hit-line {
+  stroke: transparent;
+  stroke-width: 14;
+  cursor: pointer;
+}
+.seq-message text {
+  font-size: 12px;
+  fill: var(--fg);
+  cursor: pointer;
+}
+.seq-message.selected .seq-line {
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}
+.seq-message.selected text {
+  fill: var(--accent);
+  font-weight: 600;
+}
+.seq-head.filled {
+  fill: var(--fg);
+}
+.seq-head.open {
+  fill: none;
+  stroke: var(--fg);
+  stroke-width: 1.5;
+}
+.sequence-form {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--pane-2);
+}
+.sequence-form-row,
+.sequence-choices {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.sequence-choices {
+  margin-top: 8px;
+}
+.sequence-steps {
+  border-collapse: collapse;
+  font-size: 13px;
+  margin: 8px 12px;
+}
+.sequence-steps th,
+.sequence-steps td {
+  border-bottom: 1px solid var(--line);
+  padding: 3px 8px;
+  text-align: left;
+}
+.sequence-steps tbody tr {
+  cursor: pointer;
+}

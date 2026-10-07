@@ -171,6 +171,7 @@ export interface RelationshipOccurrenceTable extends ScenarioRow {
   route: Json;
   label_position: number;
   style: Json<Record<string, unknown>>;
+  step: string | null;
 }
 
 export interface AnnotationTable extends ScenarioRow {

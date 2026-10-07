@@ -391,6 +391,11 @@ function checkDocument(
       kinds(c.source.relationships.kinds, at);
       relTypes(c.add?.types, at);
       kinds(c.add?.kinds, at);
+      if (c.perRow) {
+        const seq = mm.diagramType(c.perRow.sequence);
+        if (seq?.definition.kind !== "sequence")
+          problems.push(`${at} has rows open "${c.perRow.sequence}", which is not a sequence type`);
+      }
       if (c.source.section !== undefined) {
         const linked = doc.sections.find((x) => x.key === c.source.section);
         if (linked?.component !== "diagramLink")

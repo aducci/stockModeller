@@ -491,7 +491,7 @@ components:
           enum: [createObject, setProperties, renameObject, moveToFolder, changeObjectType, deleteObject,
                  createRelationship, reconnectRelationship, changeRelationshipType, setPayload, deleteRelationship,
                  createFolder, renameFolder, moveFolder, deleteFolder,
-                 createDiagram, updateDiagram, deleteDiagram, setViewDefinition,
+                 createDiagram, updateDiagram, deleteDiagram, setViewDefinition, setMessageStep,
                  addObjectOccurrence, moveObjectOccurrence, styleOccurrence, removeOccurrence,
                  addRelationshipOccurrence, routeRelationshipOccurrence, addAnnotation, updateAnnotation, removeAnnotation,
                  setTags, setDescription, confirmProperties, setConfirmations,
@@ -563,6 +563,7 @@ components:
               targetOccurrenceId: { type: string }
               shownAs: { type: string, enum: [line, nesting] }
               route: { type: object }
+              step: { type: string, description: 'Order in a sequence view (edit setMessageStep); absent elsewhere' }
         annotations: { type: array, items: { type: object } }
     Comparison:
       type: object

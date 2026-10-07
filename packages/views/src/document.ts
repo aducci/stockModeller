@@ -68,6 +68,11 @@ export interface TableRow {
   cells: Record<string, TableCell>;
   /** Labels of the required columns this row has not filled. */
   toDescribe: string[];
+  /**
+   * With a template's `perRow` sequence: the row's sequence diagram once created, `undefined` before, and `null` when
+   * the row is not an interaction (only interactions have messages).
+   */
+  sequence: DiagramRow | undefined | null;
 }
 export interface TableColumnModel {
   key: string;
@@ -215,6 +220,8 @@ function projectTable(
   relationships = relationships.filter((r) => matchesRelationship(metamodel, r, filter));
 
   const required = new Set(config.required ?? []);
+  const sequences = ((ctx.definition[section.key] as { sequences?: Record<Id, Id> } | undefined)?.sequences ??
+    {}) as Record<Id, Id>;
   const rows: TableRow[] = relationships.map((relationship) => {
     const direction =
       subject?.id === relationship.sourceId ? "out" : subject?.id === relationship.targetId ? "in" : null;
@@ -240,7 +247,10 @@ function projectTable(
     const toDescribe = columns
       .filter((c) => required.has(c.key) && cells[c.key]!.applicable && isEmpty(cells[c.key]!.value))
       .map((c) => c.label);
-    return { relationship, counterpart, direction, cells, toDescribe };
+    const interaction = metamodel.relationshipType(relationship.type)?.semantic === "interaction";
+    const sequenceId = sequences[relationship.id];
+    const sequence = !config.perRow || !interaction ? null : sequenceId ? state.diagrams.get(sequenceId) : undefined;
+    return { relationship, counterpart, direction, cells, toDescribe, sequence };
   });
   rows.sort(
     (a, b) =>

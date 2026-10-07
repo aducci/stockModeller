@@ -19,6 +19,7 @@ import {
 import { useModel, useWorkbench } from "../state/workbench";
 import { notationFor } from "../notation";
 import { createLinkedDiagramPlan, placeRelationshipEdits } from "../document";
+import { sequenceForInteractionEdits } from "../sequence";
 import { edgePoint, layoutBoxes } from "../diagram";
 import { displayValue, fieldGroups } from "../inspector";
 import { byName } from "../text";
@@ -565,6 +566,7 @@ function RelationTableSection({ document, section, model, subject }: SectionProp
   const edit = useWorkbench((s) => s.edit);
   const select = useWorkbench((s) => s.select);
   const [adding, setAdding] = useState<Id | "" | null>(null);
+  const openTab = useWorkbench((s) => s.openTab);
   const { config } = model;
   const linkedDiagram = model.linked?.diagram;
   const name = (oid: Id) => state.objects.get(oid)?.name ?? "?";
@@ -631,6 +633,27 @@ function RelationTableSection({ document, section, model, subject }: SectionProp
     ]);
   };
   const required = new Set(config.required ?? []);
+  // A row's sequence (decision V4): created on demand with the interaction's two ends and messages, and linked in
+  // the section's state, in one change.
+  const openSequence = (row: TableRow) => {
+    if (row.sequence) return openTab({ kind: "diagram", id: row.sequence.id });
+    if (!config.perRow) return;
+    const plan = sequenceForInteractionEdits(
+      state,
+      metamodel,
+      row.relationship.id,
+      config.perRow.sequence,
+      document.folderId,
+    );
+    if ("error" in plan) return;
+    const previous = (document.definition?.[section.key] as { sequences?: Record<Id, Id> } | undefined) ?? {};
+    const diagramId = (plan.edits[0] as { id: Id }).id;
+    const link = setSection(document, section.key, {
+      ...previous,
+      sequences: { ...previous.sequences, [row.relationship.id]: diagramId },
+    });
+    if (edit(`Create ${plan.name}`, [...plan.edits, link])) openTab({ kind: "diagram", id: diagramId });
+  };
 
   return (
     <div className="doc-table">
@@ -661,6 +684,7 @@ function RelationTableSection({ document, section, model, subject }: SectionProp
                 )}
               </th>
             ))}
+            {config.perRow && <th scope="col">Sequence</th>}
             <th scope="col" className="doc-row-state">
               <span className="visually-hidden">State</span>
             </th>
@@ -669,7 +693,7 @@ function RelationTableSection({ document, section, model, subject }: SectionProp
         <tbody>
           {model.rows.length === 0 && (
             <tr>
-              <td colSpan={model.columns.length + 2} className="muted">
+              <td colSpan={model.columns.length + (config.perRow ? 3 : 2)} className="muted">
                 {model.linked ? `No ${kindsText(config)} on the ${model.linked.title.toLowerCase()} yet.` : "None yet."}
               </td>
             </tr>
@@ -682,6 +706,7 @@ function RelationTableSection({ document, section, model, subject }: SectionProp
               state={state}
               metamodel={metamodel}
               onSelect={() => select({ kind: "relationship", id: row.relationship.id })}
+              onSequence={config.perRow ? () => openSequence(row) : undefined}
             />
           ))}
         </tbody>
@@ -724,8 +749,9 @@ function TableRowView(props: {
   state: ModelState;
   metamodel: Metamodel;
   onSelect(): void;
+  onSequence?(): void;
 }) {
-  const { row, model, state, metamodel, onSelect } = props;
+  const { row, model, state, metamodel, onSelect, onSequence } = props;
   const edit = useWorkbench((s) => s.edit);
   const rel = row.relationship;
   const type = metamodel.relationshipType(rel.type);
@@ -788,6 +814,24 @@ function TableRowView(props: {
           </td>
         );
       })}
+      {onSequence && (
+        <td>
+          {row.sequence === null ? (
+            <span className="muted" title="Only interactions have messages">
+              –
+            </span>
+          ) : (
+            <button
+              className="link"
+              aria-label={`${row.sequence ? "Open" : "Create"} the sequence with ${row.counterpart?.name ?? "row"}`}
+              title={row.sequence?.name}
+              onClick={onSequence}
+            >
+              {row.sequence ? "⇅ Open" : "+ Create"}
+            </button>
+          )}
+        </td>
+      )}
       <td className="doc-row-state">
         {row.toDescribe.length > 0 && (
           <span className="doc-badge" title={`Missing: ${row.toDescribe.join(", ")}`}>

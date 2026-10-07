@@ -25,7 +25,8 @@
       "enum": [
         "canvas",
         "matrix",
-        "document"
+        "document",
+        "sequence"
       ],
       "default": "canvas",
       "description": "The view kind. See 02-model/views-and-design-artifacts.md §2."
@@ -365,6 +366,18 @@
                       },
                       "missing": {
                         "type": "boolean"
+                      },
+                      "perRow": {
+                        "type": "object",
+                        "required": [
+                          "sequence"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "sequence": {
+                            "type": "string"
+                          }
+                        }
                       }
                     }
                   }

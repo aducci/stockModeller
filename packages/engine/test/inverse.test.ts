@@ -248,6 +248,7 @@ function candidates(state: ModelState, next: () => number, n: number): Edit[] {
           set: { x: n, content: { shape: "frame", title: "T" } },
         }
       : null,
+    ro ? { edit: "setMessageStep", diagramId: ro.diagramId, occurrenceId: ro.id, step: pick([`a${n}`, null])! } : null,
     an ? { edit: "removeAnnotation", diagramId: an.diagramId, annotationId: an.id } : null,
   ];
   return all.filter((e): e is Edit => e !== null);

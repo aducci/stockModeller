@@ -173,6 +173,7 @@ export interface RelationshipOccurrence {
   shownAs: "line" | "nesting";
   route: { mode: "auto" } | { mode: "manual"; points: Array<[number, number]> };
   labelPosition: number; style: Partial<LineStyle>;
+  step?: string;                  // build (slice V-3): order in a sequence view (fractional-index key)
 }
 
 export interface Annotation extends Rect {

@@ -4,6 +4,7 @@
 import {
   LEVEL_PROPERTY,
   isRendition,
+  DRAWN_KINDS,
   MAX_EDITS_PER_CHANGE,
   SUBJECT_KEY,
   type Actor,
@@ -246,6 +247,8 @@ class Transaction {
         return this.deleteDiagramEdit(edit);
       case "setViewDefinition":
         return this.setViewDefinition(edit);
+      case "setMessageStep":
+        return this.setMessageStep(edit);
       case "addObjectOccurrence":
         return this.addObjectOccurrence(edit);
       case "moveObjectOccurrence":
@@ -1186,7 +1189,7 @@ class Transaction {
   /** Only canvases hold occurrences; a matrix or other view shows its scope (views-and-design-artifacts.md §2). */
   private requireCanvas(type: ResolvedDiagramType): void {
     const kind = type.definition.kind ?? "canvas";
-    if (kind !== "canvas")
+    if (!DRAWN_KINDS.includes(kind))
       this.invalid("diagramId", `A ${kind} view shows what its definition selects; it has no symbols`);
   }
 
@@ -1471,6 +1474,16 @@ class Transaction {
       route: ro.route,
       labelPosition: ro.labelPosition,
     });
+    return ro.id;
+  }
+
+  /** build (slice V-3): a message's place in a sequence view. */
+  private setMessageStep(e: Extract<DiagramEdit, { edit: "setMessageStep" }>): Id {
+    const { diagram } = this.diagramOf(e.diagramId);
+    const ro = this.occurrenceOn("relationshipOccurrences", e.occurrenceId, diagram.id);
+    const { step: previous, ...rest } = ro;
+    this.write("relationshipOccurrences", e.step === null ? rest : { ...rest, step: e.step });
+    this.step({ edit: "setMessageStep", diagramId: diagram.id, occurrenceId: ro.id, step: previous ?? null });
     return ro.id;
   }
 

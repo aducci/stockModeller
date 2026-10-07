@@ -91,7 +91,10 @@
               "interaction"
             ]
           },
-          "missing": true
+          "missing": true,
+          "perRow": {
+            "sequence": "sequence"
+          }
         }
       },
       {

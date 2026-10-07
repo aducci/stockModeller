@@ -10,6 +10,7 @@ describe("Essentials", () => {
       readDesignJson("05-structures/example-diagram-type.json"),
       readDesignJson("05-structures/example-matrix-type.json"),
       readDesignJson("05-structures/example-context-type.json"),
+      readDesignJson("05-structures/example-sequence-type.json"),
       readDesignJson("05-structures/example-hld-type.json"),
     ]);
   });
