@@ -15,6 +15,11 @@
     "nesting": { "enum": ["nested", "lines"], "default": "nested", "description": "How nesting relationships are shown" },
     "showExistingRelationships": { "type": "boolean", "default": true, "description": "Offer relationships between shown objects as faint lines" },
     "symbols": { "type": "object", "additionalProperties": { "type": "object" }, "description": "Object type key → symbol override" },
+    "properties": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Property types diagrams of this type carry (build: slice A-1b)"
+    },
     "renditions": {
       "type": "object", "additionalProperties": false,
       "description": "Which rendition occurrences start in, and the zoom levels below which every occurrence draws smaller. See 02-model/notation-and-metamodel-admin.md §4.",

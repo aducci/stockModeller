@@ -154,6 +154,31 @@ export function fieldGroups(
   return { groups: [...groups.values()].filter((g) => g.fields.length > 0), hidden };
 }
 
+export interface StrandedValue {
+  key: string;
+  name: string;
+  display: string;
+}
+
+/**
+ * Values an item holds for properties its type no longer carries (slice A-1b): a publish keeps them, and the panel
+ * lists them so someone can clear them. Named after the property type when it still exists.
+ */
+export function strandedValues(
+  metamodel: Metamodel,
+  carried: ReadonlySet<string>,
+  values: Readonly<Record<string, PropertyValue>>,
+): StrandedValue[] {
+  return Object.entries(values)
+    .filter(([key, value]) => !carried.has(key) && !isEmpty(value))
+    .map(([key, value]) => {
+      const pt = metamodel.propertyType(key);
+      const list = pt?.valueList ? metamodel.valueList(pt.valueList) : undefined;
+      return { key, name: pt?.name ?? key, display: displayValue(value, list) };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
 /** A user's own property set: a key unlikely to collide with a package's, and only properties the type has. */
 export function mySet(name: string, properties: Iterable<string>, now = Date.now()): PropertySet {
   return { key: `my${now.toString(36)}`, name: name.trim(), properties: [...properties] };

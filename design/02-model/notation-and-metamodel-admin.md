@@ -382,7 +382,17 @@ Rule endpoints therefore become: a type key, `*`, an abstract type (inherited th
 - **Draft:** every edit changes a draft of the relationship rules kept in the browser; a bar says "n changes not published" with *Discard* and *Review and publish…*. The review lists the rules added, removed and changed, and the combinations in use that the new rules would refuse (they stay and are flagged; nothing is deleted).
 - **Matrix:** rows and columns are every object type in tree order (an abstract parent such as *Application (any)* above its subtypes). A rule on a parent or on `*` shows as a lighter, inherited dot that can only be changed where it is written. Dots are coloured by kind family: structure (containment, composition, aggregation, specialisation), dependency (realisation, representation, serving, assignment, access, association), behaviour and flow (flow, trigger, interaction), influence; hollow means warn only.
 - **Publishing:** `PUT /repositories/{repo}/metamodel/relationship-rules` with the version the draft was edited from (409 if someone published meanwhile; `?preview=true` reports without publishing). It replaces the `relationship` rows of the `rule` table, sets the next patch version and notifies `connectome_metamodel`; every server instance drops its compiled metamodel and asks its open sessions to reload (`resync`).
-- **Not yet:** the map, learning from data, category and level endpoints (A-2); editing types (A-1b); cardinality is kept but not shown.
+- **Not yet:** the map, learning from data, category and level endpoints (A-2); editing properties (A-1b, built: §10.6b) and types (A-1c); cardinality is kept but not shown.
+
+### 10.6b Built in slice A-1b: properties
+
+- **Where:** the Metamodel tab gains a **Properties** view, and the **Types** view becomes editable: select an object, relationship or diagram type to see its own properties, the ones it inherits or has built in, and to add or remove them.
+- **Properties view:** every property type by group (built-in ones read-only), with how many types carry it and how many items hold a value. A form edits its name, group, data type (fixed while items hold values), unit, how the panel shows it, *required* and help; list properties edit their values (label, colour, order; a value in use cannot be removed); **Used by** ticks the object types (inherited ones shown, ticked and fixed), relationship types and diagram types that carry it. A new property's key follows its group and name until it is published, then it is permanent.
+- **One draft:** the whole metamodel (package and diagram types) is the draft; the rule views of A-1 edit the same draft. The review lists properties added, changed and removed, list changes, properties given to and taken from types, rule changes, and the effect on the model.
+- **Publishing:** `PUT /repositories/{repo}/metamodel` with the draft and its base version (`?preview=true` to check only; 409 if someone published meanwhile). The server checks the package against its schema, compiles it, and refuses (422) a draft that would break stored data: a type removed while items use it, a data type changed while values exist, a list value removed while in use. It then rewrites the metamodel tables, sets the next patch version and notifies `connectome_metamodel`, as A-1 does.
+- **Values are never touched by a publish.** Taking a property from a type keeps the stored values; the review counts them, and the properties panel lists them under *Not on this type* with *Clear*.
+- **Panel:** relationships and diagrams now have editable properties too (edits `setRelationshipProperties`, `setDiagramProperties`), so objects, relationships and diagrams all show exactly the properties their type carries.
+- **Not yet:** creating, renaming or removing object, relationship and diagram types (A-1c); calculated properties and formulas; moving values from one property to another.
 
 ### 10.7 Notation studio
 
@@ -444,7 +454,8 @@ The engine stays pure: style rules, markers, decorations, compartment queries an
 | **N-6** | Zones | N-5 |
 | **N-7** | Ports: anchors bound to objects by a path, `side: auto`, connecting straight to a port | N-2a, N-2b |
 | **A-1** ✅ | Metamodel menu and tab: types (read-only), connection matrix, rule sentences, try a connection, over one draft of the relationship rules; review with the effect on existing relationships; publish as the next version, picked up by every open session | Nothing new: the rules are rows of the `rule` table |
-| **A-1b** | Editing types: new object and relationship types, rename, parent, category, level, properties; breaking edits with a migration preview ([metamodel §7](metamodel.md#7-versions-and-packages)) | A-1 |
+| **A-1b** ✅ | Properties: property types and value lists, which object, relationship and diagram types carry them, editable relationship and diagram properties, publishing the whole metamodel with an impact check (§10.6b) | A-1 |
+| **A-1c** | Editing types: new object and relationship types, rename, parent, category, level; breaking edits with a migration preview ([metamodel §7](metamodel.md#7-versions-and-packages)) | A-1 |
 | **A-2** | Metamodel map; learn from data; category and level rule endpoints | A-1 |
 | **A-3** | Notation studio (glyph editor, rendition and rule previews) | N-3, A-1 |
 

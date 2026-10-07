@@ -4,6 +4,7 @@ import {
   MetamodelError,
   applyChange,
   invertLog,
+  metamodelImpact,
   newlyRefused,
   type Combination,
   type ModelState,
@@ -21,6 +22,7 @@ import {
   lockRepository,
   markWritten,
   repositorySeq,
+  saveMetamodel,
   saveRelationshipRules,
   withWorkspace,
   type Connection,
@@ -31,7 +33,10 @@ import {
 import {
   parseChange,
   ulid,
+  validateDiagramType,
+  validatePackage,
   type ChangeSource,
+  type DiagramType,
   type Edit,
   type MetamodelPackage,
   type RuleFinding,
@@ -71,6 +76,17 @@ export interface RulesResult {
   /** Combinations the baseline uses that the old rules allow and the new ones refuse; they stay, flagged. */
   newlyRefused: Combination[];
 }
+
+export interface MetamodelResult extends RulesResult {
+  /** Values the new types stop carrying, per property; they stay stored and the panel lists them. */
+  stranded: { propertyType: string; count: number }[];
+}
+
+const draftInvalid = (problems: string[]) =>
+  invalid(
+    "The metamodel cannot be published",
+    problems.slice(0, 20).map((message) => ({ property: "metamodel", message })),
+  );
 
 /** The next patch version: 1.4.0 → 1.4.1. */
 export function nextVersion(version: string): string {
@@ -245,6 +261,69 @@ export class ModelService {
         const result = { version, preview, newlyRefused: newlyRefused(view.state, before, after) };
         if (preview) return result;
         await saveRelationshipRules(tx, principal.workspaceId, repositoryId, body.relationshipRules, version);
+        entry.metamodel = undefined;
+        return result;
+      }),
+    );
+  }
+
+  /**
+   * Replaces the repository's whole metamodel with an edited draft (slice A-1b: property types, value lists, which
+   * types carry which properties, rules) and publishes it as a new metamodel version. Stored values are never
+   * changed: values a type stops carrying are kept and reported. Refused (422) when the draft does not compile or
+   * would break stored data (metamodelImpact); 409 when someone published meanwhile.
+   */
+  async publishMetamodel(
+    principal: Principal,
+    repositoryId: string,
+    body: { baseVersion: string; metamodel: Omit<MetamodelPackage, "version">; diagramTypes: DiagramType[] },
+    preview: boolean,
+  ): Promise<MetamodelResult> {
+    const entry = this.cache.entry(repositoryId);
+    return entry.mutex.run(() =>
+      withWorkspace(this.conn, principal.workspaceId, async (tx) => {
+        const { repository } = await this.resolve(tx, repositoryId, undefined);
+        const seq = await lockRepository(tx, repositoryId);
+        const current = await loadMetamodelPackage(tx, repositoryId);
+        if (current.metamodel.version !== body.baseVersion) {
+          throw new ApiError(
+            409,
+            "conflict",
+            `The metamodel is at version ${current.metamodel.version} now; reload to see what changed`,
+          );
+        }
+        const version = nextVersion(current.metamodel.version);
+        const pkg = { ...body.metamodel, version } as MetamodelPackage;
+        const schemaProblems = [
+          ...(() => {
+            const r = validatePackage(pkg);
+            return r.ok ? [] : r.errors;
+          })(),
+          ...body.diagramTypes.flatMap((d) => {
+            const r = validateDiagramType(d);
+            return r.ok ? [] : r.errors.map((e) => `Diagram type ${d.key}: ${e}`);
+          }),
+        ];
+        if (schemaProblems.length > 0) throw draftInvalid(schemaProblems);
+        let after: Metamodel;
+        try {
+          after = Metamodel.compile(pkg, body.diagramTypes);
+        } catch (error) {
+          if (error instanceof MetamodelError) throw draftInvalid(error.problems);
+          throw error;
+        }
+        const before = Metamodel.compile(current.metamodel, current.diagramTypes);
+        const view = await this.current(tx, entry, repositoryId, repository.baselineScenarioId, seq);
+        const impact = metamodelImpact(view.state, before, after);
+        if (impact.problems.length > 0) throw draftInvalid(impact.problems);
+        const result = {
+          version,
+          preview,
+          newlyRefused: newlyRefused(view.state, before, after),
+          stranded: impact.stranded,
+        };
+        if (preview) return result;
+        await saveMetamodel(tx, principal.workspaceId, repositoryId, pkg, body.diagramTypes);
         entry.metamodel = undefined;
         return result;
       }),

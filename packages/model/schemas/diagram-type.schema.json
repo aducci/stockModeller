@@ -27,6 +27,11 @@
       "additionalProperties": { "type": "object" },
       "description": "Object type key → symbol override"
     },
+    "properties": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Property types diagrams of this type carry (build: slice A-1b)"
+    },
     "renditions": {
       "type": "object",
       "additionalProperties": false,

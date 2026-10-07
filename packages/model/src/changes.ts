@@ -83,6 +83,8 @@ export type ModelEdit =
     } & OnExisting)
   /** build: replaces what a relationship carries (semantics §5). */
   | ({ edit: "setPayload"; payload: Id[] } & OnExisting)
+  /** build: a relationship's property values, as setProperties does for objects; null clears a value. */
+  | ({ edit: "setRelationshipProperties"; set: Record<PropertyKey, PropertyValue> } & OnExisting)
   /** Deleting an interaction deletes its messages too (semantics §6). */
   | ({ edit: "deleteRelationship" } & OnExisting)
   | { edit: "createFolder"; id: Id; parentId: Id | null; name: string }
@@ -105,6 +107,8 @@ export type DiagramEdit =
       folderId: Id;
       /** build: so that restoring a deleted diagram is exact. */
       description?: string;
+      /** build: so that restoring a deleted diagram is exact (slice A-1b). */
+      properties?: Record<PropertyKey, PropertyValue>;
     }
   | {
       edit: "updateDiagram";
@@ -112,6 +116,8 @@ export type DiagramEdit =
       baseVersion: number;
       set: { name?: string; description?: string; folderId?: Id; diagramType?: TypeKey };
     }
+  /** build: a diagram's property values (its diagram type's `properties`); null clears a value. */
+  | ({ edit: "setDiagramProperties"; set: Record<PropertyKey, PropertyValue> } & OnExisting)
   | { edit: "deleteDiagram"; id: Id }
   | { edit: "addObjectOccurrence"; diagramId: Id; occurrence: ObjectOccurrence }
   | {

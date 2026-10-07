@@ -242,6 +242,8 @@ export interface Diagram {
   folderId: Id;
   version: number;
   generatedBy: { rule: string; focusObjectId: Id } | null;
+  /** build: values of its diagram type's `properties` (slice A-1b); absent means none. */
+  properties?: Record<PropertyKey, PropertyValue>;
   objectOccurrences: ObjectOccurrence[];
   relationshipOccurrences: RelationshipOccurrence[];
   annotations: Annotation[];

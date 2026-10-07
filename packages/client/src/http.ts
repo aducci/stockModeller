@@ -1,6 +1,6 @@
 // The HTTP calls the web app makes (design/03-platform/openapi.yaml).
 import type { RepositorySnapshot } from "@connectome/engine";
-import type { Change, Id, MetamodelPackage, Rejection } from "@connectome/model";
+import type { Change, DiagramType, Id, MetamodelPackage, Rejection } from "@connectome/model";
 
 export interface ApiOptions {
   /** Where the server is, e.g. "http://localhost:3000" or "" for the page's own origin. */
@@ -112,6 +112,25 @@ export class ApiClient {
     newlyRefused: { relationshipType: string; sourceType: string; targetType: string; count: number }[];
   }> {
     const path = `/repositories/${encodeURIComponent(repositoryId)}/metamodel/relationship-rules`;
+    return this.request("PUT", `${path}${preview ? "?preview=true" : ""}`, body);
+  }
+
+  /**
+   * Publishes an edited metamodel (slice A-1b) as the next version (or, with `preview`, reports what would happen):
+   * relationships the new rules refuse and values the new types stop carrying. Refused with 422 when it would break
+   * stored data, 409 when someone published meanwhile.
+   */
+  publishMetamodel(
+    repositoryId: Id,
+    body: { baseVersion: string; metamodel: Omit<MetamodelPackage, "version">; diagramTypes: DiagramType[] },
+    preview = false,
+  ): Promise<{
+    version: string;
+    preview: boolean;
+    newlyRefused: { relationshipType: string; sourceType: string; targetType: string; count: number }[];
+    stranded: { propertyType: string; count: number }[];
+  }> {
+    const path = `/repositories/${encodeURIComponent(repositoryId)}/metamodel`;
     return this.request("PUT", `${path}${preview ? "?preview=true" : ""}`, body);
   }
 
