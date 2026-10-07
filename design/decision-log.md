@@ -76,6 +76,25 @@ From [notation and metamodel administration](02-model/notation-and-metamodel-adm
 | N20 | Where does the default notation live, and what does Essentials carry? | With the product (the core notation), because it is what the semantic layer means; **Essentials 1.3.0** drops its hand-set lines and fills so every type draws from its kind and category | Keep the defaults in the Essentials package (then every package repeats them, and two packages disagree) |
 | N19 | Where do a decoration's colours, icons and ranges come from? | The value list (its `glyph` and colours) and the property type (its `scale` with bands), so one definition serves chips, cells, legends and diagrams | Per diagram type, as part of the style rule |
 
+## Views decisions
+
+From [views and design artifacts](02-model/views-and-design-artifacts.md). **Proposed** 2026-10-07; each row is the default the design uses until the product owner decides otherwise.
+
+| # | Question | Proposed default | Alternative |
+|---|---|---|---|
+| V1 | Where do matrices, lists, specifications, sequences and design artifacts live? | As **diagrams** whose diagram type has a `kind`, with a `definition` column: one table, one explorer, history, permissions, drill-down and scenarios for every view | Separate tables per view kind (the unused `catalogue` and `dashboard` tables in schema.sql) |
+| V2 | What is a design-artifact template? | A diagram type of kind `document` in a metamodel package, versioned with it | A separate template entity outside the metamodel |
+| V3 | Where does an artifact's prose live? | In the artifact: it is the author's words, not a model fact; `@` mentions are live object links | In model objects (a "section" object per paragraph), so prose is queryable but the model fills with text fragments |
+| V4 | How does a list row get its child view ("for each Y, a sequence")? | An ordinary diagram created **on demand** with `generatedBy` = the artifact section and Y, so there is one per row and Y's page finds it | Created automatically for every row (many empty diagrams) |
+| V5 | Where is the order of messages in a sequence kept? | On the relationship occurrence (`step`), per diagram, so one message can sit in several sequences; the interaction's `rank` is the default order when generating | Only the interaction's message `rank` (one global order) |
+| V6 | Self-calls in a sequence | A note on the lifeline (annotation) until rules allow relationships from an object to itself | Allow self-relationships for flow kinds now |
+| V7 | What can be a lifeline? | Any object, drawn with its own rendition (the hybrid look); actor-category types default to a figure | Only component, interface and actor categories |
+| V8 | Are combined fragments (alt, opt, loop, par, ref) model or picture? | Picture: annotations over a range of steps; `ref` links another sequence | Model objects (an "interaction fragment" type) |
+| V9 | How is RACI stored? | One relationship type `raci` (kind `assignment`) with a list property `raci.code` (R, A, C, I) | Four relationship types (`responsibleFor`, `accountableFor`, …) |
+| V10 | Show indirect relationships in matrices? | Opt-in per matrix (`derived: "trace"`), hatched and read-only | Never |
+| V11 | Queries before the M1 parser | Structured JSON paths (the parser's future AST), evaluated by a pure `packages/views` | Wait for the parser |
+| V12 | The unused `catalogue` and `dashboard` tables | Retire them in a later migration; a catalogue is a `list` view | Keep them alongside |
+
 ## Found while building (M0)
 
 Questions the build raised. Each has a provisional answer in the code; change the code if the product owner decides otherwise.
