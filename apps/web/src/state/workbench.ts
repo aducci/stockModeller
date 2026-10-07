@@ -2,9 +2,8 @@
 // region, open tabs, toasts, and a revision that bumps whenever the model view changes.
 import { create } from "zustand";
 import { LiveSession, type PresenceUser, type SessionStatus } from "@connectome/client";
-import { ulid, type Edit, type Id } from "@connectome/model";
+import { ulid, type DiagramType, type Edit, type Id, type MetamodelPackage } from "@connectome/model";
 import { describeRejection } from "../text";
-import type { Rule } from "../metamodel-admin";
 
 export type ItemKind = "object" | "folder" | "diagram";
 export interface Selection {
@@ -23,12 +22,13 @@ export interface Tab {
 
 /** The metamodel tab's id: there is one, whatever view it shows. */
 export const METAMODEL_TAB = "metamodel";
-export type MetamodelView = "types" | "matrix" | "sentences" | "try";
+export type MetamodelView = "types" | "properties" | "matrix" | "sentences" | "try";
 
-/** Relationship rules being edited, and the metamodel version they were edited from. */
-export interface RuleDraft {
+/** The metamodel being edited (package and diagram types), and the version it was edited from. */
+export interface MetamodelDraft {
   baseVersion: string;
-  rules: Rule[];
+  package: MetamodelPackage;
+  diagramTypes: DiagramType[];
 }
 
 export interface Toast {
@@ -78,7 +78,9 @@ interface WorkbenchState {
   marked: Selection[];
   metamodelView: MetamodelView;
   /** Unpublished rule edits (notation-and-metamodel-admin.md §10); null when there are none. */
-  ruleDraft: RuleDraft | null;
+  metamodelDraft: MetamodelDraft | null;
+  /** The property type the Properties view of the metamodel tab shows. */
+  metamodelProperty: string | null;
 
   open(options: OpenOptions): Promise<void>;
   close(): void;
@@ -100,7 +102,9 @@ interface WorkbenchState {
   showTrace(trace: WorkbenchState["trace"]): void;
   /** Opens the metamodel tab at a view. */
   openMetamodel(view: MetamodelView): void;
-  setRuleDraft(draft: RuleDraft | null): void;
+  /** Opens the metamodel tab's Properties view on one property type. */
+  showMetamodelProperty(key: string | null): void;
+  setMetamodelDraft(draft: MetamodelDraft | null): void;
 }
 
 let unsubscribe: (() => void) | undefined;
@@ -137,7 +141,8 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
     explorerTask: null,
     marked: [],
     metamodelView: "matrix",
-    ruleDraft: null,
+    metamodelDraft: null,
+    metamodelProperty: null,
 
     async open(options) {
       get().close();
@@ -199,7 +204,8 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
           confirmDelete: null,
           explorerTask: null,
           marked: [],
-          ruleDraft: null,
+          metamodelDraft: null,
+          metamodelProperty: null,
         });
       } catch (error) {
         if (mine !== generation) return;
@@ -238,8 +244,13 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
       get().openTab({ kind: "metamodel", id: METAMODEL_TAB });
     },
 
-    setRuleDraft(ruleDraft) {
-      set({ ruleDraft });
+    showMetamodelProperty(metamodelProperty) {
+      set({ metamodelProperty });
+      if (metamodelProperty) get().openMetamodel("properties");
+    },
+
+    setMetamodelDraft(metamodelDraft) {
+      set({ metamodelDraft });
     },
 
     closeTab(id) {

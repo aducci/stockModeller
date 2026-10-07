@@ -73,6 +73,14 @@ function candidates(state: ModelState, next: () => number, n: number): Edit[] {
           set: { "lifecycle.status": pick(["planned", "active", null])! },
         }
       : null,
+    interaction
+      ? {
+          edit: "setRelationshipProperties",
+          id: interaction.id,
+          baseVersion: interaction.version,
+          set: { "interaction.protocol": pick([`HTTP/${n}`, null])! },
+        }
+      : null,
     o && f ? { edit: "moveToFolder", id: o.id, baseVersion: o.version, folderId: f.id } : null,
     o ? { edit: "deleteObject", id: o.id, baseVersion: o.version } : null,
     o && o2
@@ -140,6 +148,14 @@ function candidates(state: ModelState, next: () => number, n: number): Edit[] {
     f ? { edit: "deleteFolder", id: f.id, contents: "deleteContents" } : null,
     f ? { edit: "createDiagram", id, name: `Diagram ${n}`, diagramType: "applicationLandscape", folderId: f.id } : null,
     d ? { edit: "updateDiagram", id: d.id, baseVersion: d.version, set: { name: `${d.name}'` } } : null,
+    d
+      ? {
+          edit: "setDiagramProperties",
+          id: d.id,
+          baseVersion: d.version,
+          set: { "documentation.link": pick([`https://docs.example/${n}`, null])! },
+        }
+      : null,
     d ? { edit: "deleteDiagram", id: d.id } : null,
     d && o
       ? {

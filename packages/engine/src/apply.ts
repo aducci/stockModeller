@@ -220,6 +220,8 @@ class Transaction {
         return this.changeRelationshipType(edit);
       case "setPayload":
         return this.setPayload(edit);
+      case "setRelationshipProperties":
+        return this.setRelationshipProperties(edit);
       case "deleteRelationship":
         return this.deleteRelationshipEdit(edit);
       case "createFolder":
@@ -236,6 +238,8 @@ class Transaction {
         return this.createDiagram(edit);
       case "updateDiagram":
         return this.updateDiagram(edit);
+      case "setDiagramProperties":
+        return this.setDiagramProperties(edit);
       case "deleteDiagram":
         return this.deleteDiagramEdit(edit);
       case "addObjectOccurrence":
@@ -721,6 +725,19 @@ class Transaction {
     return rel.id;
   }
 
+  private setRelationshipProperties(e: Extract<ModelEdit, { edit: "setRelationshipProperties" }>): Id {
+    const rel = this.requireLive("relationships", e.id);
+    const fields = Object.keys(e.set).map((k) => `properties.${k}`);
+    this.checkBase("relationships", rel, e.baseVersion, fields);
+    const allowed = this.mm.relationshipTypeProperties(rel.type);
+    const properties = this.checkProperties(allowed, rel.properties, e.set, "properties");
+    const previous = Object.fromEntries(Object.keys(e.set).map((k) => [k, rel.properties[k] ?? null]));
+    this.write("relationships", { ...rel, properties });
+    this.markChanged("relationships", rel.id, fields);
+    this.step({ edit: "setRelationshipProperties", id: rel.id, baseVersion: PENDING_VERSION, set: previous });
+    return rel.id;
+  }
+
   private writePayload(rel: RelationshipRow, payload: Id[]): void {
     this.write("relationships", { ...rel, payload });
     this.markChanged("relationships", rel.id, ["payload"]);
@@ -1015,13 +1032,15 @@ class Transaction {
   private createDiagram(e: Extract<DiagramEdit, { edit: "createDiagram" }>): Id {
     this.requireNewId("diagrams", e.id);
     this.checkName(e.name);
-    this.diagramTypeOf(e.diagramType, "diagramType");
+    const dt = this.diagramTypeOf(e.diagramType, "diagramType");
     this.refLive("folders", e.folderId, "folderId");
+    const properties = e.properties ? this.checkProperties(dt.properties, {}, e.properties, "properties") : undefined;
     const tombstone = this.state.diagrams.getAny(e.id);
     this.write("diagrams", {
       id: e.id,
       name: e.name,
       description: e.description ?? "",
+      ...(properties && Object.keys(properties).length > 0 ? { properties } : {}),
       diagramType: e.diagramType,
       folderId: e.folderId,
       generatedBy: null,
@@ -1058,6 +1077,22 @@ class Transaction {
     return diagram.id;
   }
 
+  private setDiagramProperties(e: Extract<DiagramEdit, { edit: "setDiagramProperties" }>): Id {
+    const diagram = this.requireLive("diagrams", e.id);
+    const fields = Object.keys(e.set).map((k) => `properties.${k}`);
+    this.checkBase("diagrams", diagram, e.baseVersion, fields);
+    const allowed = this.mm.diagramType(diagram.diagramType)?.properties ?? new Set<string>();
+    const current = diagram.properties ?? {};
+    const properties = this.checkProperties(allowed, current, e.set, "properties");
+    const previous = Object.fromEntries(Object.keys(e.set).map((k) => [k, current[k] ?? null]));
+    // No values is stored as no `properties`, as on a new diagram, so undo restores the row exactly.
+    const { properties: _, ...rest } = diagram;
+    this.write("diagrams", Object.keys(properties).length > 0 ? { ...rest, properties } : rest);
+    this.markChanged("diagrams", diagram.id, fields);
+    this.step({ edit: "setDiagramProperties", id: diagram.id, baseVersion: PENDING_VERSION, set: previous });
+    return diagram.id;
+  }
+
   private deleteDiagramEdit(e: Extract<DiagramEdit, { edit: "deleteDiagram" }>): Id {
     this.deleteDiagram(this.requireLive("diagrams", e.id));
     return e.id;
@@ -1088,6 +1123,7 @@ class Transaction {
         diagramType: diagram.diagramType,
         folderId: diagram.folderId,
         description: diagram.description,
+        ...(diagram.properties && Object.keys(diagram.properties).length > 0 ? { properties: diagram.properties } : {}),
       },
       ...this.restoreRank("diagram", diagram),
     );

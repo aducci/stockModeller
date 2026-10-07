@@ -238,6 +238,28 @@ paths:
         '409': { $ref: '#/components/responses/Problem' }
         '422': { $ref: '#/components/responses/Problem' }
 
+  /repositories/{repo}/metamodel:
+    parameters: [ { $ref: '#/components/parameters/repo' } ]
+    put:
+      summary: Replace the whole metamodel with an edited draft and publish it as the next metamodel version (slice A-1b; 02-model/metamodel.md §7). Stored values are kept; values the new types stop carrying are counted. 422 when the draft fails its schema, does not compile, or would break stored data (a type in use removed, a data type changed while values exist, a list value in use removed). 409 when baseVersion is not the current version
+      parameters:
+        - { name: preview, in: query, schema: { type: boolean, default: false }, description: 'Report the outcome without publishing' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [baseVersion, metamodel, diagramTypes]
+              properties:
+                baseVersion: { type: string, description: The metamodel version the draft was edited from }
+                metamodel: { type: object, description: 'A package (05-structures/metamodel.schema.json); its version is set by the server' }
+                diagramTypes: { type: array, items: { type: object, description: 05-structures/diagram-type.schema.json } }
+      responses:
+        '200': { description: Published (or previewed), content: { application/json: { schema: { $ref: '#/components/schemas/MetamodelResult' } } } }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
   /repositories/{repo}/diagrams/{id}:
     parameters: [ { $ref: '#/components/parameters/repo' }, { $ref: '#/components/parameters/scenario' }, { $ref: '#/components/parameters/id' } ]
     get:
@@ -305,6 +327,21 @@ components:
         targetType: { type: string }
         cardinality: { type: string, enum: ['0..1', '0..*', '1..1', '1..*'] }
         enforcement: { type: string, enum: [block, warn], default: block }
+    MetamodelResult:
+      allOf:
+        - { $ref: '#/components/schemas/RulesResult' }
+        - type: object
+          required: [stranded]
+          properties:
+            stranded:
+              type: array
+              description: Values the new types stop carrying, per property type; they stay stored
+              items:
+                type: object
+                required: [propertyType, count]
+                properties:
+                  propertyType: { type: string }
+                  count: { type: integer }
     RulesResult:
       type: object
       required: [version, preview, newlyRefused]
@@ -457,7 +494,8 @@ components:
                  createDiagram, updateDiagram, deleteDiagram,
                  addObjectOccurrence, moveObjectOccurrence, styleOccurrence, removeOccurrence,
                  addRelationshipOccurrence, routeRelationshipOccurrence, addAnnotation, updateAnnotation, removeAnnotation,
-                 setTags, setDescription, confirmProperties, setConfirmations]
+                 setTags, setDescription, confirmProperties, setConfirmations,
+                 setRelationshipProperties, setDiagramProperties]
       additionalProperties: true
     ChangeRequestBody:
       type: object
@@ -498,6 +536,7 @@ components:
         diagramType: { type: string }
         folderId: { type: string }
         rank: { type: string, description: 'Explorer order among its siblings (edit setRank); absent when unranked' }
+        properties: { type: object, description: 'Values of its diagram type''s properties (edit setDiagramProperties); absent when none' }
         objectOccurrences:
           type: array
           items:

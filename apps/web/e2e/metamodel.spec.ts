@@ -58,7 +58,7 @@ test("adds a rule in the connection matrix, reviews it and publishes it to every
   const review = dana.getByRole("dialog", { name: "Publish the metamodel" });
   await expect(review).toContainText("Rules added (1)");
   await expect(review).toContainText("Process · accesses · Data object");
-  await expect(review).toContainText("Every existing relationship is still allowed.");
+  await expect(review).toContainText("Every existing relationship is still allowed");
   await review.getByRole("button", { name: "Publish" }).click();
   await expect(dana.getByRole("status").filter({ hasText: /^Published metamodel/ })).toBeVisible();
   await expect(draft).toHaveCount(0);

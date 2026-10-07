@@ -152,6 +152,7 @@ export interface Diagram {
   id: Id; name: string; description: string; diagramType: TypeKey; folderId: Id; version: number;
   rank?: string;                                // build: place among its siblings in the explorer
   generatedBy: { rule: string; focusObjectId: Id } | null;
+  properties?: Record<PropertyKey, PropertyValue>; // build: values of its diagram type's `properties` (A-1b)
   objectOccurrences: ObjectOccurrence[];
   relationshipOccurrences: RelationshipOccurrence[];
   annotations: Annotation[];

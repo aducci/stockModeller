@@ -55,7 +55,8 @@ A diagram type defines a kind of diagram. Every diagram is based on one. It cove
 - how they look;
 - how they are coloured and labelled;
 - layout and legend;
-- optionally, how diagrams of this type are generated.
+- optionally, how diagrams of this type are generated;
+- the property types its diagrams carry (`properties`, slice A-1b), e.g. a review state or a documentation link.
 
 Details in [diagrams-and-catalogues](diagrams-and-catalogues.md#3-diagram-types). Schema: [diagram-type.schema.json](../05-structures/diagram-type.schema.json).
 
@@ -87,7 +88,7 @@ Rules support the `*` wildcard and inherit through `extends`. The metamodel edit
 | Edit | Migration choice |
 |---|---|
 | Delete an object type | Change existing objects to another type, or delete them (count shown) |
-| Delete a property type | Drop the values, or move them to another property type |
+| Delete a property type | Drop the values, or move them to another property type. Built so far (slice A-1b): values are kept and listed in the properties panel as *Not on this type*; moving them is not built yet |
 | Change a data type | Conversion rule; values that fail are listed |
 | Remove a list value | Map it to another value |
 | Tighten a rule to `block` | Existing violations are listed and stay flagged until fixed |
