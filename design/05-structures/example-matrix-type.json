@@ -1,0 +1,15 @@
+{
+  "key": "capabilityMatrix",
+  "name": "Capability × application matrix",
+  "description": "Which applications realise which capabilities. Click a cell to add or remove a realisation.",
+  "kind": "matrix",
+  "objectTypes": ["capability", "applicationBase"],
+  "relationshipTypes": ["realizes"],
+  "matrix": {
+    "rows": { "from": { "type": ["capability"] }, "order": "rank" },
+    "columns": { "from": { "type": ["applicationBase"] } },
+    "relationships": { "types": ["realizes"], "dir": "columnToRow" },
+    "create": "realizes",
+    "groupRows": true
+  }
+}

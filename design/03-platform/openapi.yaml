@@ -454,7 +454,7 @@ components:
           enum: [createObject, setProperties, renameObject, moveToFolder, changeObjectType, deleteObject,
                  createRelationship, reconnectRelationship, changeRelationshipType, setPayload, deleteRelationship,
                  createFolder, renameFolder, moveFolder, deleteFolder,
-                 createDiagram, updateDiagram, deleteDiagram,
+                 createDiagram, updateDiagram, deleteDiagram, setViewDefinition,
                  addObjectOccurrence, moveObjectOccurrence, styleOccurrence, removeOccurrence,
                  addRelationshipOccurrence, routeRelationshipOccurrence, addAnnotation, updateAnnotation, removeAnnotation,
                  setTags, setDescription, confirmProperties, setConfirmations]
@@ -498,6 +498,7 @@ components:
         diagramType: { type: string }
         folderId: { type: string }
         rank: { type: string, description: 'Explorer order among its siblings (edit setRank); absent when unranked' }
+        definition: { type: object, description: 'What a matrix or other view shows (edit setViewDefinition); absent for canvases' }
         objectOccurrences:
           type: array
           items:

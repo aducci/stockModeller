@@ -179,6 +179,22 @@ describeDb("engine + database", () => {
     expect(snapshot(after.state)).toEqual(snapshot(result.state));
   });
 
+  it("stores a view definition and reads it back exactly", async () => {
+    const before = await withWorkspace(t.conn, WS, (tx) => loadState(tx, REPO, BASELINE));
+    const diagram = [...before.state.diagrams.live()][0]!;
+    const set = { hideEmpty: true, rows: { from: { type: ["capability"] } } };
+    const result = await submit(t.conn, {
+      id: "C-VIEW",
+      scenarioId: BASELINE,
+      label: "Define view",
+      edits: [{ edit: "setViewDefinition", diagramId: diagram.id, baseVersion: diagram.version, set }],
+    });
+    if (!result.ok) throw new Error(JSON.stringify(result.reasons));
+    const after = await withWorkspace(t.conn, WS, (tx) => loadState(tx, REPO, BASELINE));
+    expect(after.state.diagrams.get(diagram.id)!.definition).toEqual(set);
+    expect(snapshot(after.state)).toEqual(snapshot(result.state));
+  });
+
   it("undoes a committed change from the inverses stored in change_log", async () => {
     const before = await withWorkspace(t.conn, WS, (tx) => loadState(tx, REPO, BASELINE));
     const deleted = await submit(t.conn, {

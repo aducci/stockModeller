@@ -140,6 +140,18 @@ function candidates(state: ModelState, next: () => number, n: number): Edit[] {
     f ? { edit: "deleteFolder", id: f.id, contents: "deleteContents" } : null,
     f ? { edit: "createDiagram", id, name: `Diagram ${n}`, diagramType: "applicationLandscape", folderId: f.id } : null,
     d ? { edit: "updateDiagram", id: d.id, baseVersion: d.version, set: { name: `${d.name}'` } } : null,
+    d
+      ? {
+          edit: "setViewDefinition",
+          diagramId: d.id,
+          baseVersion: d.version,
+          set: pick([
+            { hideEmpty: n % 2 === 0 },
+            { groupRows: null },
+            { rows: { from: { type: ["capability"] } }, hideEmpty: null },
+          ])!,
+        }
+      : null,
     d ? { edit: "deleteDiagram", id: d.id } : null,
     d && o
       ? {

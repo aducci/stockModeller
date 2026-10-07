@@ -25,6 +25,10 @@ const tags = z.array(z.string().min(1).max(100)).max(100);
 const externalIds = z.record(z.string().min(1).max(64), z.string().min(1).max(256));
 const confirmation = z.strictObject({ by: id, at: z.iso.datetime({ offset: true }) });
 const confirmations = z.record(propertyKey, confirmation);
+/** A view's definition (slice V-1): top-level keys, any JSON below them; the web app and packages/views read it. */
+const viewDefinition = z
+  .record(z.string().regex(/^[a-z][a-zA-Z0-9]*$/), z.unknown())
+  .refine((d) => JSON.stringify(d).length <= 262_144, "A view definition can be at most 256 kB");
 
 const shape = z.enum(["rect", "roundRect", "ellipse", "hexagon", "cylinder", "person", "icon"]);
 const arrow = z.enum(["none", "arrow", "diamond", "circle"]);
@@ -197,6 +201,7 @@ export const editSchema = z.discriminatedUnion("edit", [
     diagramType: typeKey,
     folderId: id,
     description: z.string().max(100_000).optional(),
+    definition: viewDefinition.optional(),
   }),
   z.strictObject({
     edit: z.literal("updateDiagram"),
@@ -210,6 +215,7 @@ export const editSchema = z.discriminatedUnion("edit", [
     }),
   }),
   z.strictObject({ edit: z.literal("deleteDiagram"), id }),
+  z.strictObject({ edit: z.literal("setViewDefinition"), diagramId: id, baseVersion: version, set: viewDefinition }),
   z.strictObject({ edit: z.literal("addObjectOccurrence"), diagramId: id, occurrence: objectOccurrenceSchema }),
   z.strictObject({
     edit: z.literal("moveObjectOccurrence"),

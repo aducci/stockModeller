@@ -299,6 +299,22 @@ export class Metamodel {
       for (const r of [dt.renditions?.default, ...(dt.renditions?.semanticZoom ?? []).map((z) => z.rendition)]) {
         if (r !== undefined && !isRendition(r)) problems.push(`Diagram type "${dt.key}" uses unknown rendition "${r}"`);
       }
+      if (dt.matrix) {
+        const where = `Diagram type "${dt.key}"`;
+        const scopes = [dt.matrix.rows, dt.matrix.columns];
+        for (const scope of scopes) {
+          for (const t of scope.from.type ?? []) typeRef(t, where);
+          for (const step of scope.steps ?? []) for (const t of step.to?.type ?? []) typeRef(t, where);
+        }
+        const relTypes = [
+          ...(dt.matrix.relationships.types ?? []),
+          ...(dt.matrix.create ? [dt.matrix.create] : []),
+          ...scopes.flatMap((s) => (s.steps ?? []).flatMap((st) => st.type ?? [])),
+        ];
+        for (const t of relTypes) {
+          if (!mm.relationshipTypes.has(t)) problems.push(`${where} uses unknown relationship type "${t}"`);
+        }
+      }
       mm.diagramTypes.set(dt.key, { definition: dt, nesting: dt.nesting ?? "nested" });
     }
 

@@ -1578,33 +1578,33 @@ button.toggle .badge {
   flex: none;
 }
 
-/* The connection matrix */
-.mm-matrix-scroll {
+/* Matrices: the connection matrix and matrix views (MatrixGrid) */
+.matrix-grid-scroll {
   overflow: auto;
 }
-.mm-matrix {
+.matrix-grid {
   border-collapse: separate;
   border-spacing: 0;
 }
-.mm-matrix th {
+.matrix-grid th {
   font-weight: 400;
   text-align: left;
   white-space: nowrap;
   background: var(--pane);
 }
-.mm-matrix tbody th {
+.matrix-grid tbody th {
   position: sticky;
   left: 0;
   z-index: 1;
   padding-right: 10px;
   border-right: 1px solid var(--line);
 }
-.mm-matrix th.col {
+.matrix-grid th.col {
   height: 120px;
   vertical-align: bottom;
   padding: 0 0 6px;
 }
-.mm-matrix .vertical {
+.matrix-grid .vertical {
   display: inline-block;
   width: 34px;
   writing-mode: vertical-rl;
@@ -1615,7 +1615,7 @@ button.toggle .badge {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.mm-matrix td.cell {
+.matrix-grid td.cell {
   position: relative;
   width: 34px;
   height: 30px;
@@ -1623,12 +1623,55 @@ button.toggle .badge {
   border-right: 1px solid var(--grid, var(--line));
   border-bottom: 1px solid var(--grid, var(--line));
 }
-.mm-matrix td.cell.used {
+.matrix-grid td.cell.used {
   background: var(--pane-2);
 }
-.mm-matrix td.cell.open {
+.matrix-grid td.cell.open {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
+}
+.matrix-grid td.total {
+  min-width: 34px;
+  padding: 0 6px;
+  text-align: center;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-2);
+  background: var(--pane-2);
+  border-bottom: 1px solid var(--grid, var(--line));
+}
+.matrix-grid tr.totals th {
+  color: var(--fg-2);
+}
+.matrix-grid tr.group > th {
+  font-weight: 600;
+}
+.matrix-grid td.cell.refused {
+  background: repeating-linear-gradient(135deg, transparent 0 5px, var(--grid, var(--line)) 5px 6px);
+}
+.matrix-grid td.cell.refused .cell-button {
+  cursor: not-allowed;
+}
+.cell-button .count {
+  font-size: 10px;
+  color: var(--fg-2);
+}
+.matrix-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.matrix-view .matrix-grid-scroll {
+  flex: 1;
+  min-height: 0;
+}
+.matrix-cell-menu .matrix-cell-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 0;
 }
 .cell-button {
   display: flex;

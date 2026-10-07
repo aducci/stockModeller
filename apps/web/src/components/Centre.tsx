@@ -1,12 +1,14 @@
 // Centre tabs: diagrams and object pages. A dot marks a tab whose item someone else changed meanwhile.
-import type { ModelState } from "@connectome/engine";
+import type { Metamodel, ModelState } from "@connectome/engine";
+import type { ViewKind } from "@connectome/model";
 import { useModel, useWorkbench, type Tab } from "../state/workbench";
 import { ObjectProperties } from "./Properties";
 import { DiagramEditor } from "./DiagramEditor";
 import { MetamodelAdmin } from "./MetamodelAdmin";
+import { MatrixView } from "./MatrixView";
 
 export function Centre() {
-  const { state } = useModel();
+  const { state, metamodel } = useModel();
   const tabs = useWorkbench((s) => s.tabs);
   const activeTab = useWorkbench((s) => s.activeTab);
   const changedTabs = useWorkbench((s) => s.changedTabs);
@@ -25,7 +27,15 @@ export function Centre() {
             className={`tab${t.id === activeTab ? " active" : ""}`}
             onClick={() => activate(t.id)}
           >
-            <span aria-hidden>{t.kind === "diagram" ? "⧉" : t.kind === "metamodel" ? "◇" : "▭"}</span>
+            <span aria-hidden>
+              {t.kind === "diagram"
+                ? viewKind(state, metamodel, t.id) === "matrix"
+                  ? "▦"
+                  : "⧉"
+                : t.kind === "metamodel"
+                  ? "◇"
+                  : "▭"}
+            </span>
             <span>{tabName(state, t)}</span>
             {changedTabs.has(t.id) && <span className="change-dot" title="Changed by someone else" />}
             <button
@@ -52,11 +62,22 @@ export function Centre() {
             <ObjectProperties id={active.id} withRelations />
           </div>
         )}
-        {active?.kind === "diagram" && <DiagramEditor key={active.id} id={active.id} />}
+        {active?.kind === "diagram" &&
+          (viewKind(state, metamodel, active.id) === "matrix" ? (
+            <MatrixView key={active.id} id={active.id} />
+          ) : (
+            <DiagramEditor key={active.id} id={active.id} />
+          ))}
         {active?.kind === "metamodel" && <MetamodelAdmin />}
       </div>
     </main>
   );
+}
+
+/** Which renderer a diagram tab uses: its diagram type's kind (views-and-design-artifacts.md §2). */
+function viewKind(state: ModelState, metamodel: Metamodel, id: string): ViewKind {
+  const diagram = state.diagrams.get(id);
+  return (diagram && metamodel.diagramType(diagram.diagramType)?.definition.kind) || "canvas";
 }
 
 function tabName(state: ModelState, tab: Tab): string {

@@ -1,0 +1,16 @@
+{
+  "name": "@connectome/views",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@connectome/engine": "0.0.0",
+    "@connectome/model": "0.0.0"
+  },
+  "devDependencies": {
+    "@connectome/content": "0.0.0"
+  }
+}

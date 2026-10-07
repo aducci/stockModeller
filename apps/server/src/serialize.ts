@@ -63,6 +63,7 @@ export function diagramJson(state: ModelState, id: string): Diagram | undefined 
     ...(d.rank ? { rank: d.rank } : {}),
     version: d.version,
     generatedBy: d.generatedBy,
+    ...(d.definition ? { definition: d.definition } : {}),
     objectOccurrences: state.objectOccurrences.find("byDiagram", id).sort(byZThenId).map(strip),
     relationshipOccurrences: state.relationshipOccurrences.find("byDiagram", id).sort(byZThenId).map(strip),
     annotations: state.annotations.find("byDiagram", id).sort(byZThenId).map(strip),

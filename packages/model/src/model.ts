@@ -242,6 +242,8 @@ export interface Diagram {
   folderId: Id;
   version: number;
   generatedBy: { rule: string; focusObjectId: Id } | null;
+  /** build (slice V-1): what a matrix or other view shows (02-model/views-and-design-artifacts.md); absent = {}. */
+  definition?: Record<string, unknown>;
   objectOccurrences: ObjectOccurrence[];
   relationshipOccurrences: RelationshipOccurrence[];
   annotations: Annotation[];

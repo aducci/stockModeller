@@ -6,7 +6,10 @@ import { readDesignJson } from "../../model/test/design";
 describe("Essentials", () => {
   it("is the package from the design pack, unchanged", () => {
     expect(essentials.metamodel).toEqual(readDesignJson("05-structures/example-metamodel.json"));
-    expect(essentials.diagramTypes).toEqual([readDesignJson("05-structures/example-diagram-type.json")]);
+    expect(essentials.diagramTypes).toEqual([
+      readDesignJson("05-structures/example-diagram-type.json"),
+      readDesignJson("05-structures/example-matrix-type.json"),
+    ]);
   });
 
   it("is valid against the schemas", () => {

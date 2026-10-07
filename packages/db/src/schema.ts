@@ -141,6 +141,7 @@ export interface DiagramTable extends ScenarioRow {
   rank: string | null;
   description: string;
   generated_by: Json<{ rule: string; focusObjectId: string } | null> | null;
+  definition: Generated<Json<Record<string, unknown>>>;
   version: number;
   field_versions: Json<Record<string, { v: number; by: string }>>;
 }

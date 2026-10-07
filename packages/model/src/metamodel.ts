@@ -10,6 +10,7 @@ import type {
   TypeKey,
   ValueList,
 } from "./model";
+import type { MatrixDefinition, ViewKind } from "./views";
 
 export interface Layer {
   key: string;
@@ -77,6 +78,10 @@ export interface DiagramType {
   key: TypeKey;
   name: string;
   description?: string;
+  /** build (slice V-1): the view kind (02-model/views-and-design-artifacts.md §2); absent = canvas. */
+  kind?: ViewKind;
+  /** build (slice V-1): a matrix type's default definition; a diagram's own definition overrides it key by key. */
+  matrix?: MatrixDefinition;
   objectTypes: TypeKey[];
   relationshipTypes?: TypeKey[];
   nesting?: "nested" | "lines";

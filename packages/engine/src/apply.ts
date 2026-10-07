@@ -179,8 +179,9 @@ class Transaction {
     for (const entry of this.log) {
       for (const inverse of entry.inverse) {
         if ("baseVersion" in inverse && inverse.baseVersion === PENDING_VERSION) {
-          const version = versions[inverse.id];
-          if (version === undefined) throw new Error(`No final version for ${inverse.id}`);
+          const target = inverse.edit === "setViewDefinition" ? inverse.diagramId : inverse.id;
+          const version = versions[target];
+          if (version === undefined) throw new Error(`No final version for ${target}`);
           inverse.baseVersion = version;
         }
       }
@@ -238,6 +239,8 @@ class Transaction {
         return this.updateDiagram(edit);
       case "deleteDiagram":
         return this.deleteDiagramEdit(edit);
+      case "setViewDefinition":
+        return this.setViewDefinition(edit);
       case "addObjectOccurrence":
         return this.addObjectOccurrence(edit);
       case "moveObjectOccurrence":
@@ -1025,6 +1028,7 @@ class Transaction {
       diagramType: e.diagramType,
       folderId: e.folderId,
       generatedBy: null,
+      ...(e.definition && Object.keys(e.definition).length > 0 ? { definition: e.definition } : {}),
       version: tombstone?.version ?? 0,
       fieldVersions: {},
       deleted: false,
@@ -1044,6 +1048,10 @@ class Transaction {
     if (e.set.folderId !== undefined) this.refLive("folders", e.set.folderId, "set.folderId");
     if (e.set.diagramType !== undefined) {
       const dt = this.diagramTypeOf(e.set.diagramType, "set.diagramType");
+      const from = this.mm.diagramType(diagram.diagramType)?.definition.kind ?? "canvas";
+      if ((dt.definition.kind ?? "canvas") !== from) {
+        this.invalid("set.diagramType", `A ${from} view cannot become a ${dt.definition.kind ?? "canvas"} view`);
+      }
       for (const occ of this.state.objectOccurrences.find("byDiagram", diagram.id)) {
         const obj = this.state.objects.get(occ.objectId)!;
         if (!this.mm.diagramAllowsObjectType(dt, obj.type)) {
@@ -1055,6 +1063,36 @@ class Transaction {
     this.write("diagrams", { ...diagram, ...e.set });
     this.markChanged("diagrams", diagram.id, fields);
     this.step({ edit: "updateDiagram", id: diagram.id, baseVersion: PENDING_VERSION, set: previous });
+    return diagram.id;
+  }
+
+  /** Patches a view's definition key by key (slice V-1); null removes a key. The engine checks only its shape. */
+  private setViewDefinition(e: Extract<DiagramEdit, { edit: "setViewDefinition" }>): Id {
+    const diagram = this.requireLive("diagrams", e.diagramId);
+    const keys = Object.keys(e.set);
+    if (keys.length === 0) this.invalid("set", "Nothing to update");
+    this.checkBase(
+      "diagrams",
+      diagram,
+      e.baseVersion,
+      keys.map((k) => `definition.${k}`),
+    );
+    const definition: Record<string, unknown> = { ...diagram.definition };
+    const previous: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(e.set)) {
+      previous[k] = definition[k] ?? null;
+      if (v === null || v === undefined) delete definition[k];
+      else definition[k] = v;
+    }
+    if (JSON.stringify(definition).length > 262_144) this.invalid("set", "A view definition can be at most 256 kB");
+    const { definition: _old, ...rest } = diagram;
+    this.write("diagrams", Object.keys(definition).length > 0 ? { ...rest, definition } : rest);
+    this.markChanged(
+      "diagrams",
+      diagram.id,
+      keys.map((k) => `definition.${k}`),
+    );
+    this.step({ edit: "setViewDefinition", diagramId: diagram.id, baseVersion: PENDING_VERSION, set: previous });
     return diagram.id;
   }
 
@@ -1088,6 +1126,7 @@ class Transaction {
         diagramType: diagram.diagramType,
         folderId: diagram.folderId,
         description: diagram.description,
+        ...(diagram.definition ? { definition: diagram.definition } : {}),
       },
       ...this.restoreRank("diagram", diagram),
     );
@@ -1099,6 +1138,13 @@ class Transaction {
     return dt;
   }
 
+  /** Only canvases hold occurrences; a matrix or other view shows its scope (views-and-design-artifacts.md §2). */
+  private requireCanvas(type: ResolvedDiagramType): void {
+    const kind = type.definition.kind ?? "canvas";
+    if (kind !== "canvas")
+      this.invalid("diagramId", `A ${kind} view shows what its definition selects; it has no symbols`);
+  }
+
   private diagramOf(diagramId: Id): { diagram: DiagramRow; type: ResolvedDiagramType } {
     const diagram = this.refLive("diagrams", diagramId, "diagramId");
     return { diagram, type: this.diagramTypeOf(diagram.diagramType, "diagramId") };
@@ -1108,6 +1154,7 @@ class Transaction {
 
   private addObjectOccurrence(e: Extract<DiagramEdit, { edit: "addObjectOccurrence" }>): Id {
     const { diagram, type } = this.diagramOf(e.diagramId);
+    this.requireCanvas(type);
     const occ = e.occurrence;
     this.requireNewId("objectOccurrences", occ.id, "occurrence.id");
     const obj = this.refLive("objects", occ.objectId, "occurrence.objectId");
@@ -1317,6 +1364,7 @@ class Transaction {
 
   private addRelationshipOccurrence(e: Extract<DiagramEdit, { edit: "addRelationshipOccurrence" }>): Id {
     const { diagram, type } = this.diagramOf(e.diagramId);
+    this.requireCanvas(type);
     const ro = e.occurrence;
     this.requireNewId("relationshipOccurrences", ro.id, "occurrence.id");
     const rel = this.refLive("relationships", ro.relationshipId, "occurrence.relationshipId");
@@ -1391,7 +1439,8 @@ class Transaction {
   // ------------------------------------------------------------------ annotations
 
   private addAnnotation(e: Extract<DiagramEdit, { edit: "addAnnotation" }>): Id {
-    const { diagram } = this.diagramOf(e.diagramId);
+    const { diagram, type } = this.diagramOf(e.diagramId);
+    this.requireCanvas(type);
     const an = e.annotation;
     this.requireNewId("annotations", an.id, "annotation.id");
     this.checkLayout(an, "annotation");

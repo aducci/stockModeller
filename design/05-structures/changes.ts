@@ -105,6 +105,8 @@ export type DiagramEdit =
       folderId: Id;
       /** build: so that restoring a deleted diagram is exact. */
       description?: string;
+      /** build (slice V-1): a view's definition (02-model/views-and-design-artifacts.md); absent = {}. */
+      definition?: Record<string, unknown>;
     }
   | {
       edit: "updateDiagram";
@@ -113,6 +115,11 @@ export type DiagramEdit =
       set: { name?: string; description?: string; folderId?: Id; diagramType?: TypeKey };
     }
   | { edit: "deleteDiagram"; id: Id }
+  /**
+   * build (slice V-1): patches a view's definition key by key; a value of null removes that key, so the inverse is
+   * exact. Conflicts are checked per key ("definition.<key>").
+   */
+  | { edit: "setViewDefinition"; diagramId: Id; baseVersion: number; set: Record<string, unknown> }
   | { edit: "addObjectOccurrence"; diagramId: Id; occurrence: ObjectOccurrence }
   | {
       edit: "moveObjectOccurrence";

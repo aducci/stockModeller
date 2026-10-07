@@ -98,6 +98,7 @@ Found while building the change engine (M0 slices 0.2–0.4). `schema.sql` stays
 | `rank text` on `folder`, `object` and `diagram` (migration 005; slice 0.8b) | The explorer's order. A fractional-index key, so placing an item between two others rewrites one row; `NULL` (absent in the API) sorts after ranked siblings, by name. An object's siblings are its folder's root objects, or its container's contents (semantics §3) |
 | `rendition` in an occurrence's `style`, and `renditions` (`default`, `semanticZoom`) on a diagram type (no migration; slice N-2) | `style` is already `jsonb` and diagram types live in the package. The engine accepts only the built-in keys (`box`, `card`, `glyph`, `chip`, `container`) until packages can declare their own (slice N-3) |
 | Relationship rules are published by replacing the `relationship` rows of `rule` and setting `repository.metamodel_version` to the next patch version, in one transaction that also notifies `connectome_metamodel` (no migration; slice A-1) | Every server instance drops its compiled metamodel and sends its open sessions `resync`, so nobody keeps editing against old rules. Existing relationships are never changed; those the new rules refuse are listed before publishing |
+| `diagram.definition jsonb NOT NULL DEFAULT '{}'` (migration 008; slice V-1) | A view's own settings ([views](../02-model/views-and-design-artifacts.md) §2): a matrix's rows, columns and relationships, later a document's components. Its keys are merged over the diagram type's (`matrix` on the type); `{}` means "as the type says" and is absent in the API |
 
 Edit types added in [changes.ts](../05-structures/changes.ts) (marked `build:`):
 
@@ -114,6 +115,5 @@ Edit types added in [changes.ts](../05-structures/changes.ts) (marked `build:`):
 | `setDescription` | New (slice P-1): sets an object's description, which `createObject` could set but nothing could change. Conflicts per field like `renameObject`; at most 10,000 characters |
 | `confirmProperties`, `setConfirmations` | New (slice P-3): `confirmProperties` stamps the listed property keys with the change's author and time in the object's `confirmations` (migration 007, column `confirmations jsonb`, NULL = none); it conflicts on `properties.<key>`, so a value changed since the reviewer's version cannot be confirmed. Its inverse `setConfirmations` puts the previous entries back (`null` removes one). `createObject` takes optional `confirmations` so restoring a deleted object is exact |
 | `setRank` | New (slice 0.8b): places a folder, object or diagram among its siblings. Last writer wins (no base version), like layout. Deleting a ranked item logs a `setRank` after the re-create in its inverse, so restoring it is exact |
-
-
-
+| `setViewDefinition` | New (slice V-1): `{ diagramId, baseVersion, set }` patches keys of a diagram's `definition`, `null` removing one, so its inverse (the previous values, `null` for keys that were absent) is exact. Conflicts per `definition.<key>`; keys are camelCase and the whole definition at most 256 KB |
+| `createDiagram` | Optional `definition` (slice V-1), so restoring a deleted view is exact |

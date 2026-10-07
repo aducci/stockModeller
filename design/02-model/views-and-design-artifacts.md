@@ -80,7 +80,7 @@ Text form, once the parser lands: `$subject -@interaction- category:component`. 
 | Pivot, filters | Swap rows and columns; hide empty rows and columns; filter by property; heat by count | View state; *Save view* writes it to the definition |
 | Totals | Row and column counts | Read-only |
 
-The metamodel editor's **connection matrix** (notation §10.2, being built in slice A-1) is the same grid over *types* and *rules* rather than objects and relationships. Both should use one grid component (sticky headers, group headers, virtualised cells, keyboard navigation). A-1 draws its matrix as a plain table, so V-1 extracts the grid from it and moves the connection matrix onto it.
+The metamodel editor's **connection matrix** (notation §10.2, being built in slice A-1) is the same grid over *types* and *rules* rather than objects and relationships. Both should use one grid component (sticky headers, group headers, virtualised cells, keyboard navigation). A-1 drew its matrix as a plain table; V-1 extracted the grid from it (`MatrixGrid`) and moved the connection matrix onto it.
 
 A matrix is also a **diagram type**, so a package can ship "Application × Capability" or "Interface × Data object (CRUD)" ready to open, and a design artifact can embed one as a section (§7).
 
@@ -379,4 +379,4 @@ Reordered 2026-10-07 after the product owner's review, to reach the document vie
 | **V-7** | Cell properties: RACI (`role`, `raci`, `raci.code`) and the CRUD data matrix; matrix checks | V-1, V-2 |
 | **V-8** | Issue and export: issued versions, Markdown / DOCX / PDF | V-2; "as of" from M2 for live issues |
 
-V-1 first: the framework pieces (definition, registry, paths) are what every later slice plugs into, and the matrix proves them on the view asked for by name. V-2 follows straight after, so the document view is usable two slices in.
+V-1 is built ([build plan](../build-plan.md); B28–B30); the component registry moved to V-2, where the first components need it. V-1 first: the framework pieces (definition, registry, paths) are what every later slice plugs into, and the matrix proves them on the view asked for by name. V-2 follows straight after, so the document view is usable two slices in.
