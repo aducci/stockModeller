@@ -89,7 +89,7 @@ function RepositoryList() {
                 {r.name}
               </button>
               <span className="spacer" />
-              <button className="link muted" aria-label={`Delete ${r.name}`} onClick={() => setDeleting(r)}>
+              <button className="link muted" title={`Delete ${r.name}`} onClick={() => setDeleting(r)}>
                 Delete…
               </button>
             </li>

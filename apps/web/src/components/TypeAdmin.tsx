@@ -82,7 +82,7 @@ export function ObjectTypeGeneral(props: {
     <section className="mm-general" aria-label="General">
       <label className="field">
         <span>Name</span>
-        <input aria-label="Type name" value={definition.name} onChange={(e) => set({ name: e.target.value })} />
+        <input aria-label="Type label" value={definition.name} onChange={(e) => set({ name: e.target.value })} />
       </label>
       <label className="field">
         <span>Plural</span>
@@ -187,7 +187,7 @@ export function RelationshipTypeGeneral(props: {
     <section className="mm-general" aria-label="General">
       <label className="field">
         <span>Name</span>
-        <input aria-label="Type name" value={definition.name} onChange={(e) => set({ name: e.target.value })} />
+        <input aria-label="Type label" value={definition.name} onChange={(e) => set({ name: e.target.value })} />
       </label>
       <label className="field">
         <span>Reads</span>

@@ -131,7 +131,13 @@ test("builds a metamodel from scratch, draws with it, and carries it to a new re
 
   await page.getByRole("menubar").getByRole("menuitem", { name: "File", exact: true }).click();
   await page.getByRole("menuitem", { name: "Switch repository…" }).click();
-  await page.getByRole("button", { name: "Delete Team model copy" }).click();
+  // The row's button is named "Delete…", so "Open" buttons keep repository names to themselves.
+  await page
+    .getByRole("list", { name: "Repositories" })
+    .getByRole("listitem")
+    .filter({ hasText: "Team model copy" })
+    .getByRole("button", { name: "Delete…" })
+    .click();
   const confirm = page.getByRole("dialog", { name: "Delete Team model copy" });
   await expect(confirm.getByRole("button", { name: "Delete repository" })).toBeDisabled();
   await confirm.getByLabel("Repository name").fill("Team model copy");
