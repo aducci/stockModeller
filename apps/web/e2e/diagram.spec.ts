@@ -92,6 +92,93 @@ test("adds a new object from the palette, and Escape cancels it", async ({ page 
   await saved(page);
 });
 
+test("clicking the palette adds where there is room; Ctrl+Enter names another beside it", async ({ page }) => {
+  await signIn(page);
+  await openDiagram(page);
+  await page
+    .getByRole("toolbar", { name: "Palette" })
+    .getByRole("button", { name: "Application", exact: true })
+    .click();
+  const box = canvas(page).getByLabel(/^Name of the new/);
+  await expect(box).toBeFocused();
+  // The box sits where the symbol will go, says what it adds, and the keys.
+  const newSymbol = canvas(page).locator(".new-symbol");
+  await expect(newSymbol).toContainText("New Application");
+  await expect(newSymbol).toContainText("Ctrl+Enter adds another");
+  await page.screenshot({ path: "test-results/add-in-place.png" });
+  await box.fill("Quick One");
+  await box.press("Control+Enter");
+  await expect(symbol(page, "Quick One")).toHaveCount(1);
+  await expect(canvas(page).getByLabel(/^Name of the new/)).toBeFocused();
+  await canvas(page)
+    .getByLabel(/^Name of the new/)
+    .fill("Quick Two");
+  await canvas(page)
+    .getByLabel(/^Name of the new/)
+    .press("Enter");
+  await expect(symbol(page, "Quick Two")).toHaveCount(1);
+  await expect(canvas(page).getByLabel(/^Name of the new/)).toHaveCount(0);
+  const one = await position(page, "Quick One");
+  const two = await position(page, "Quick Two");
+  expect(two.x).toBeGreaterThan(one.x);
+  expect(two.y).toBe(one.y);
+  await saved(page);
+});
+
+test("dropping onto a symbol puts the new one inside it when a rule allows, and says why when not", async ({
+  page,
+}) => {
+  await signIn(page);
+  await openDiagram(page);
+  const container = (await symbol(page, "Claims Management").locator("rect").first().boundingBox())!;
+  const palette = page.getByRole("toolbar", { name: "Palette" });
+  // The strip below its contents, clear of the capabilities already inside it.
+  const origin = (await canvas(page).boundingBox())!;
+  const target = { x: container.x + container.width / 2 - origin.x, y: container.y + container.height - 8 - origin.y };
+  await palette.locator(".palette-item", { hasText: /^Capability$/ }).dragTo(canvas(page), { targetPosition: target });
+  await expect(canvas(page).locator(".new-symbol")).toContainText("New Capability in Claims Management");
+  await canvas(page)
+    .getByLabel(/^Name of the new/)
+    .fill("Claim Recovery");
+  await page.screenshot({ path: "test-results/add-inside.png" });
+  await canvas(page)
+    .getByLabel(/^Name of the new/)
+    .press("Enter");
+  await expect(
+    page.getByRole("status").filter({ hasText: "Create Claim Recovery in Claims Management" }),
+  ).toBeVisible();
+  // It is drawn inside the container, and the model says Claims Management contains it.
+  const inner = (await symbol(page, "Claim Recovery").locator("rect").first().boundingBox())!;
+  const outer = (await symbol(page, "Claims Management").locator("rect").first().boundingBox())!;
+  expect(inner.x).toBeGreaterThanOrEqual(outer.x);
+  expect(inner.y + inner.height).toBeLessThanOrEqual(outer.y + outer.height);
+  await expect(relations(page)).toContainText("Claims Management");
+
+  // An application cannot go inside a capability: it is placed on the diagram, and the toast says why.
+  await palette.locator(".palette-item", { hasText: /^Application$/ }).dragTo(canvas(page), { targetPosition: target });
+  await canvas(page)
+    .getByLabel(/^Name of the new/)
+    .fill("Recovery Desk");
+  await canvas(page)
+    .getByLabel(/^Name of the new/)
+    .press("Enter");
+  await expect(page.getByRole("status").filter({ hasText: "No rule lets an Application go inside" })).toBeVisible();
+  await expect(symbol(page, "Recovery Desk")).toHaveCount(1);
+
+  // Later specs count the capabilities and click near Claims Management's contents: take both away again.
+  for (const name of ["Recovery Desk", "Claim Recovery"]) {
+    const at = await centre(page, name);
+    await page.mouse.click(at.x, at.y);
+    await page.keyboard.press("Shift+Delete");
+    await page
+      .getByRole("dialog", { name: `Delete ${name}` })
+      .getByRole("button", { name: "Delete object" })
+      .click();
+    await expect(symbol(page, name)).toHaveCount(0);
+  }
+  await saved(page);
+});
+
 test("adds an existing object again, and marks the repeat", async ({ page }) => {
   await signIn(page);
   await openDiagram(page);
