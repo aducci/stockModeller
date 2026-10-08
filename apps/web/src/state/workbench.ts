@@ -34,7 +34,7 @@ export interface MetamodelDraft {
 export interface Toast {
   id: string;
   text: string;
-  tone: "info" | "error";
+  tone: "info" | "warning" | "error";
   /** The change it reports: Undo becomes available once the server has committed it. */
   changeId?: Id;
   committed?: boolean;
@@ -279,7 +279,15 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
         toast({ text: `${label}: ${describeRejection(result.reasons[0]!)}`, tone: "error" });
         return false;
       }
-      toast({ text: label, tone: "info", changeId: id, committed: false, ...(action ? { action } : {}) });
+      // A warn rule (a discouraged pair, a repeated name or relationship) keeps the change and says why.
+      const finding = result.findings[0]?.message;
+      toast({
+        text: finding ? `${label}. ${finding}` : label,
+        tone: finding ? "warning" : "info",
+        changeId: id,
+        committed: false,
+        ...(action ? { action } : {}),
+      });
       return true;
     },
 

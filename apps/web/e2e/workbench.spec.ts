@@ -118,13 +118,17 @@ test("offers an existing object when a new one is named the same, and selects it
 
 test("refuses an edit that breaks a rule and says why", async ({ page }) => {
   await signIn(page);
-  // Names are unique per type in the repository: make one, then try to give another the same name.
+  // Names are unique per type in the repository (at one level): make two, then try to give one the other's name.
+  // Both are new, so an earlier spec's change of level elsewhere cannot make the names legitimately differ.
   await selectInExplorer(page, "Payments Hub");
-  await explorer(page).getByRole("button", { name: "+ Object" }).click();
-  await explorer(page).getByLabel("Object type").selectOption({ label: "SaaS application" });
-  await explorer(page).getByLabel("New object name").fill("Taken Name");
-  await explorer(page).getByLabel("New object name").press("Enter");
-  await rename(page, "Payments Hub", "Taken Name");
+  for (const name of ["Taken Name", "Spare Name"]) {
+    await explorer(page).getByRole("button", { name: "+ Object" }).click();
+    await explorer(page).getByLabel("Object type").selectOption({ label: "SaaS application" });
+    await explorer(page).getByLabel("New object name").fill(name);
+    await explorer(page).getByLabel("New object name").press("Enter");
+    await expect(properties(page).getByLabel("Name")).toHaveValue(name);
+  }
+  await rename(page, "Spare Name", "Taken Name");
   await expect(page.getByRole("alert").filter({ hasText: "already exists" })).toBeVisible();
-  await expect(properties(page).getByLabel("Name")).toHaveValue("Payments Hub");
+  await expect(properties(page).getByLabel("Name")).toHaveValue("Spare Name");
 });

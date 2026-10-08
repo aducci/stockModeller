@@ -25,6 +25,7 @@ import {
   type TypeKey,
 } from "@connectome/model";
 import type { Metamodel, ResolvedDiagramType, ResolvedObjectType, ResolvedRelationshipType } from "./metamodel";
+import { containerOf, duplicateRelationships, nameClash } from "./identity";
 import { checkValue } from "./properties";
 import type {
   AnnotationRow,
@@ -110,8 +111,6 @@ const SYMBOL_STYLE_KEYS = new Set(["shape", "fill", "stroke", "icon", "rendition
 const LINE_STYLE_KEYS = new Set(["style", "color", "startArrow", "endArrow"]);
 /** A placeholder replaced by the item's final version when the change finishes. */
 const PENDING_VERSION = -1;
-
-const sameName = (a: string, b: string) => a.trim().toLocaleLowerCase() === b.trim().toLocaleLowerCase();
 
 function stripMeta<T extends { deleted: boolean; scenarioId?: Id; baseVersion?: number | null }>(row: T) {
   const { deleted: _d, scenarioId: _s, baseVersion: _b, ...rest } = row;
@@ -277,8 +276,8 @@ class Transaction {
     const type = this.instantiableType(e.type, "type");
     this.checkName(e.name);
     this.refLive("folders", e.folderId, "folderId");
-    this.checkUniqueName(e.type, e.name, e.folderId, e.id);
     const properties = this.checkProperties(type.properties, {}, e.properties ?? {}, "properties");
+    this.checkUniqueName({ type: e.type, name: e.name, folderId: e.folderId, properties }, e.id);
     this.checkLevel(type, e.properties ?? {});
     const key = e.key ?? this.nextKey(e.type, type.keyPattern);
     if (key !== null) this.checkUniqueKey(e.type, key, e.id);
@@ -316,6 +315,8 @@ class Transaction {
     const properties = this.checkProperties(allowed, obj.properties, e.set, "properties");
     const type = this.mm.objectType(obj.type);
     if (type) this.checkLevel(type, e.set);
+    // Names may repeat across levels (uniquePerLevel), so moving to another level can clash.
+    if (LEVEL_PROPERTY in e.set) this.checkUniqueName({ ...obj, properties }, obj.id);
     const previous = Object.fromEntries(Object.keys(e.set).map((k) => [k, obj.properties[k] ?? null]));
     this.write("objects", { ...obj, properties });
     this.markChanged("objects", obj.id, fields);
@@ -327,7 +328,7 @@ class Transaction {
     const obj = this.requireLive("objects", e.id);
     this.checkBase("objects", obj, e.baseVersion, ["name"]);
     this.checkName(e.name);
-    this.checkUniqueName(obj.type, e.name, obj.folderId, obj.id);
+    this.checkUniqueName({ ...obj, name: e.name }, obj.id);
     this.write("objects", { ...obj, name: e.name });
     this.markChanged("objects", obj.id, ["name"]);
     this.step({ edit: "renameObject", id: obj.id, baseVersion: PENDING_VERSION, name: obj.name });
@@ -453,7 +454,7 @@ class Transaction {
       }
     }
     if (obj.key !== null) this.checkUniqueKey(e.type, obj.key, obj.id);
-    this.checkUniqueName(e.type, obj.name, obj.folderId, obj.id);
+    this.checkUniqueName({ ...obj, type: e.type, properties }, obj.id);
 
     for (const rel of this.relationshipsOf(obj.id)) {
       const source = rel.sourceId === obj.id ? e.type : this.state.objects.get(rel.sourceId)!.type;
@@ -599,7 +600,11 @@ class Transaction {
       ...this.meta(tombstone),
     });
     this.markChanged("relationships", e.id, ["*"]);
-    if (type.semantic === "containment") this.relocate(target, source.folderId);
+    if (type.semantic === "containment") {
+      this.checkUniqueName({ ...target, folderId: source.folderId }, target.id, source.id);
+      this.relocate(target, source.folderId);
+    }
+    this.checkDistinct(e.id);
     this.step({ edit: "deleteRelationship", id: e.id, baseVersion: PENDING_VERSION });
     return e.id;
   }
@@ -654,7 +659,11 @@ class Transaction {
       this.markChanged("relationships", message.id, ["sourceId", "targetId"]);
     }
     // A re-parented content moves into its new container's folder (semantics.md §3).
-    if (this.isContainment(rel.type)) this.relocate(target, source.folderId);
+    if (this.isContainment(rel.type)) {
+      this.checkUniqueName({ ...target, folderId: source.folderId }, target.id, source.id);
+      this.relocate(target, source.folderId);
+    }
+    this.checkDistinct(rel.id);
     this.step({ edit: "reconnectRelationship", id: rel.id, baseVersion: PENDING_VERSION, ...previous });
   }
 
@@ -708,7 +717,11 @@ class Transaction {
     this.write("relationships", { ...rel, type: e.type, properties });
     this.markChanged("relationships", rel.id, [...fields, ...Object.keys(properties).map((k) => `properties.${k}`)]);
     this.unnestUnbacked(rel.sourceId, rel.targetId);
-    if (type.semantic === "containment") this.relocate(target, source.folderId);
+    if (type.semantic === "containment") {
+      this.checkUniqueName({ ...target, folderId: source.folderId }, target.id, source.id);
+      this.relocate(target, source.folderId);
+    }
+    this.checkDistinct(rel.id);
     this.step({
       edit: "changeRelationshipType",
       id: rel.id,
@@ -732,6 +745,7 @@ class Transaction {
     this.checkBase("relationships", rel, e.baseVersion, ["payload"]);
     const payload = this.checkPayload(this.mm.relationshipType(rel.type)!, e.payload, "payload");
     this.writePayload(rel, payload);
+    this.checkDistinct(rel.id);
     return rel.id;
   }
 
@@ -929,7 +943,7 @@ class Transaction {
     for (const id of subtree.reverse()) {
       const obj = this.state.objects.get(id)!;
       if (obj.folderId === folderId && !(includeRoot && id === root.id)) continue;
-      this.checkUniqueName(obj.type, obj.name, folderId, obj.id);
+      this.checkUniqueName({ ...obj, folderId }, obj.id);
       this.write("objects", { ...obj, folderId });
       this.markChanged("objects", obj.id, ["folderId"]);
       this.step({ edit: "moveToFolder", id: obj.id, baseVersion: PENDING_VERSION, folderId: obj.folderId });
@@ -1588,17 +1602,39 @@ class Transaction {
     return this.mm.objectType(key)?.definition.name ?? key;
   }
 
-  /** Checks a name against the object type's uniqueness setting (case-insensitive). */
-  private checkUniqueName(type: TypeKey, name: string, folderId: Id, selfId: Id): void {
-    const scope = this.mm.objectType(type)?.uniqueName ?? "none";
-    if (scope === "none") return;
-    const clash = this.state.objects
-      .find("byType", type)
-      .find((o) => o.id !== selfId && sameName(o.name, name) && (scope === "repository" || o.folderId === folderId));
-    if (clash) {
-      const where = scope === "repository" ? "in this repository" : "in this folder";
-      this.invalid("name", `A ${this.typeName(type)} named "${clash.name}" already exists ${where}`);
-    }
+  /**
+   * Checks a name against the object type's uniqueness policy (duplicates-and-identity.md §4): refused, or a finding
+   * when the type only warns. `containerId` is the container the object is about to get; by default its current one.
+   */
+  private checkUniqueName(
+    object: { type: TypeKey; name: string; folderId: Id; properties: Record<string, PropertyValue> },
+    selfId: Id,
+    containerId: Id | null = this.state.objects.get(selfId) ? containerOf(this.state, this.mm, selfId) : null,
+  ): void {
+    const clash = nameClash(this.state, this.mm, {
+      type: object.type,
+      name: object.name,
+      folderId: object.folderId,
+      containerId,
+      level: this.mm.objectLevel(object),
+      selfId,
+    });
+    if (!clash) return;
+    if (clash.enforcement === "block") this.invalid("name", clash.message);
+    this.finding(`${object.type}:uniqueName`, selfId, clash.message);
+  }
+
+  /** A relationship that repeats another (the type's `distinct`) is allowed, with a finding. */
+  private checkDistinct(relId: Id): void {
+    const rel = this.state.relationships.get(relId);
+    if (!rel) return;
+    const same = duplicateRelationships(this.state, this.mm, rel);
+    if (same.length === 0) return;
+    const type = this.mm.relationshipType(rel.type)!;
+    const source = this.state.objects.get(rel.sourceId)?.name ?? "?";
+    const target = this.state.objects.get(rel.targetId)?.name ?? "?";
+    const carrying = type.distinct === "pairAndPayload" && rel.payload.length > 0 ? " with the same payload" : "";
+    this.finding(`${rel.type}:distinct`, rel.id, `"${source} ${type.verb} ${target}" already exists${carrying}`);
   }
 
   private checkUniqueKey(type: TypeKey, key: string, selfId: Id): void {

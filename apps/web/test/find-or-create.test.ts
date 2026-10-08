@@ -17,6 +17,7 @@ describe("find or create", () => {
     expect(findOrCreateOptions(state, metamodel, " ", "application", "F04")).toEqual({
       matches: [],
       refused: null,
+      warning: null,
       defaultIndex: 0,
     });
     const options = findOrCreateOptions(state, metamodel, "Fraud Check", "application", "F04");
@@ -30,7 +31,7 @@ describe("find or create", () => {
     // "claims-manager" is not the same name to the engine, so it may still be created deliberately.
     expect(options.refused).toBeNull();
     expect(findOrCreateOptions(state, metamodel, "CLAIMS MANAGER", "application", "F04").refused).toBe(
-      "An Application named “Claims Manager” already exists in this repository",
+      'An Application named "Claims Manager" already exists in this repository',
     );
   });
 
@@ -38,6 +39,16 @@ describe("find or create", () => {
     const options = findOrCreateOptions(state, metamodel, "claims man", "application", "F04");
     expect(options.matches[0]!.object.name).toBe("Claims Manager");
     expect(options.defaultIndex).toBe(options.matches.length);
+  });
+
+  it("checks the type's policy: related types, and names it only warns about", () => {
+    expect(findOrCreateOptions(state, metamodel, "Claims Manager", "saasApplication", "F04").refused).toMatch(
+      /An Application named/,
+    );
+    const data = findOrCreateOptions(state, metamodel, "payment", "dataObject", "F08");
+    expect(data.refused).toBeNull();
+    expect(data.warning).toBe('A Data object named "Payment" already exists in this repository');
+    expect(data.defaultIndex).toBe(0);
   });
 
   it("checks folder-scoped names in the target folder only", () => {

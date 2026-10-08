@@ -44,7 +44,11 @@ export interface ResolvedObjectType {
   lineage: TypeKey[];
   /** Property types assigned to this type or inherited. */
   properties: ReadonlySet<string>;
-  uniqueName: "repository" | "folder" | "none";
+  /** Name uniqueness (design/02-model/duplicates-and-identity.md §4), each field inherited through `extends`. */
+  uniqueName: "repository" | "folder" | "container" | "none";
+  uniqueAcross: "type" | "family";
+  uniquePerLevel: boolean;
+  onClash: "block" | "warn";
   keyPattern: string | undefined;
   symbol: Partial<SymbolStyle>;
   /** Semantic category and default level (design/02-model/semantics.md §4), inherited through `extends`. */
@@ -62,6 +66,7 @@ export interface ResolvedRelationshipType extends RelationshipType {
   nesting: boolean;
   singleParent: boolean;
   payload: PayloadUse;
+  distinct: "pair" | "pairAndPayload" | "none";
 }
 
 export interface CompiledRule extends RelationshipRule {
@@ -258,6 +263,9 @@ export class Metamodel {
         lineage,
         properties,
         uniqueName: inherited("uniqueName") ?? "none",
+        uniqueAcross: inherited("uniqueAcross") ?? "type",
+        uniquePerLevel: inherited("uniquePerLevel") ?? true,
+        onClash: inherited("onClash") ?? "block",
         keyPattern: inherited("keyPattern"),
         symbol: Object.assign({}, ...[...chain].reverse().map((t) => t.symbol ?? {})),
         category: inherited("category") ?? "other",
@@ -289,6 +297,10 @@ export class Metamodel {
         nesting: containment || (rt.nesting ?? false),
         singleParent: containment || (rt.singleParent ?? false),
         payload: rt.payload ?? (semantic === "flow" || semantic === "trigger" ? "optional" : "none"),
+        // Flows, triggers and interactions differ by what they carry; other kinds say nothing new the second time.
+        distinct:
+          rt.distinct ??
+          (semantic === "flow" || semantic === "trigger" || semantic === "interaction" ? "pairAndPayload" : "pair"),
       });
       mm.relationshipProperties.set(rt.key, new Set([...(rt.properties ?? []), ...kind.properties]));
       for (const p of rt.properties ?? []) {
