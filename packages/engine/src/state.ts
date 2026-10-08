@@ -21,6 +21,7 @@ const INDEXES: { [C in CollectionName]: Record<string, IndexKey<Rows[C]>> } = {
     byDiagram: (r) => r.diagramId,
     byObject: (r) => r.objectId,
     byParent: (r) => r.parentOccurrenceId,
+    byDrillDown: (r) => r.drillDownDiagramId,
   },
   relationshipOccurrences: {
     byDiagram: (r) => r.diagramId,

@@ -148,6 +148,8 @@ export type DiagramEdit =
       parentOccurrenceId?: Id | null;
     }
   | { edit: "styleOccurrence"; diagramId: Id; occurrenceId: Id; style: StylePatch; z?: number }
+  /** build: links a symbol to the diagram it drills down to (`null` removes the link). Last writer wins, like layout. */
+  | { edit: "setDrillDown"; diagramId: Id; occurrenceId: Id; drillDownDiagramId: Id | null }
   | { edit: "removeOccurrence"; diagramId: Id; occurrenceId: Id } // the object stays in the model
   | { edit: "addRelationshipOccurrence"; diagramId: Id; occurrence: RelationshipOccurrence }
   | {

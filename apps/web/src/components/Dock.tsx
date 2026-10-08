@@ -1,6 +1,7 @@
 // The right-hand dock (design/04-ux/workbench.md "Tool windows"): two tool windows, Properties above Relations, each
-// with a tab strip, collapsible to that strip, with a divider between them. Tabs are entries in TOOL_WINDOWS, so a
-// new view (History, Comments, an extension's panel) is one entry.
+// with a tab strip, collapsible to that strip, with a divider between them. The dock is resized from its left edge
+// and minimises to a rail of the windows' names. Tabs are entries in TOOL_WINDOWS, so a new view (History,
+// Comments, an extension's panel) is one entry.
 import { useRef, type CSSProperties, type PointerEvent, type ReactNode } from "react";
 import { usePanelPrefs } from "./Inspector";
 import { PropertiesTabContent } from "./Properties";
@@ -39,11 +40,50 @@ const TOOL_WINDOWS: ToolWindowDef[] = [
   },
 ];
 
+/** The minimised dock's width in pixels. */
+export const DOCK_RAIL = 28;
+
 export function Dock() {
   const split = usePanelPrefs((s) => s.dockSplit);
   const setSplit = usePanelPrefs((s) => s.setDockSplit);
   const collapsed = usePanelPrefs((s) => s.collapsed);
+  const minimised = usePanelPrefs((s) => s.dockMinimised);
+  const setMinimised = usePanelPrefs((s) => s.setDockMinimised);
+  const setWidth = usePanelPrefs((s) => s.setDockWidth);
+  const openTab = usePanelPrefs((s) => s.openTab);
   const dock = useRef<HTMLDivElement>(null);
+  const resize = (e: PointerEvent<HTMLDivElement>) => {
+    const box = dock.current?.getBoundingClientRect();
+    if (!box) return;
+    e.preventDefault();
+    const move = (m: globalThis.PointerEvent) => setWidth(box.right - m.clientX);
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
+  if (minimised)
+    return (
+      <div className="dock minimised" aria-label="Side panel">
+        <nav className="dock-rail" aria-label="Tool windows">
+          {TOOL_WINDOWS.map((w) => (
+            <button
+              key={w.key}
+              title={`Show ${w.label}`}
+              aria-label={`Show ${w.label}`}
+              onClick={() => {
+                setMinimised(false);
+                openTab(w.key, usePanelPrefs.getState().tabs[w.key] ?? w.tabs[0]!.key);
+              }}
+            >
+              <span className="rail-label">{w.label}</span>
+            </button>
+          ))}
+        </nav>
+      </div>
+    );
   const drag = (e: PointerEvent<HTMLDivElement>) => {
     const box = dock.current?.getBoundingClientRect();
     if (!box) return;
@@ -60,7 +100,18 @@ export function Dock() {
   const bothOpen = !collapsed.includes(top.key) && !collapsed.includes(bottom.key);
   return (
     <div className="dock" ref={dock}>
-      <ToolWindow def={top} style={bothOpen ? { flexBasis: `${split}%` } : undefined} />
+      <div
+        className="dock-resizer"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize the side panel"
+        onPointerDown={resize}
+      />
+      <ToolWindow
+        def={top}
+        style={bothOpen ? { flexBasis: `${split}%` } : undefined}
+        onMinimise={() => setMinimised(true)}
+      />
       <div
         className="dock-divider"
         role="separator"
@@ -73,7 +124,7 @@ export function Dock() {
   );
 }
 
-function ToolWindow({ def, style }: { def: ToolWindowDef; style?: CSSProperties }) {
+function ToolWindow({ def, style, onMinimise }: { def: ToolWindowDef; style?: CSSProperties; onMinimise?(): void }) {
   const active = usePanelPrefs((s) => s.tabs[def.key]);
   const isCollapsed = usePanelPrefs((s) => s.collapsed.includes(def.key));
   const openTab = usePanelPrefs((s) => s.openTab);
@@ -105,6 +156,16 @@ function ToolWindow({ def, style }: { def: ToolWindowDef; style?: CSSProperties 
         >
           {isCollapsed ? "+" : "–"}
         </button>
+        {onMinimise && (
+          <button
+            className="collapse"
+            aria-label="Minimise the side panel"
+            title="Minimise the side panel"
+            onClick={onMinimise}
+          >
+            »
+          </button>
+        )}
       </div>
       {!isCollapsed && (
         <div className="tool-body" role="tabpanel" aria-label={tab.label}>

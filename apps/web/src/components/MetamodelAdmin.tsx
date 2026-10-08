@@ -50,7 +50,7 @@ import {
   typeChanges as objectTypeChanges,
   type TypeChanges,
 } from "../type-admin";
-import { MetamodelFileButtons, NewTypeButton, ObjectTypeGeneral, RelationshipTypeGeneral } from "./TypeAdmin";
+import { NewTypeButton, ObjectTypeGeneral, RelationshipTypeGeneral, RelationshipTypeRules } from "./TypeAdmin";
 
 const VIEWS: { view: MetamodelView; label: string }[] = [
   { view: "types", label: "Types" },
@@ -74,7 +74,8 @@ export function MetamodelAdmin() {
   const openMetamodel = useWorkbench((s) => s.openMetamodel);
   const saved = useWorkbench((s) => s.metamodelDraft);
   const setDraft = useWorkbench((s) => s.setMetamodelDraft);
-  const [reviewing, setReviewing] = useState(false);
+  const reviewing = useWorkbench((s) => s.metamodelReview);
+  const setReviewing = useWorkbench((s) => s.setMetamodelReview);
 
   const published = store.metamodelPackage;
   const version = published.package.version;
@@ -92,7 +93,6 @@ export function MetamodelAdmin() {
   const changes = useMemo(() => draftChanges(publishedDraft, draft), [publishedDraft, draft]);
   const typeChanges = useMemo(() => diagramTypeChanges(publishedDraft, draft), [publishedDraft, draft]);
   const types = useMemo(() => objectTypeChanges(publishedDraft, draft), [publishedDraft, draft]);
-  const notify = useWorkbench((s) => s.notify);
   const identity = useMemo(
     () => identityChanges(store.metamodel, compiled.metamodel ?? store.metamodel),
     [store.metamodel, compiled.metamodel],
@@ -118,16 +118,6 @@ export function MetamodelAdmin() {
             {version}
           </span>
         </h2>
-        <MetamodelFileButtons
-          draft={draft}
-          hasDraft={!!saved}
-          publishedVersion={version}
-          onImport={(imported) => {
-            update(imported);
-            notify("Metamodel imported as unpublished changes: review and publish it to use it");
-          }}
-          onError={notify}
-        />
         <div className="mm-views" role="tablist" aria-label="Metamodel views">
           {VIEWS.map((v) => (
             <button
@@ -253,13 +243,16 @@ function TypesView(props: {
         onRemoved={() => setPicked(null)}
       />
     ) : picked?.kind === "relationship" ? (
-      <RelationshipTypeGeneral
-        type={picked.type}
-        draft={draft}
-        relationships={relsByType.get(picked.type) ?? 0}
-        onChange={onChange}
-        onRemoved={() => setPicked(null)}
-      />
+      <>
+        <RelationshipTypeGeneral
+          type={picked.type}
+          draft={draft}
+          relationships={relsByType.get(picked.type) ?? 0}
+          onChange={onChange}
+          onRemoved={() => setPicked(null)}
+        />
+        <RelationshipTypeRules type={picked.type} draft={draft} metamodel={metamodel} onChange={onChange} />
+      </>
     ) : null;
 
   return (
@@ -411,6 +404,8 @@ function MatrixView(props: { metamodel: Metamodel; rules: Rule[]; published: Rul
   const tree = typeTree(metamodel);
   const used = useMemo(() => pairUsage(state), [state]);
   const publishedKeys = new Set(published.map(ruleKey));
+  // A new relationship type has no rules, so it has no dot anywhere yet: say so, so it can be found.
+  const unruled = metamodel.allRelationshipTypes().filter((rt) => !rules.some((r) => r.relationshipType === rt.key));
 
   const shown = (e: CellEntry) =>
     (!family || KIND_FAMILY[e.relationshipType.semantic] === family) && (!only || e.relationshipType.key === only);
@@ -458,6 +453,20 @@ function MatrixView(props: { metamodel: Metamodel; rules: Rule[]; published: Rul
         <span className="spacer" />
         <Legend />
       </div>
+      {unruled.length > 0 && (
+        <p className="muted small mm-unruled" role="note">
+          No rules yet for{" "}
+          {unruled.map((rt, i) => (
+            <span key={rt.key}>
+              {i > 0 && ", "}
+              <button className="link" onClick={() => setOnly(rt.key)}>
+                {rt.name}
+              </button>
+            </span>
+          ))}
+          : click a cell and tick it to say which types it connects.
+        </p>
+      )}
       <MatrixGrid
         ariaLabel="Connection matrix"
         corner={<span className="muted">From ↓ · to →</span>}
@@ -559,8 +568,15 @@ function CellEditor(props: {
   onClose(): void;
 }) {
   const { metamodel, rules, source, target, at, onChange, onClose } = props;
+  // The rules as they were when the cell opened: Cancel puts them back.
+  const [before] = useState(rules);
   const entries = new Map(matrixCell(metamodel, rules, source, target).map((e) => [e.relationshipType.key, e]));
   const name = (k: TypeKey | "*") => typeLabel(metamodel, k);
+  const own = [...entries.values()].filter((e) => e.own);
+  const cancel = () => {
+    if (rules !== before) onChange(before);
+    onClose();
+  };
   return (
     <div
       className="mm-cell-editor"
@@ -570,7 +586,7 @@ function CellEditor(props: {
       }}
       role="dialog"
       aria-label={`Rules from ${name(source)} to ${name(target)}`}
-      onKeyDown={(e) => e.key === "Escape" && onClose()}
+      onKeyDown={(e) => e.key === "Escape" && cancel()}
     >
       <h4>
         {name(source)} → {name(target)}
@@ -609,7 +625,21 @@ function CellEditor(props: {
         })}
       </ul>
       <div className="actions">
-        <button onClick={onClose}>Done</button>
+        <button
+          className="danger"
+          disabled={own.length === 0}
+          title={own.length ? "Remove every rule ticked for this pair" : "No rule is ticked for this pair"}
+          onClick={() =>
+            onChange(own.reduce((acc, e) => setRule(acc, e.relationshipType.key, source, target, null), rules))
+          }
+        >
+          Remove all
+        </button>
+        <span className="spacer" />
+        <button onClick={cancel}>Cancel</button>
+        <button className="primary" onClick={onClose}>
+          Done
+        </button>
       </div>
     </div>
   );

@@ -98,6 +98,6 @@ Features:
 
 ## 7. Navigation between views
 
-- An object occurrence can link to another diagram (drill-down). Links back are automatic.
+- An object occurrence can link to another diagram (drill-down). Links back are automatic. As built (B58): the link is made from the symbol's right-click *Child diagram ▸* (a new canvas around the object, or an existing view) with the edit `setDrillDown`; the symbol shows a drill marker, double-clicking it opens the child, and deleting the child removes the link (Undo restores both). Links back are not shown yet.
 - "Occurs on…" lists every diagram where the selected object occurs.
 - Export: PNG and SVG (MVP); PDF and PowerPoint (v1); read-only share links.

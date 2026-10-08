@@ -255,6 +255,12 @@ export const editSchema = z.discriminatedUnion("edit", [
     style: stylePatch,
     z: z.number().int().optional(),
   }),
+  z.strictObject({
+    edit: z.literal("setDrillDown"),
+    diagramId: id,
+    occurrenceId: id,
+    drillDownDiagramId: id.nullable(),
+  }),
   z.strictObject({ edit: z.literal("removeOccurrence"), diagramId: id, occurrenceId: id }),
   z.strictObject({
     edit: z.literal("addRelationshipOccurrence"),

@@ -35,6 +35,8 @@ import {
   type ConnectChoice,
 } from "../diagram";
 import { addPayloadPlan, messageType, payloadText } from "../semantics";
+import { canvasTypesFor, diagramAroundPlan } from "../views";
+import { byName } from "../text";
 
 /** Drag-and-drop payloads: an object type from the palette, or an existing object from the explorer. */
 export const DRAG_TYPE = "application/x-connectome-type";
@@ -98,6 +100,7 @@ export function DiagramEditor({ id }: { id: Id }) {
   const edit = useWorkbench((s) => s.edit);
   const select = useWorkbench((s) => s.select);
   const askDeleteObject = useWorkbench((s) => s.askDeleteObject);
+  const openTab = useWorkbench((s) => s.openTab);
   const notify = useWorkbench((s) => s.notify);
   const workbenchSelection = useWorkbench((s) => s.selection);
   const traced = useWorkbench((s) => s.trace?.objectIds);
@@ -579,6 +582,77 @@ export function DiagramEditor({ id }: { id: Id }) {
     ]);
   };
 
+  // ---------------------------------------------------------------- drill-down
+
+  /** The live diagram a symbol drills down to, if any. */
+  const drillTarget = (occ: ObjectOccurrenceRow): Id | null =>
+    occ.drillDownDiagramId && state.diagrams.get(occ.drillDownDiagramId) ? occ.drillDownDiagramId : null;
+  const openDiagram = (diagramId: Id) => {
+    select({ kind: "diagram", id: diagramId });
+    openTab({ kind: "diagram", id: diagramId });
+  };
+  const linkEdit = (occ: ObjectOccurrenceRow, to: Id | null): Edit => ({
+    edit: "setDrillDown",
+    diagramId: id,
+    occurrenceId: occ.id,
+    drillDownDiagramId: to,
+  });
+  /** "Child diagram ▸": open or unlink the linked one; else a new canvas around the object, or link an existing view. */
+  const childDiagramMenu = (occ: ObjectOccurrenceRow): MenuEntry => {
+    const object = state.objects.get(occ.objectId);
+    const name = object?.name ?? "it";
+    const target = drillTarget(occ);
+    if (target) {
+      const child = state.diagrams.get(target)!;
+      return {
+        label: "Child diagram",
+        submenu: [
+          { label: `Open ${child.name}`, run: () => openDiagram(target) },
+          {
+            label: "Unlink child diagram",
+            run: () => edit(`Unlink ${child.name} from ${name}`, [linkEdit(occ, null)]),
+          },
+        ],
+      };
+    }
+    const create: MenuEntry[] = object
+      ? canvasTypesFor(metamodel, object).map((t) => ({
+          label: `New ${t.definition.name.toLowerCase()}`,
+          run: () => {
+            const plan = diagramAroundPlan(state, metamodel, t, object);
+            const childId = (plan.edits[0] as { id: Id }).id;
+            if (edit(`${plan.label} as a child of ${name}`, [...plan.edits, linkEdit(occ, childId)]))
+              openDiagram(childId);
+          },
+        }))
+      : [];
+    // Views named after the object, or stored beside it, come first.
+    const near = (d: DiagramRow) =>
+      (object && d.name.toLocaleLowerCase().includes(object.name.toLocaleLowerCase())) ||
+      d.folderId === object?.folderId
+        ? 0
+        : 1;
+    const existing = [...state.diagrams.live()]
+      .filter((d) => d.id !== id)
+      .sort((a, b) => near(a) - near(b) || byName(a, b))
+      .slice(0, 25);
+    return {
+      label: "Child diagram",
+      submenu: [
+        ...create,
+        ...(create.length ? (["separator"] as MenuEntry[]) : []),
+        {
+          label: "Link to existing",
+          disabled: existing.length ? null : "There is no other diagram yet",
+          submenu: existing.map((d) => ({
+            label: d.name,
+            run: () => edit(`Link ${d.name} as the child of ${name}`, [linkEdit(occ, d.id)]),
+          })),
+        },
+      ],
+    };
+  };
+
   const occMenuEntries = (occId: Id): MenuEntry[] => {
     const occ = state.objectOccurrences.get(occId);
     if (!occ) return [];
@@ -593,6 +667,7 @@ export function DiagramEditor({ id }: { id: Id }) {
         })),
       },
       { label: "Rename", shortcut: "F2", run: () => setRenaming(occId) },
+      childDiagramMenu(occ),
       "separator",
       {
         label: "Remove from diagram",
@@ -754,7 +829,12 @@ export function DiagramEditor({ id }: { id: Id }) {
                 style={{ "--occ-ink": ink } as CSSProperties}
                 className={classes.join(" ")}
                 onPointerDown={(e) => onOccPointerDown(e, o.id)}
-                onDoubleClick={() => setRenaming(o.id)}
+                onDoubleClick={() => {
+                  // Double-click drills down when the symbol has a child diagram; F2 always renames.
+                  const target = drillTarget(o);
+                  if (target) openDiagram(target);
+                  else setRenaming(o.id);
+                }}
                 onContextMenu={(e) => {
                   e.preventDefault();
                   choose(o.id);
@@ -774,6 +854,22 @@ export function DiagramEditor({ id }: { id: Id }) {
                   container={container}
                   zoom={zoom}
                 />
+                {drillTarget(o) && (
+                  <g
+                    className="drill"
+                    role="link"
+                    aria-label={`Open the child diagram of ${object?.name ?? "this symbol"}`}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openDiagram(drillTarget(o)!);
+                    }}
+                  >
+                    <title>Child diagram: {state.diagrams.get(drillTarget(o)!)?.name}</title>
+                    <rect x={b.x + b.w - 17} y={b.y + b.h - 17} width={14} height={14} rx={3} />
+                    <GlyphUse glyph="drill" x={b.x + b.w - 16} y={b.y + b.h - 16} size={12} />
+                  </g>
+                )}
                 {count > 1 && (
                   <text
                     x={b.x + b.w - 4}

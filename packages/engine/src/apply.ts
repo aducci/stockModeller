@@ -259,6 +259,8 @@ class Transaction {
         return this.moveObjectOccurrence(edit);
       case "styleOccurrence":
         return this.styleOccurrence(edit);
+      case "setDrillDown":
+        return this.setDrillDown(edit);
       case "removeOccurrence":
         return this.removeOccurrence(edit);
       case "addRelationshipOccurrence":
@@ -281,9 +283,12 @@ class Transaction {
     const type = this.instantiableType(e.type, "type");
     this.checkName(e.name);
     this.refLive("folders", e.folderId, "folderId");
-    const properties = this.checkProperties(type.properties, {}, e.properties ?? {}, "properties");
+    // A new object starts at its type's level unless the change says otherwise (decision B57).
+    const given = e.properties ?? {};
+    const set = type.level && !(LEVEL_PROPERTY in given) ? { ...given, [LEVEL_PROPERTY]: type.level } : given;
+    const properties = this.checkProperties(type.properties, {}, set, "properties");
     this.checkUniqueName({ type: e.type, name: e.name, folderId: e.folderId, properties }, e.id);
-    this.checkLevel(type, e.properties ?? {});
+    this.checkLevel(type, set);
     const key = e.key ?? this.nextKey(e.type, type.keyPattern);
     if (key !== null) this.checkUniqueKey(e.type, key, e.id);
     this.checkUniqueExternalIds("objects", e.externalIds ?? {}, e.id);
@@ -1223,6 +1228,17 @@ class Transaction {
 
   /** Deletes a diagram and everything on it. Objects are never deleted with a diagram. */
   private deleteDiagram(diagram: DiagramRow): void {
+    // Symbols elsewhere that drill down to it lose the link first, so the inverse restores the diagram before them.
+    for (const occ of this.state.objectOccurrences.find("byDrillDown", diagram.id)) {
+      if (occ.diagramId === diagram.id) continue;
+      this.write("objectOccurrences", { ...occ, drillDownDiagramId: null });
+      this.step({
+        edit: "setDrillDown",
+        diagramId: occ.diagramId,
+        occurrenceId: occ.id,
+        drillDownDiagramId: diagram.id,
+      });
+    }
     for (const ro of this.state.relationshipOccurrences.find("byDiagram", diagram.id))
       this.removeRelationshipOccurrence(ro);
     for (const an of this.state.annotations.find("byDiagram", diagram.id)) this.removeAnnotationRow(an);
@@ -1365,6 +1381,25 @@ class Transaction {
         style: previous as StylePatch,
       });
     }
+    return occ.id;
+  }
+
+  /** build: the diagram a symbol drills down to (diagrams-and-catalogues.md §2); double-clicking the symbol opens it. */
+  private setDrillDown(e: Extract<DiagramEdit, { edit: "setDrillDown" }>): Id {
+    const { diagram } = this.diagramOf(e.diagramId);
+    const occ = this.occurrenceOn("objectOccurrences", e.occurrenceId, diagram.id);
+    if (e.drillDownDiagramId !== null) {
+      this.refLive("diagrams", e.drillDownDiagramId, "drillDownDiagramId");
+      if (e.drillDownDiagramId === diagram.id)
+        this.invalid("drillDownDiagramId", "A symbol cannot drill down to the diagram it is on");
+    }
+    this.write("objectOccurrences", { ...occ, drillDownDiagramId: e.drillDownDiagramId });
+    this.step({
+      edit: "setDrillDown",
+      diagramId: diagram.id,
+      occurrenceId: occ.id,
+      drillDownDiagramId: occ.drillDownDiagramId,
+    });
     return occ.id;
   }
 

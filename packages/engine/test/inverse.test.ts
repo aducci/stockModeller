@@ -215,6 +215,14 @@ function candidates(state: ModelState, next: () => number, n: number): Edit[] {
           z: n,
         }
       : null,
+    occ && d
+      ? {
+          edit: "setDrillDown",
+          diagramId: occ.diagramId,
+          occurrenceId: occ.id,
+          drillDownDiagramId: d.id === occ.diagramId ? null : d.id,
+        }
+      : null,
     occ ? { edit: "removeOccurrence", diagramId: occ.diagramId, occurrenceId: occ.id } : null,
     ro
       ? {

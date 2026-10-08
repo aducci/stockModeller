@@ -1,6 +1,6 @@
 // Centre tabs: diagrams and object pages. A dot marks a tab whose item someone else changed meanwhile.
 import type { ModelState } from "@connectome/engine";
-import { KIND_GLYPH, viewKind } from "../views";
+import { viewKind } from "../views";
 import { useModel, useWorkbench, type Tab } from "../state/workbench";
 import { ObjectProperties } from "./Properties";
 import { DiagramEditor } from "./DiagramEditor";
@@ -9,6 +9,8 @@ import { MatrixView } from "./MatrixView";
 import { DocumentView } from "./DocumentView";
 import { SequenceView } from "./SequenceView";
 import { DuplicatesView } from "./DuplicatesView";
+import { ObjectViewer } from "./ObjectViewer";
+import { FolderIcon, ViewIcon } from "./ExplorerIcon";
 
 export function Centre() {
   const { state, metamodel } = useModel();
@@ -31,13 +33,17 @@ export function Centre() {
             onClick={() => activate(t.id)}
           >
             <span aria-hidden>
-              {t.kind === "diagram"
-                ? KIND_GLYPH[viewKind(state, metamodel, t.id)]
-                : t.kind === "metamodel"
-                  ? "◇"
-                  : t.kind === "duplicates"
-                    ? "≈"
-                    : "▭"}
+              {t.kind === "diagram" ? (
+                <ViewIcon kind={viewKind(state, metamodel, t.id)} size={12} />
+              ) : t.kind === "objects" ? (
+                <FolderIcon size={12} />
+              ) : t.kind === "metamodel" ? (
+                "◇"
+              ) : t.kind === "duplicates" ? (
+                "≈"
+              ) : (
+                "▭"
+              )}
             </span>
             <span>{tabName(state, t)}</span>
             {changedTabs.has(t.id) && <span className="change-dot" title="Changed by someone else" />}
@@ -77,6 +83,7 @@ export function Centre() {
           ))}
         {active?.kind === "metamodel" && <MetamodelAdmin />}
         {active?.kind === "duplicates" && <DuplicatesView />}
+        {active?.kind === "objects" && active.folderId && <ObjectViewer key={active.id} folderId={active.folderId} />}
       </div>
     </main>
   );
@@ -85,6 +92,7 @@ export function Centre() {
 function tabName(state: ModelState, tab: Tab): string {
   if (tab.kind === "metamodel") return "Metamodel";
   if (tab.kind === "duplicates") return "Possible duplicates";
+  if (tab.kind === "objects") return `${state.folders.get(tab.folderId ?? "")?.name ?? "(deleted)"} objects`;
   const item = tab.kind === "diagram" ? state.diagrams.get(tab.id) : state.objects.get(tab.id);
   return item?.name ?? "(deleted)";
 }

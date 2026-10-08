@@ -16,8 +16,10 @@ export type Focus = Selection | { kind: "relationship"; id: Id };
 export const itemSelected = (focus: Focus | null): Selection | null =>
   focus && focus.kind !== "relationship" ? focus : null;
 export interface Tab {
-  kind: "object" | "diagram" | "metamodel" | "duplicates";
+  kind: "object" | "diagram" | "metamodel" | "duplicates" | "objects";
   id: Id;
+  /** The object viewer's folder (kind "objects"). */
+  folderId?: Id;
 }
 
 /** The metamodel tab's id: there is one, whatever view it shows. */
@@ -81,6 +83,8 @@ interface WorkbenchState {
   metamodelView: MetamodelView;
   /** Unpublished rule edits (notation-and-metamodel-admin.md §10); null when there are none. */
   metamodelDraft: MetamodelDraft | null;
+  /** The Review and publish dialog is open (from the Metamodel menu or the draft bar). */
+  metamodelReview: boolean;
   /** The property type the Properties view of the metamodel tab shows. */
   metamodelProperty: string | null;
 
@@ -107,6 +111,7 @@ interface WorkbenchState {
   /** Opens the metamodel tab's Properties view on one property type. */
   showMetamodelProperty(key: string | null): void;
   setMetamodelDraft(draft: MetamodelDraft | null): void;
+  setMetamodelReview(open: boolean): void;
 }
 
 let unsubscribe: (() => void) | undefined;
@@ -144,6 +149,7 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
     marked: [],
     metamodelView: "matrix",
     metamodelDraft: null,
+    metamodelReview: false,
     metamodelProperty: null,
 
     async open(options) {
@@ -207,6 +213,7 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
           explorerTask: null,
           marked: [],
           metamodelDraft: null,
+          metamodelReview: false,
           metamodelProperty: null,
         });
       } catch (error) {
@@ -249,6 +256,10 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
     showMetamodelProperty(metamodelProperty) {
       set({ metamodelProperty });
       if (metamodelProperty) get().openMetamodel("properties");
+    },
+
+    setMetamodelReview(metamodelReview) {
+      set({ metamodelReview });
     },
 
     setMetamodelDraft(metamodelDraft) {

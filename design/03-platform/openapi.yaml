@@ -518,7 +518,7 @@ components:
                  createRelationship, reconnectRelationship, changeRelationshipType, setPayload, deleteRelationship,
                  createFolder, renameFolder, moveFolder, deleteFolder,
                  createDiagram, updateDiagram, deleteDiagram, setViewDefinition, setMessageStep,
-                 addObjectOccurrence, moveObjectOccurrence, styleOccurrence, removeOccurrence,
+                 addObjectOccurrence, moveObjectOccurrence, styleOccurrence, setDrillDown, removeOccurrence,
                  addRelationshipOccurrence, routeRelationshipOccurrence, addAnnotation, updateAnnotation, removeAnnotation,
                  setTags, setDescription, confirmProperties, setConfirmations, setAliases, setNotDuplicates,
                  setRelationshipProperties, setDiagramProperties]

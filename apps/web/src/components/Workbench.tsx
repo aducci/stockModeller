@@ -1,12 +1,13 @@
 // One page per repository (design/04-ux/workbench.md): top bar, explorer, centre tabs, properties.
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { authorization, useAuth } from "../state/auth";
 import { useWorkbench } from "../state/workbench";
 import { navigate } from "../route";
 import { saveState } from "../text";
 import { Explorer } from "./Explorer";
 import { Centre } from "./Centre";
-import { Dock } from "./Dock";
+import { Dock, DOCK_RAIL } from "./Dock";
+import { usePanelPrefs } from "./Inspector";
 import { Toasts } from "./Toasts";
 import { DeleteObjectDialog } from "./DeleteObjectDialog";
 import { MenuBar } from "./Menu";
@@ -16,6 +17,7 @@ export function Workbench({ repositoryId, scenarioId }: { repositoryId: string; 
   const signIn = useAuth((s) => s.signIn)!;
   const { session, loading, error, open, close } = useWorkbench();
   const status = useWorkbench((s) => s.status);
+  const dockWidth = usePanelPrefs((s) => (s.dockMinimised ? DOCK_RAIL : s.dockWidth));
 
   useEffect(() => {
     void open({
@@ -53,7 +55,10 @@ export function Workbench({ repositoryId, scenarioId }: { repositoryId: string; 
 
   const inScenario = session.store.scenario.parentId !== null;
   return (
-    <div className={`workbench${inScenario ? " in-scenario" : ""}`}>
+    <div
+      className={`workbench${inScenario ? " in-scenario" : ""}`}
+      style={{ "--dock-width": `${dockWidth}px` } as CSSProperties}
+    >
       <TopBar />
       {(status === "reconnecting" || status === "paused") && (
         <div className="banner" role="status">
