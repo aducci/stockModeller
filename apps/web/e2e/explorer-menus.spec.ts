@@ -19,7 +19,7 @@ test("the right-click menu creates, renames and deletes a folder", async ({ page
   await signIn(page);
   await row(page, "Applications").click({ button: "right" });
   await menuItem(page, "New").hover();
-  await menuItem(page, "New folder").click();
+  await menuItem(page, "Folder").click();
   await explorer(page).getByLabel("New folder name").fill("Menu Test");
   await explorer(page).getByLabel("New folder name").press("Enter");
   await expect(row(page, "Menu Test")).toBeVisible();
@@ -27,7 +27,7 @@ test("the right-click menu creates, renames and deletes a folder", async ({ page
   // An object in it: the folder cannot be deleted while it holds something, and the menu says why.
   await row(page, "Menu Test").click({ button: "right" });
   await menuItem(page, "New").hover();
-  await menuItem(page, "New object").click();
+  await menuItem(page, "Object").click();
   await explorer(page).getByLabel("New object name").fill("Menu Widget");
   await explorer(page).getByLabel("New object name").press("Enter");
   await expect(row(page, "Menu Widget")).toBeVisible();
@@ -86,7 +86,7 @@ test("the File menu creates a diagram, renames it and closes its tab", async ({ 
   // Keyboard: ↓ opens the menu, arrows move, Enter runs.
   await file.focus();
   await page.keyboard.press("ArrowDown");
-  await expect(menuItem(page, "New folder")).toBeFocused();
+  await expect(menuItem(page, "New object")).toBeFocused();
   await page.keyboard.press("Escape");
   await file.click();
   await menuItem(page, "Close all tabs").click();

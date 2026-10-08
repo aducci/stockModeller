@@ -58,13 +58,15 @@ A property set is a named, ordered selection of a type's properties (B25). **Sha
 
 #### Confirmations (slice P-3)
 
-Reviews happen in the properties panel itself (decided 2026-10-06). **Review** in the toolbar adds a confirmation column and a bar saying how many shown values are due this quarter, with **Confirm all shown**. Each row shows "✓ 6 Oct" when confirmed this quarter, or **Confirm** when it was never confirmed, was confirmed in an earlier quarter, or changed since it was confirmed (amber); the tooltip says who confirmed it and when. Setting a value while reviewing confirms it in the same change. Choosing a property set first (Essentials' *Quarterly review*) limits the review to that set.
+**Moved out of the properties panel** (October 2026 feedback, B61): reviews will be run from a *Manage reviews* menu over a set of elements (an object list or list view), started by people allowed to start one, and each reviewer sees the review waiting for them; see the [feature backlog](../feature-backlog.md). The engine's confirmations below stay; the panel no longer has the Review toggle or the confirmation column. What the panel did until then: **Review** in the toolbar adds a confirmation column and a bar saying how many shown values are due this quarter, with **Confirm all shown**. Each row shows "✓ 6 Oct" when confirmed this quarter, or **Confirm** when it was never confirmed, was confirmed in an earlier quarter, or changed since it was confirmed (amber); the tooltip says who confirmed it and when. Setting a value while reviewing confirms it in the same change. Choosing a property set first (Essentials' *Quarterly review*) limits the review to that set.
 
 A confirmation is model data: the edit `confirmProperties` stamps each key with the change's author and time in the object's `confirmations`, and is refused for a value changed since the version the reviewer saw. Its inverse `setConfirmations` restores what was there, so Undo is exact (B26). Later (P-4): a review list per owner across many objects, using the same panel elements, reminders, and reviewers without modelling rights.
 
 #### Tool windows (slice P-2)
 
-The right column is a dock of two **tool windows**, each a tab strip over its content (Sparx EA, ABACUS): **Properties** (the inspector) above **Relations**, with a divider between them; either collapses to its tab strip. Open tabs, collapsed windows and the divider are remembered. Tabs are entries in a registry, so History, Comments and an extension's view are one entry each.
+The right column is a dock of two **tool windows**, each a tab strip over its content (Sparx EA, ABACUS): **Properties** (the inspector) above **Relations**, with a divider between them; either collapses to its tab strip. The whole dock **minimises** (» in its top tab strip) to a narrow rail of the windows' names, any of which brings it back on that window, and its left edge **resizes** it (240–720 px). Open tabs, collapsed windows, the divider, the width and the minimised state are remembered.
+
+Moving tool windows around was weighed in the October 2026 feedback (B59). *Floating* windows cover the diagram being edited and get lost on small screens and second monitors; a full *docking* framework (drag a tab to any edge, split, stack) costs a layout engine, persistence per user and a reset, for little gain while there are two windows. So the dock stays fixed on the right, and what people asked for is covered by minimising and resizing it. The next step, when there are more windows (History, Comments), is to let a tab move between the right dock and a bottom dock by dragging it or from its menu, still docked, never floating. Tabs are entries in a registry, so History, Comments and an extension's view are one entry each.
 
 | Relations tab | Content |
 |---|---|
@@ -124,7 +126,7 @@ The **Hierarchies** tab picks any hierarchy (containment, a composition or aggre
 
 | Action | Result |
 |---|---|
-| Double-click an object occurrence | Opens its drill-down diagram, or else the object's full page |
+| Double-click an object occurrence | Opens its drill-down diagram, or else renames it in place (F2 always renames). A symbol with a child diagram shows the drill marker in its corner, which opens it too. Right-click › *Child diagram ▸* makes one (a new canvas of each type that can draw the object, with it in the middle, B58) or links an existing view, and later opens or unlinks it |
 | Alt+click | "Occurs on…": jump to other diagrams showing the object |
 | ⌘K | Search objects, diagrams, catalogues and commands ("New application", "Switch scenario", "Run automation…") |
 | Breadcrumb | Folder path of the selection; hierarchy path when the selection is nested |
@@ -136,9 +138,9 @@ One menu component serves the top bar's menu bar and the explorer's right-click 
 
 | Menu | Items |
 |---|---|
-| **File** (top bar) | New folder, New object, New diagram · Rename (F2) · Delete · Close tab, Close all tabs · Switch repository…, Sign out. New items go into the selected folder or the selected item's folder. New diagram opens the dialog with the types grouped by kind (B46), where the folder can be changed, so it needs no selection |
+| **File** (top bar) | New object, New diagram, New folder, New group · Rename (F2) · Delete · Close tab, Close all tabs · Switch repository…, Sign out. New items go into the selected folder or the selected item's folder. New diagram opens the dialog with the types grouped by kind (B46), where the folder can be changed, so it needs no selection |
 | **Review** (top bar) | Possible duplicates: opens a tab listing pairs of objects that may be one thing, with the likeness, the reasons and *Not duplicates* ([duplicates-and-identity.md](../02-model/duplicates-and-identity.md) §6, slice D-3) |
-| Explorer: folder | New ▸ (folder, object, diagram, group) · Rename · Delete folder (only when empty) |
+| Explorer: folder | Object viewer · New ▸ (Object, Diagram, Folder, Group: the submenu does not repeat "New") · Rename · Move up, Move down · Delete folder (only when empty) |
 | Explorer: object | Open · New ▸ (as a folder, then each canvas type that can draw it, *Sequence of its interactions* when it has some, and the documents it can be the subject of) · Rename · Add to group ▸ (the groups, then New group…) · Delete object… (the dialog listing what goes with it) |
 | Explorer: group | As an object, plus Ungroup (deletes the group; its members stay) |
 | Explorer: group member (↗) | Open · Remove from group |
@@ -146,7 +148,22 @@ One menu component serves the top bar's menu bar and the explorer's right-click 
 | Explorer: several marked rows | Group *n* items… · Add to group ▸ · Clear marks |
 | Explorer: empty space | New folder at the top level · New diagram |
 
-In the explorer, F2 renames the focused row in place, Delete deletes it (on a member row: removes it from the group), Shift+F10 or the context-menu key opens its menu, and Ctrl/⌘-click marks rows to drag or group together (Esc clears the marks). Edit and View menus follow in later slices.
+In the explorer, F2 renames the focused row in place, Ctrl/⌘+↑ and Ctrl/⌘+↓ move it one place among its siblings (as dropping it there would, so the order is stored and shared), Delete deletes it (on a member row: removes it from the group), Shift+F10 or the context-menu key opens its menu, and Ctrl/⌘-click marks rows to drag or group together (Esc clears the marks). Edit and View menus follow in later slices.
+
+## Object viewer
+
+Right-click a folder › **Object viewer** opens a centre tab listing the objects stored in the folder and, unless *Include subfolders* is cleared, in its subfolders (with the folder each is in). It is for administering many objects at speed:
+
+- the top row adds an object: a type and a name, Enter adds it and keeps the box open for the next one;
+- the name and simple properties (text, number, date, yes/no, list) are edited in their cells; other values are shown and edited in the properties panel;
+- the columns are the properties every listed type carries, the level first, at most eight; a type filter narrows the list (and so widens the columns), and a name filter finds rows;
+- rows are selected with their checkbox and deleted together in one change (one Undo); × on a row deletes one object through the dialog that lists what goes with it.
+
+Every edit is an ordinary change. Choosing columns, sorting and saving a list as a view are for the list views of V-6 ([views](../02-model/views-and-design-artifacts.md) §8).
+
+## Explorer rows
+
+Rows are 12 px text on 22 px rows, indented 12 px a level, with a disclosure triangle (blank for a leaf) and then an icon. The icon tells the three kinds of item apart at a glance: **objects** draw their type's line glyph in its category colour (notation §2), **views** (diagrams, matrices, documents, sequences) a filled accent tile with the kind inside, and **folders** a plain grey folder outline, their names in medium weight.
 
 ## Drag and drop in the explorer
 

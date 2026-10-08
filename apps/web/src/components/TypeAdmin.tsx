@@ -264,10 +264,6 @@ export function RelationshipTypeGeneral(props: {
           ))}
         </select>
       </label>
-      <p className="muted small">
-        Nothing can be connected with it until a rule allows it: add one under Rules, or tick it in the Connection
-        matrix.
-      </p>
       <div className="mm-general-actions">
         <span className="muted mono small">{type}</span>
         <span className="spacer" />

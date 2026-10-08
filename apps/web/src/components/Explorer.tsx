@@ -567,6 +567,13 @@ function Row(props: {
     ];
   };
 
+  // Objects open on double-click, so their contents toggle from the triangle or the icon.
+  const toggleFromIcon = (e: MouseEvent) => {
+    if (expanded === undefined || !onToggle) return;
+    e.stopPropagation();
+    onToggle();
+  };
+
   if (renaming) return <RenameBox item={item} depth={depth} icon={icon} name={label} />;
   return (
     <div
@@ -609,19 +616,10 @@ function Row(props: {
         showMenu(e.clientX, e.clientY);
       }}
     >
-      <span
-        className="twisty"
-        aria-hidden
-        onClick={(e) => {
-          // Objects open on double-click, so their contents toggle from the triangle.
-          if (expanded === undefined || !onToggle) return;
-          e.stopPropagation();
-          onToggle();
-        }}
-      >
+      <span className="twisty" aria-hidden onClick={toggleFromIcon}>
         {expanded === undefined ? "" : expanded ? "▾" : "▸"}
       </span>
-      <span className="icon" aria-hidden>
+      <span className="icon" aria-hidden onClick={item.kind === "object" ? toggleFromIcon : undefined}>
         {icon}
       </span>
       <span className="label">{label}</span>

@@ -106,9 +106,9 @@ test("builds a metamodel from scratch, draws with it, and carries it to a new re
   await saved(page);
 
   // Export the metamodel, start a second repository from the file, then delete that one.
-  await openMetamodel(page, "Types");
   const download = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export" }).click();
+  await page.getByRole("menubar").getByRole("menuitem", { name: "Metamodel", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Export metamodel", exact: true }).click();
   const file = await (await download).path();
   expect((await download).suggestedFilename()).toMatch(/\.metamodel\.json$/);
   const exported = JSON.parse(await readFile(file, "utf8")) as { package: { objectTypes: { key: string }[] } };

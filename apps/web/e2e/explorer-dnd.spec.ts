@@ -26,7 +26,7 @@ async function signIn(page: Page) {
 async function create(page: Page, parent: string, what: "folder" | "object", name: string) {
   await row(page, parent).click({ button: "right" });
   await menuItem(page, "New").hover();
-  await menuItem(page, `New ${what}`).click();
+  await menuItem(page, what === "folder" ? "Folder" : "Object").click();
   const box = explorer(page).getByLabel(`New ${what} name`);
   await box.fill(name);
   await box.press("Enter");

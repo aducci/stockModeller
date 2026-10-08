@@ -401,6 +401,13 @@ Rule endpoints therefore become: a type key, `*`, an abstract type (inherited th
 - **Editor tabs:** *General* for every kind (name, description, kind, the element types it can show with their subtypes, every relationship type or a list, and the properties its diagrams carry). Then one tab for the kind: *Notation* for canvases (nesting, drawing existing relationships, the rendition shapes start as, and per element type its shape, fill, width and height); *Matrix* (rows, columns, the relationship and its direction, nesting rows, hiding empty ones, with a count of rows, columns and filled cells on this repository); *Sequence* (what can be a lifeline, which relationships are messages); *Template* (the resolved sections with their locks, read-only until the designer, V-5).
 - **Publishing:** the review lists diagram types added, changed and removed, and what existing diagrams still show that their type no longer allows (it stays drawn; no more can be added). A type in use keeps its kind, and the server refuses a publish that changes it. `colourRules`, `labels`, `legend` and `generate` are kept as they are: nothing reads them yet.
 
+### 10.6d Changed after the October 2026 feedback
+
+- **The Metamodel menu holds the draft and the file:** *Review and publish…* (when there are unpublished changes), *Discard unpublished changes*, *Export metamodel* (the draft when there is one, else the published version) and *Import metamodel…* (as unpublished changes). The Export and Import buttons left the tab's header to save space; the draft bar keeps *Discard* and *Review and publish…*.
+- **A relationship type's rules are edited in its panel** (Types view): the rules naming it, from type to type, with *blocks*/*warns* and *Remove*, and a row to add one (*Any type* is `*`). The matrix and the rule sentences edit the same rules.
+- **Matrix:** a note names the relationship types that have no rule yet (each one filters the matrix to it), since a new type has no dot anywhere until it is allowed somewhere. A cell's editor has *Cancel* (puts the cell's rules back as they were when it opened; Esc does the same), *Remove all* (the rules ticked for that pair) and *Done*.
+- **Help:** *Level* and *Abstract* have a ? that explains them on hover and, clicked, under the setting. New objects start at their type's level (B57).
+
 ### 10.7 Notation studio
 
 The notation lives on the type editor, not in a separate tool:
