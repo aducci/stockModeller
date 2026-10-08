@@ -443,3 +443,35 @@ describe("confirmations", () => {
     ).toMatchObject({ ok: false, reasons: [{ code: "invalid", property: "keys" }] });
   });
 });
+
+describe("external ids", () => {
+  it("refuses a second object claiming the same system id, and allows it once the first is gone", () => {
+    const state = exampleState();
+    const create = (id: string): Edit => ({
+      edit: "createObject",
+      id,
+      type: "application",
+      name: `App ${id}`,
+      folderId: "F04",
+      externalIds: { servicenow: "cmdb_ci_appl_7781" },
+    });
+    expect(rejection(state, [create("N1")])).toMatchObject({ code: "invalid", property: "externalIds.servicenow" });
+    const owner = [...state.objects.live()].find((o) => o.externalIds.servicenow === "cmdb_ci_appl_7781")!;
+    applyOk(state, [{ edit: "deleteObject", id: owner.id, baseVersion: owner.version }]);
+    applyOk(state, [create("N1")]);
+  });
+
+  it("allows the same id in another system", () => {
+    const state = exampleState();
+    applyOk(state, [
+      {
+        edit: "createObject",
+        id: "N1",
+        type: "application",
+        name: "Other",
+        folderId: "F04",
+        externalIds: { leanix: "cmdb_ci_appl_7781" },
+      },
+    ]);
+  });
+});

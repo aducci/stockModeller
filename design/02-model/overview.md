@@ -90,7 +90,9 @@ flowchart LR
 |---|---|
 | System references, links, history | `id`: one global ID (ULID) per object, relationship, diagram, etc. |
 | People and imports | Optional `key` (e.g. `APP-0042`), unique per object type, or the name + folder path |
-| Other systems | `externalIds`, e.g. `{ "servicenow": "a1b2c3" }` |
+| Other systems | `externalIds`, e.g. `{ "servicenow": "a1b2c3" }`. A `system: id` pair belongs to at most one live object (and one relationship) |
+
+Names are labels, not identity: how duplicates are prevented, found and merged is in [duplicates-and-identity.md](duplicates-and-identity.md).
 
 ## 5. Where to read next
 
@@ -103,4 +105,5 @@ flowchart LR
 | Validation, calculations, derived relationships | [rules-and-calculations.md](rules-and-calculations.md) |
 | Semantic kinds, containment, payloads, interactions, tracing | [semantics.md](semantics.md) |
 | Glyphs, renditions, style rules, markers, lenses, stencils; administering the rules | [notation-and-metamodel-admin.md](notation-and-metamodel-admin.md)  |
+| Duplicates: uniqueness per type, find or create, similarity, merge | [duplicates-and-identity.md](duplicates-and-identity.md) |
 | Matrix, list, specification and sequence views; design artifacts (templated documents) | [views-and-design-artifacts.md](views-and-design-artifacts.md) |

@@ -88,6 +88,26 @@ test("creates a folder and an object in it, and undoes from the toast", async ({
   await expect(page.getByTestId("save-state")).toHaveText("All changes saved");
 });
 
+test("offers an existing object when a new one is named the same, and selects it", async ({ page }) => {
+  await signIn(page);
+  await selectInExplorer(page, "Payments Hub");
+  await explorer(page).getByRole("button", { name: "+ Object" }).click();
+  await explorer(page).getByLabel("Object type").selectOption({ label: "Application" });
+  const box = explorer(page).getByLabel("New object name");
+  await box.fill("payments");
+  const list = explorer(page).getByRole("listbox", { name: "Existing or new" });
+  // A partial name lists the match (a SaaS application, so its type is shown) but still creates by default.
+  await expect(list.getByRole("option").first()).toContainText("Payments Hub");
+  await expect(list.getByRole("option").first()).toContainText("SaaS application");
+  await expect(list.getByRole("option").last()).toHaveAttribute("aria-selected", "true");
+  await box.press("ArrowDown");
+  await expect(list.getByRole("option").first()).toHaveAttribute("aria-selected", "true");
+  await box.press("Enter");
+  await expect(properties(page).getByLabel("Name")).toHaveValue("Payments Hub");
+  await expect(page.getByRole("status").filter({ hasText: "Payments Hub already exists" })).toBeVisible();
+  await expect(explorer(page).getByLabel("New object name")).toHaveCount(0);
+});
+
 test("refuses an edit that breaks a rule and says why", async ({ page }) => {
   await signIn(page);
   // Names are unique per type in the repository: make one, then try to give another the same name.

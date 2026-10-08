@@ -39,6 +39,7 @@ import {
   type Position,
 } from "../dragdrop";
 import { DRAG_OBJECT } from "./DiagramEditor";
+import { FindOrCreate } from "./FindOrCreate";
 import { Glyph } from "./Glyph";
 import { ContextMenu, type MenuEntry } from "./Menu";
 import { backgroundMenu, deleteItem, itemMenu, marksMenu, memberMenu, openItem, renameItem, runPlan } from "./commands";
@@ -649,6 +650,7 @@ function CreateForm(props: {
   const edit = useWorkbench((s) => s.edit);
   const select = useWorkbench((s) => s.select);
   const openTab = useWorkbench((s) => s.openTab);
+  const notify = useWorkbench((s) => s.notify);
   const types =
     kind === "diagram"
       ? metamodel.allDiagramTypes().map((t) => ({ key: t.definition.key, name: t.definition.name }))
@@ -663,6 +665,10 @@ function CreateForm(props: {
     e.preventDefault();
     const trimmed = name.trim();
     if (!trimmed) return onDone();
+    if (create(trimmed)) onDone();
+  };
+  /** Makes the item; false when the change was refused. */
+  const create = (trimmed: string): boolean => {
     const id = ulid();
     const ok =
       kind === "folder"
@@ -688,8 +694,8 @@ function CreateForm(props: {
       useWorkbench.getState().toggleMark(null);
       select({ kind: kind === "group" ? "object" : kind, id });
       if (kind === "diagram") openTab({ kind, id });
-      onDone();
     }
+    return ok;
   };
   const words = kind;
   return (
@@ -707,16 +713,34 @@ function CreateForm(props: {
           ))}
         </select>
       )}
-      <input
-        autoFocus
-        aria-label={`New ${words} name`}
-        placeholder={kind === "folder" ? "Folder name" : kind === "group" ? "Group name" : "Name"}
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-      />
-      <button type="submit" className="primary">
-        Create
-      </button>
+      {kind === "object" ? (
+        // Offers the objects this may already be before making a new one (design/02-model/duplicates-and-identity.md §5).
+        <FindOrCreate
+          key={type}
+          type={type}
+          folderId={folderId}
+          label="New object name"
+          onPick={(object) => {
+            select({ kind: "object", id: object.id });
+            notify(`${object.name} already exists, so it is selected instead of making a copy`, "info");
+          }}
+          onCreate={(chosen) => create(chosen)}
+          onDone={onDone}
+        />
+      ) : (
+        <>
+          <input
+            autoFocus
+            aria-label={`New ${words} name`}
+            placeholder={kind === "folder" ? "Folder name" : kind === "group" ? "Group name" : "Name"}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <button type="submit" className="primary">
+            Create
+          </button>
+        </>
+      )}
     </form>
   );
 }

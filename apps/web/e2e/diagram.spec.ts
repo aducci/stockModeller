@@ -107,6 +107,28 @@ test("adds an existing object again, and marks the repeat", async ({ page }) => 
   await saved(page);
 });
 
+test("naming a new symbol after an existing object reuses it instead of making a copy", async ({ page }) => {
+  await signIn(page);
+  await openDiagram(page);
+  await expect(symbol(page, "Claim Intake").first()).toBeVisible();
+  const before = await symbol(page, "Claim Intake").count();
+  await page
+    .getByRole("toolbar", { name: "Palette" })
+    .locator(".palette-item", { hasText: /^Capability$/ })
+    .dragTo(canvas(page), { targetPosition: { x: 620, y: 360 } });
+  const box = canvas(page).getByLabel(/^Name of the new/);
+  await box.fill("claim intake");
+  // The existing capability is offered first and highlighted; creating a copy is the last option.
+  const options = canvas(page).getByRole("listbox", { name: "Existing or new" }).getByRole("option");
+  await expect(options.first()).toContainText("Claim Intake");
+  await expect(options.first()).toHaveAttribute("aria-selected", "true");
+  await expect(options.last()).toContainText("already exists");
+  await box.press("Enter");
+  await expect(symbol(page, "Claim Intake")).toHaveCount(before + 1);
+  await expect(explorer(page).locator(".row", { hasText: "Claim Intake" })).toHaveCount(1);
+  await saved(page);
+});
+
 test("connects two symbols with a relationship type the rules allow", async ({ page }) => {
   await signIn(page);
   await openDiagram(page);

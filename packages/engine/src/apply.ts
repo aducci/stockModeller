@@ -282,6 +282,7 @@ class Transaction {
     this.checkLevel(type, e.properties ?? {});
     const key = e.key ?? this.nextKey(e.type, type.keyPattern);
     if (key !== null) this.checkUniqueKey(e.type, key, e.id);
+    this.checkUniqueExternalIds("objects", e.externalIds ?? {}, e.id);
 
     const tombstone = this.state.objects.getAny(e.id);
     this.write("objects", {
@@ -573,6 +574,8 @@ class Transaction {
         rank = ranks.length > 0 ? Math.max(...ranks) + 1 : 0;
       }
     }
+
+    this.checkUniqueExternalIds("relationships", e.externalIds ?? {}, e.id);
 
     const tombstone = this.state.relationships.getAny(e.id);
     this.write("relationships", {
@@ -1601,6 +1604,23 @@ class Transaction {
   private checkUniqueKey(type: TypeKey, key: string, selfId: Id): void {
     const clash = this.state.objects.find("byType", type).find((o) => o.id !== selfId && o.key === key);
     if (clash) this.invalid("key", `Key ${key} is already used by ${clash.name}`);
+  }
+
+  /**
+   * An external id names one item in another system, so two live objects (or two relationships) may not claim the
+   * same `system: id` pair: an integration could not tell which to update.
+   */
+  private checkUniqueExternalIds(kind: "objects" | "relationships", ids: Record<string, string>, selfId: Id): void {
+    const pairs = Object.entries(ids);
+    if (pairs.length === 0) return;
+    for (const row of this.state[kind].live()) {
+      if (row.id === selfId) continue;
+      for (const [system, value] of pairs) {
+        if (row.externalIds[system] !== value) continue;
+        const what = kind === "objects" ? (row as { name: string }).name : "another relationship";
+        this.invalid(`externalIds.${system}`, `${system} id ${value} already belongs to ${what}`);
+      }
+    }
   }
 
   /** The next key for a pattern such as `APP-{0000}` (tombstones count, so keys are never reused). */
