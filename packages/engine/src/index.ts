@@ -21,3 +21,12 @@ export {
   type MetamodelImpact,
   type PropertyUsage,
 } from "./property-usage";
+export {
+  findSimilarObjects,
+  kinshipOf,
+  nameSimilarity,
+  normaliseName,
+  type Kinship,
+  type SimilarObject,
+  type SimilarQuery,
+} from "./similar";

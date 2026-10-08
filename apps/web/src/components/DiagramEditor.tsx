@@ -14,6 +14,7 @@ import { RENDITIONS, ulid, type Edit, type Id } from "@connectome/model";
 import type { DiagramRow, ObjectOccurrenceRow } from "@connectome/engine";
 import { useModel, useWorkbench } from "../state/workbench";
 import { ON_LITERAL_FILL, lineFor, notationFor } from "../notation";
+import { FindOrCreate } from "./FindOrCreate";
 import { Glyph, GlyphUse } from "./Glyph";
 import { ContextMenu, type MenuEntry } from "./Menu";
 import { OccurrenceShape } from "./OccurrenceShape";
@@ -230,10 +231,15 @@ export function DiagramEditor({ id }: { id: Id }) {
       if (edit(plan.label, plan.edits)) select({ kind: "relationship", id: onLine.dataset.rel });
       return;
     }
-    const others = occurrences.filter((o) => o.objectId === objectId).map((o) => o.id);
+    placeExisting(object, at);
+  };
+
+  /** Shows an existing object here (dropped from the explorer, or picked in the name box instead of a copy). */
+  const placeExisting = (object: { id: Id; name: string; type: string }, at: Point) => {
+    const others = occurrences.filter((o) => o.objectId === object.id).map((o) => o.id);
     const occId = ulid();
     const ok = edit(`Add ${object.name} to ${diagram.name}`, [
-      { edit: "addObjectOccurrence", diagramId: id, occurrence: newOccurrence(occId, objectId, object.type, at) },
+      { edit: "addObjectOccurrence", diagramId: id, occurrence: newOccurrence(occId, object.id, object.type, at) },
     ]);
     if (ok) {
       // A repeat is allowed, but made visible so it is deliberate.
@@ -718,11 +724,15 @@ export function DiagramEditor({ id }: { id: Id }) {
         </svg>
 
         {naming && (
-          <NameBox
-            at={{ x: naming.at.x * zoom, y: naming.at.y * zoom }}
+          <FindOrCreate
+            className="name-box"
+            style={{ left: naming.at.x * zoom, top: naming.at.y * zoom }}
+            type={naming.type}
+            folderId={defaultFolderFor(state, metamodel, naming.type, diagram)}
             label={`Name of the new ${metamodel.objectType(naming.type)?.definition.name ?? naming.type}`}
-            initial=""
-            onCommit={(name) => (name ? createObject(naming.type, naming.at, name) : true)}
+            commitOnBlur
+            onPick={(object) => placeExisting(object, naming.at)}
+            onCreate={(name) => createObject(naming.type, naming.at, name)}
             onDone={() => {
               setNaming(null);
               canvas.current?.focus();
@@ -814,7 +824,7 @@ function Palette({ diagram, zoom, onZoom }: { diagram: DiagramRow; zoom: number;
   );
 }
 
-/** The name box for a new object: Enter creates it, Escape (or no name) cancels and nothing is created. */
+/** A name box: Enter commits, Escape (or no name) cancels. */
 function NameBox(props: {
   at: Point;
   label: string;

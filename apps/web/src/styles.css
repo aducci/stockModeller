@@ -2797,3 +2797,68 @@ button.toggle .badge {
 .dt-outline .chip {
   margin-left: 6px;
 }
+
+/* Find or create (design/02-model/duplicates-and-identity.md §5) */
+.find-or-create {
+  position: relative;
+}
+.find-or-create > input {
+  width: 100%;
+  box-sizing: border-box;
+}
+.foc-list {
+  position: fixed;
+  z-index: 30;
+  max-width: 420px;
+  max-height: 320px;
+  overflow: auto;
+  background: var(--pane);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.18);
+  font-size: 13px;
+}
+.foc-heading {
+  padding: 4px 8px 2px;
+  font-size: 11px;
+  color: var(--fg-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.foc-list [role="option"] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.foc-list [role="option"].kin-other {
+  color: var(--fg-2);
+}
+.foc-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.foc-where {
+  margin-left: auto;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.foc-list [role="option"].active,
+.foc-list [role="option"]:hover {
+  background: var(--sky-fill);
+}
+.foc-list .foc-create {
+  border-top: 1px solid var(--line);
+}
+.foc-list .foc-create[aria-disabled="true"] {
+  color: var(--removed);
+  cursor: default;
+}
+.foc-list .foc-create[aria-disabled="true"]:hover,
+.foc-list .foc-create[aria-disabled="true"].active {
+  background: none;
+}

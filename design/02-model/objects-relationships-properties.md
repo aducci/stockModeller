@@ -12,7 +12,7 @@
 | `description` | rich text | |
 | `properties` | map of property key → value | Only property types assigned to the object type |
 | `tags` | text list | Free labels |
-| `externalIds` | map of system → id | For integrations |
+| `externalIds` | map of system → id | For integrations. A `system: id` pair is unique among live objects |
 | `version` | integer | Increases on every change |
 | `created…`, `updated…` | time, user | |
 
