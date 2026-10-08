@@ -691,6 +691,65 @@ ul.plain li {
   gap: 8px;
   margin-top: 16px;
 }
+/* New diagram (views in the app, U-1): the types grouped by kind, then what the chosen kind needs. */
+.dialog.new-diagram {
+  width: min(720px, calc(100vw - 32px));
+}
+.new-diagram .kinds {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 8px;
+}
+.new-diagram .kind {
+  margin: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+.new-diagram .kind legend {
+  font-size: 12px;
+  font-weight: 600;
+}
+.new-diagram .kind legend .muted {
+  font-weight: normal;
+}
+.new-diagram .kind label {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  padding: 3px 4px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.new-diagram .kind label.chosen {
+  background: var(--sky-fill);
+}
+.new-diagram .kind label .muted {
+  font-size: 12px;
+}
+.new-diagram .fields {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 10px;
+  align-items: center;
+  margin-top: 12px;
+}
+.new-diagram .field {
+  display: contents;
+}
+.new-diagram .field > span {
+  font-size: 12px;
+  color: var(--fg-2);
+}
+.new-diagram .check,
+.new-diagram .fields > p {
+  grid-column: 2;
+  margin: 0;
+}
+.new-diagram .actions .muted {
+  margin-right: auto;
+  align-self: center;
+}
 button.danger {
   background: var(--removed);
   border-color: var(--removed);
@@ -2596,4 +2655,22 @@ button.toggle .badge {
   gap: 6px;
   margin: 0 0 4px;
   font-size: 13px;
+}
+
+/* The View section of a diagram's properties (views in the app, U-1). */
+.view-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 10px;
+  margin: 0;
+  font-size: 12px;
+}
+.view-facts dt {
+  color: var(--fg-2);
+}
+.view-facts dd {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 0;
 }

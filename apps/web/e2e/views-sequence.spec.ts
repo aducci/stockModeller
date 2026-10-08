@@ -33,9 +33,9 @@ test("draws an interaction as a sequence: request, response, a step moved, kept 
   await row(page, "Diagrams").click();
   await page.getByRole("menubar").getByRole("menuitem", { name: "File" }).click();
   await menuItem(page, "New diagram").click();
-  await explorer(page).getByLabel("Diagram type").selectOption({ label: "Sequence diagram" });
-  await explorer(page).getByLabel("New diagram name").fill("Register a claim");
-  await explorer(page).getByLabel("New diagram name").press("Enter");
+  await page.getByRole("dialog", { name: "New diagram" }).getByRole("radio", { name: "Sequence diagram" }).check();
+  await page.getByRole("dialog", { name: "New diagram" }).getByLabel("Diagram name").fill("Register a claim");
+  await page.getByRole("dialog", { name: "New diagram" }).getByLabel("Diagram name").press("Enter");
 
   await page.getByLabel("Add lifeline").selectOption({ label: "Claims Manager" });
   await page.getByLabel("Add lifeline").selectOption({ label: "Claims API" });
