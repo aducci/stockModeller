@@ -16,7 +16,7 @@ async function signIn(page: Page, userId = "dev@example.com") {
 
 async function openMetamodel(page: Page, item: string) {
   await page.getByRole("menubar").getByRole("menuitem", { name: "Metamodel", exact: true }).click();
-  await page.getByRole("menuitem", { name: item }).click();
+  await page.getByRole("menuitem", { name: item, exact: true }).click();
   await expect(page.getByRole("tablist", { name: "Metamodel views" })).toBeVisible();
 }
 

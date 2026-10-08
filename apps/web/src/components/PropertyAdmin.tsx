@@ -561,7 +561,8 @@ export function TypePropertiesPanel(props: {
   draft: Draft;
   metamodel: Metamodel;
   onChange(draft: Draft): void;
-  onClose(): void;
+  /** Without it the panel has no close button (inside the diagram type editor). */
+  onClose?(): void;
 }) {
   const { kind, type, draft, metamodel, onChange, onClose } = props;
   const showProperty = useWorkbench((s) => s.showMetamodelProperty);
@@ -599,9 +600,11 @@ export function TypePropertiesPanel(props: {
         <h3>{definition.name}</h3>
         <span className="muted small">{CARRIER_LABEL[kind].replace(/s$/, "").toLowerCase()}</span>
         <span className="spacer" />
-        <button className="link" aria-label="Close" onClick={onClose}>
-          ×
-        </button>
+        {onClose && (
+          <button className="link" aria-label="Close" onClick={onClose}>
+            ×
+          </button>
+        )}
       </header>
       <h4>Its properties ({own.length})</h4>
       <ul className="plain mm-type-props" aria-label="Own properties">

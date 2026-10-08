@@ -231,6 +231,7 @@ export function metamodelMenu(): MenuEntry[] {
   const pending = store().metamodelDraft;
   return [
     { label: "Types", run: open("types") },
+    { label: "Diagram types", run: open("diagramTypes") },
     { label: "Properties", run: open("properties") },
     { label: "Connection matrix", run: open("matrix") },
     { label: "Rule sentences", run: open("sentences") },

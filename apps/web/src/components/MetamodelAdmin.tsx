@@ -40,9 +40,12 @@ import {
 import { Glyph } from "./Glyph";
 import { MatrixGrid } from "./MatrixGrid";
 import { PropertiesView, TypePropertiesPanel } from "./PropertyAdmin";
+import { DiagramTypesView } from "./DiagramTypeAdmin";
+import { diagramTypeChanges, offTypeOccurrences, type DiagramTypeChanges } from "../diagram-type-admin";
 
 const VIEWS: { view: MetamodelView; label: string }[] = [
   { view: "types", label: "Types" },
+  { view: "diagramTypes", label: "Diagram types" },
   { view: "properties", label: "Properties" },
   { view: "matrix", label: "Connection matrix" },
   { view: "sentences", label: "Rule sentences" },
@@ -78,7 +81,9 @@ export function MetamodelAdmin() {
   const metamodel = compiled.metamodel ?? store.metamodel;
   const combinations = useMemo(() => relationshipCombinations(state), [state]);
   const changes = useMemo(() => draftChanges(publishedDraft, draft), [publishedDraft, draft]);
-  const pending = countDraftChanges(changes);
+  const typeChanges = useMemo(() => diagramTypeChanges(publishedDraft, draft), [publishedDraft, draft]);
+  const pending =
+    countDraftChanges(changes) + typeChanges.added.length + typeChanges.removed.length + typeChanges.changed.length;
 
   const update = (next: Draft) =>
     setDraft(sameAsPublished(publishedDraft, next) ? null : { baseVersion: saved?.baseVersion ?? version, ...next });
@@ -115,6 +120,9 @@ export function MetamodelAdmin() {
       <div className="mm-body">
         {view === "types" && (
           <TypesView metamodel={metamodel} combinations={combinations} rules={rules} draft={draft} onChange={update} />
+        )}
+        {view === "diagramTypes" && (
+          <DiagramTypesView draft={draft} published={publishedDraft} metamodel={metamodel} onChange={update} />
         )}
         {view === "properties" && (
           <PropertiesView draft={draft} published={publishedDraft} metamodel={metamodel} onChange={update} />
@@ -156,6 +164,7 @@ export function MetamodelAdmin() {
           draft={draft}
           draftMetamodel={compiled.metamodel}
           changes={changes}
+          typeChanges={typeChanges}
           onClose={() => setReviewing(false)}
         />
       )}
@@ -742,8 +751,14 @@ function Block({ title, children }: { title: string; children: ReactNode }) {
 
 // ------------------------------------------------------------------ publishing
 
-function PublishDialog(props: { draft: Draft; draftMetamodel: Metamodel; changes: DraftChanges; onClose(): void }) {
-  const { draft, draftMetamodel, changes, onClose } = props;
+function PublishDialog(props: {
+  draft: Draft;
+  draftMetamodel: Metamodel;
+  changes: DraftChanges;
+  typeChanges: DiagramTypeChanges;
+  onClose(): void;
+}) {
+  const { draft, draftMetamodel, changes, typeChanges, onClose } = props;
   const { store, state, metamodel } = useModel();
   const session = useWorkbench((s) => s.session)!;
   const saved = useWorkbench((s) => s.metamodelDraft);
@@ -753,6 +768,7 @@ function PublishDialog(props: { draft: Draft; draftMetamodel: Metamodel; changes
   const [error, setError] = useState<string | null>(null);
   const refused = useMemo(() => newlyRefused(state, metamodel, draftMetamodel), [state, metamodel, draftMetamodel]);
   const impact = useMemo(() => metamodelImpact(state, metamodel, draftMetamodel), [state, metamodel, draftMetamodel]);
+  const offType = useMemo(() => offTypeOccurrences(state, draftMetamodel), [state, draftMetamodel]);
   const name = (k: TypeKey | "*") => typeLabel(draftMetamodel, k);
   const verb = (k: TypeKey) => draftMetamodel.relationshipType(k)?.verb ?? k;
   const sentence = (r: { relationshipType: TypeKey; sourceType: TypeKey; targetType: TypeKey }) =>
@@ -857,6 +873,21 @@ function PublishDialog(props: { draft: Draft; draftMetamodel: Metamodel; changes
           )),
           "changed",
         )}
+        {section(
+          "Diagram types added",
+          typeChanges.added.map((t) => <li key={t.key}>{t.name}</li>),
+          "added",
+        )}
+        {section(
+          "Diagram types changed",
+          typeChanges.changed.map((t) => <li key={t.key}>{t.name}</li>),
+          "changed",
+        )}
+        {section(
+          "Diagram types removed",
+          typeChanges.removed.map((t) => <li key={t.key}>{t.name}</li>),
+          "removed",
+        )}
         {section("Given to types", changes.carried.added.map(carriage), "added")}
         {section(
           "Taken from types",
@@ -878,11 +909,30 @@ function PublishDialog(props: { draft: Draft; draftMetamodel: Metamodel; changes
               </ul>
             </div>
           )}
-          {refused.length === 0 && impact.stranded.length === 0 && impact.problems.length === 0 && (
-            <p className="muted">
-              Every existing relationship is still allowed, and every value still has its property.
-            </p>
+          {offType.length > 0 && (
+            <>
+              <p>
+                Diagrams that show what their type no longer allows. What is drawn stays, but no more of it can be
+                added:
+              </p>
+              <ul className="plain removed" aria-label="Drawn but no longer allowed">
+                {offType.map((o) => (
+                  <li key={`${o.diagramType}|${o.what}|${o.type}`}>
+                    {draftMetamodel.diagramType(o.diagramType)?.definition.name ?? o.diagramType} ·{" "}
+                    {o.what === "object" ? name(o.type) : verb(o.type)} <span className="muted small">× {o.count}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
+          {refused.length === 0 &&
+            offType.length === 0 &&
+            impact.stranded.length === 0 &&
+            impact.problems.length === 0 && (
+              <p className="muted">
+                Every existing relationship is still allowed, and every value still has its property.
+              </p>
+            )}
           {impact.stranded.length > 0 && (
             <>
               <p>

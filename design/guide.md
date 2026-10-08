@@ -30,7 +30,7 @@ Every relationship type has a **meaning** (one of 14 semantic kinds such as cont
 - **Diagram**: the palette band lists the object types this diagram type allows. Zoom with Ctrl + wheel, `+`, `-`, `0`.
 - **Properties**: everything about the selection, in sections, with a filter, Hide empty, property sets and a Review mode for confirming values.
 - **Relationships, Trace, Occurs on**: what the selection is connected to, read by meaning, by object, as flows or dependencies.
-- **Metamodel tab**: types, the connection matrix, rule sentences and Try a connection. Rule edits are a draft until you publish them.
+- **Metamodel tab**: types, diagram types (duplicate one to make your own, then set what it shows and how), the connection matrix, rule sentences and Try a connection. Rule edits are a draft until you publish them.
 
 ## Doing things
 
