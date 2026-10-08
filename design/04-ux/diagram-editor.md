@@ -6,12 +6,14 @@ Every gesture has a clear effect on the model, and the editor always says what i
 
 | Gesture | Effect |
 |---|---|
-| Drag an object type from the palette | New object (in the type's default folder) + its occurrence; name editing starts at once. Esc with an empty name cancels both |
+| Drag an object type from the palette | New object (in the type's default folder) + its occurrence; name editing starts at once, in a box drawn where the symbol will be placed (centred on the drop point) that says what it adds (*New Application in Claims Management*) and the keys. Esc with an empty name cancels both |
+| Click an object type in the palette | The same, at the first free place in view (built in the add-at-speed change) |
+| `Ctrl/⌘+Enter` in the name box | Adds it and opens another name box of the same type beside it, in the same container, so a list is typed without touching the mouse |
 | Drag an object from the explorer or search | New occurrence of an **existing** object. If it already occurs on this diagram, its other occurrences briefly highlight so the repeat is deliberate |
 | Type `/` on the canvas | Quick add: type an object type or an existing object's name |
 | Drag from a symbol's handle to another symbol | Choose a relationship type from those the rules **allow** for that pair (most used first) → new relationship + its occurrence between exactly those two symbols. If the relationship already exists, only a new occurrence is drawn |
 | Drag a handle onto empty space | New object + relationship in one step |
-| Drop a symbol **inside** another | New nesting relationship (e.g. *contains*) + nested occurrence. Refused, with the reason, if no rule allows it |
+| Drop a symbol **inside** another | New nesting relationship (e.g. *contains*) + nested occurrence, for a new object from the palette and an existing one from the explorer; the symbol under the pointer is outlined while dragging. If no rule allows it, the symbol is placed on the diagram and the toast says why (B55) |
 | Paste | Pastes occurrences of the **same** objects. "Paste as new objects" creates copies |
 
 ## 2. Editing
@@ -79,7 +81,7 @@ From [semantics](../02-model/semantics.md); built in slices Sem-2 to Sem-4. What
 |---|---|
 | Draw a line whose type is a **containment** | The relationship is created and the content **moves inside** its container (the container grows; animated). Toast: "Placed inside Payments Platform · Show as line". On a diagram type with `nesting: "lines"` it stays a line |
 | Draw a **composition** or **aggregation** line | Stays a line. Context menu **Show nested** moves the part inside the whole (`shownAs: "nesting"`); **Show as line** reverses it |
-| Drop a symbol **inside** another | Offers the nesting types the rules allow for the pair: containment types first, then composition, then aggregation. One allowed type is used at once; several show a small picker at the drop point, pre-selecting the type last used for that pair of object types. None: refused with the reason |
+| Drop a symbol **inside** another | Offers the nesting types the rules allow for the pair: containment types first, then composition, then aggregation. One allowed type is used at once; several show a small picker at the drop point, pre-selecting the type last used for that pair of object types. None: refused with the reason. *Built for drops from the palette and the explorer (B55): an existing nesting relationship is reused, else containment first, then the most used type, with no picker yet; moving a symbol that is already on the diagram into another is not built* |
 | Drop a nested symbol into **another container** | The **same** relationship is reconnected to the new container (re-parenting keeps its id and history). If the content also occurs nested elsewhere, those occurrences follow (rule 6) |
 | Drag a symbol **out** of its container | Asks, as today: *Take it out* (deletes the relationship; for containment it stays in the folder) or *Only change the picture* (the relationship becomes a line) |
 | **Alt** while dropping | Opens the type picker even when only one type fits, so the connector type can be changed on the way in |

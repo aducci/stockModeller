@@ -522,8 +522,13 @@ ul.plain li {
   border: 1px solid var(--line);
   border-radius: 4px;
   background: var(--pane);
+  color: inherit;
+  font: inherit;
   cursor: grab;
   user-select: none;
+}
+.palette-item:hover {
+  border-color: var(--accent);
 }
 .palette-item .swatch {
   display: inline-flex;
@@ -626,6 +631,42 @@ ul.plain li {
   position: absolute;
   width: 160px;
   z-index: 3;
+}
+/* A new symbol being named, where it will be placed (design/04-ux/diagram-editor.md §2). */
+.new-symbol {
+  position: absolute;
+  z-index: 3;
+  box-sizing: border-box;
+  padding: 4px 6px 6px;
+  border: 1.5px dashed var(--accent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--pane) 92%, var(--accent));
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.15);
+}
+.new-symbol-type {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+  font-size: 11px;
+  color: var(--fg-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.foc-hint {
+  padding: 3px 0 0;
+  font-size: 11px;
+}
+.foc-list .foc-hint {
+  padding: 4px 8px;
+  border-top: 1px solid var(--line);
+  white-space: nowrap;
+}
+.canvas .occ.drop-target > :first-child {
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  stroke-dasharray: 5 3;
 }
 .menu {
   position: absolute;

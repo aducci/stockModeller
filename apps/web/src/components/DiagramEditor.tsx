@@ -22,7 +22,9 @@ import {
   connectChoices,
   defaultFolderFor,
   edgePoint,
+  freeSpot,
   layoutBoxes,
+  nestingChoice,
   paletteTypes,
   renditionFor,
   renditionSize,
@@ -101,7 +103,9 @@ export function DiagramEditor({ id }: { id: Id }) {
   const traced = useWorkbench((s) => s.trace?.objectIds);
   const [selected, setSelected] = useState<Id | null>(null);
   const [gesture, setGesture] = useState<Gesture | null>(null);
-  const [naming, setNaming] = useState<{ type: string; at: Point } | null>(null);
+  /** A new symbol being named: where it will go, and the symbol it goes inside, if any. */
+  const [naming, setNaming] = useState<{ key: number; type: string; box: Box; parent: Id | null } | null>(null);
+  const [dropTarget, setDropTarget] = useState<Id | null>(null);
   const [renaming, setRenaming] = useState<Id | null>(null);
   const [menu, setMenu] = useState<{ from: Id; to: Id; at: Point; choices: ConnectChoice[] } | null>(null);
   const [flash, setFlash] = useState<ReadonlySet<Id>>(new Set());
@@ -208,19 +212,55 @@ export function DiagramEditor({ id }: { id: Id }) {
 
   // ---------------------------------------------------------------- adding
 
+  /** The box a new symbol of `type` gets, centred on `at`. */
+  const boxAt = (type: string, at: Point): Box => {
+    const symbol = symbolFor(metamodel, diagram, type);
+    return {
+      x: Math.max(0, snap(at.x - symbol.width / 2)),
+      y: Math.max(0, snap(at.y - symbol.height / 2)),
+      w: symbol.width,
+      h: symbol.height,
+    };
+  };
+  const startNaming = (type: string, box: Box, parent: Id | null) =>
+    setNaming((n) => ({ key: (n?.key ?? 0) + 1, type, box, parent }));
+
+  /** Adds a new symbol of a type where there is room in view: clicking a palette item. */
+  const addInView = (type: string) => {
+    const el = canvas.current;
+    if (!el) return;
+    const view = (el.closest(".tab-body") ?? el).getBoundingClientRect();
+    const rect = el.getBoundingClientRect();
+    const top = Math.max(rect.top, view.top + 48); // below the sticky palette
+    const area = {
+      x: (Math.max(rect.left, view.left) - rect.left) / zoom,
+      y: (top - rect.top) / zoom,
+      w: (Math.min(rect.right, view.right) - Math.max(rect.left, view.left)) / zoom,
+      h: (Math.min(rect.bottom, view.bottom) - top) / zoom,
+    };
+    const symbol = symbolFor(metamodel, diagram, type);
+    const spot = freeSpot(boxes.values(), { w: symbol.width, h: symbol.height }, area);
+    startNaming(type, { ...spot, w: symbol.width, h: symbol.height }, null);
+  };
+
   const onDragOver = (e: DragEvent) => {
     if (e.dataTransfer.types.includes(DRAG_TYPE) || e.dataTransfer.types.includes(DRAG_OBJECT)) {
       e.preventDefault();
       e.dataTransfer.dropEffect = "copy";
+      const under = occAt(e.clientX, e.clientY);
+      if (under !== dropTarget) setDropTarget(under);
     }
   };
   const onDrop = (e: DragEvent) => {
+    setDropTarget(null);
     const at = toCanvas(e.clientX, e.clientY);
     const type = e.dataTransfer.getData(DRAG_TYPE);
     const objectId = e.dataTransfer.getData(DRAG_OBJECT);
     if (!type && !objectId) return;
     e.preventDefault();
-    if (type) return setNaming({ type, at });
+    // Dropped on a symbol: the new one goes inside it, when a rule allows (design/04-ux/diagram-editor.md §8).
+    const parent = occAt(e.clientX, e.clientY);
+    if (type) return startNaming(type, boxAt(type, at), parent);
     const object = state.objects.get(objectId);
     if (!object) return;
     // Dropped on a line: the relationship carries it (design/04-ux/diagram-editor.md §8).
@@ -231,48 +271,123 @@ export function DiagramEditor({ id }: { id: Id }) {
       if (edit(plan.label, plan.edits)) select({ kind: "relationship", id: onLine.dataset.rel });
       return;
     }
-    placeExisting(object, at);
+    placeExisting(object, boxAt(object.type, at), parent);
   };
 
-  /** Shows an existing object here (dropped from the explorer, or picked in the name box instead of a copy). */
-  const placeExisting = (object: { id: Id; name: string; type: string }, at: Point) => {
-    const others = occurrences.filter((o) => o.objectId === object.id).map((o) => o.id);
+  /**
+   * The edits that show an object in `box`: inside `parentOcc` through a nesting relationship (an existing one, or a
+   * new one the rules allow), else on the diagram itself, with the reason it could not go inside.
+   */
+  const placement = (objectId: Id, isNew: boolean, type: string, box: Box, parentOcc: Id | null) => {
     const occId = ulid();
-    const ok = edit(`Add ${object.name} to ${diagram.name}`, [
-      { edit: "addObjectOccurrence", diagramId: id, occurrence: newOccurrence(occId, object.id, object.type, at) },
-    ]);
+    const parent = parentOcc ? state.objectOccurrences.get(parentOcc) : undefined;
+    const choice = parent
+      ? nestingChoice(state, metamodel, diagram, parent.objectId, type, isNew ? null : objectId)
+      : null;
+    if (!parent || !choice || "refused" in choice) {
+      return {
+        occId,
+        inside: null,
+        note: choice && "refused" in choice ? `${choice.refused}, so it was placed on the diagram` : null,
+        edits: [
+          { edit: "addObjectOccurrence", diagramId: id, occurrence: newOccurrence(occId, objectId, box) },
+        ] as Edit[],
+      };
+    }
+    const outer = boxes.get(parent.id)!;
+    const pad = 16;
+    const x = Math.max(pad, snap(box.x - outer.x));
+    const y = Math.max(36, snap(box.y - outer.y)); // below the container's own label
+    const w = Math.max(parent.w, x + box.w + pad);
+    const h = Math.max(parent.h, y + box.h + pad);
+    const relationshipId = choice.existingId ?? ulid();
+    const edits: Edit[] = [
+      ...(choice.existingId
+        ? []
+        : [
+            {
+              edit: "createRelationship" as const,
+              id: relationshipId,
+              type: choice.type.key,
+              sourceId: parent.objectId,
+              targetId: objectId,
+            },
+          ]),
+      ...(w !== parent.w || h !== parent.h
+        ? [
+            {
+              edit: "moveObjectOccurrence" as const,
+              diagramId: id,
+              occurrenceId: parent.id,
+              x: parent.x,
+              y: parent.y,
+              w,
+              h,
+            },
+          ]
+        : []),
+      {
+        edit: "addObjectOccurrence",
+        diagramId: id,
+        occurrence: { ...newOccurrence(occId, objectId, { ...box, x, y }), parentOccurrenceId: parent.id },
+      },
+      {
+        edit: "addRelationshipOccurrence",
+        diagramId: id,
+        occurrence: {
+          id: ulid(),
+          relationshipId,
+          sourceOccurrenceId: parent.id,
+          targetOccurrenceId: occId,
+          shownAs: "nesting",
+          route: { mode: "auto" },
+          labelPosition: 0.5,
+          style: {},
+        },
+      },
+    ];
+    return { occId, inside: nameOf(parent.objectId), note: null, edits };
+  };
+
+  /** Shows an existing object (dropped from the explorer, or picked in the name box instead of a copy). */
+  const placeExisting = (object: { id: Id; name: string; type: string }, box: Box, parent: Id | null) => {
+    const others = occurrences.filter((o) => o.objectId === object.id).map((o) => o.id);
+    const place = placement(object.id, false, object.type, box, parent);
+    const ok = edit(`Add ${object.name} to ${place.inside ?? diagram.name}`, place.edits);
     if (ok) {
       // A repeat is allowed, but made visible so it is deliberate.
       if (others.length > 0) setFlash(new Set(others));
-      choose(occId);
+      if (place.note) notify(place.note);
+      choose(place.occId);
     }
+    return ok;
   };
 
-  const newOccurrence = (occId: Id, objectId: Id, type: string, at: Point) => {
-    const symbol = symbolFor(metamodel, diagram, type);
-    return {
-      id: occId,
-      objectId,
-      parentOccurrenceId: null,
-      x: Math.max(0, snap(at.x - symbol.width / 2)),
-      y: Math.max(0, snap(at.y - symbol.height / 2)),
-      w: symbol.width,
-      h: symbol.height,
-      z: nextZ,
-      style: {},
-      drillDownDiagramId: null,
-      pinned: false,
-    };
-  };
+  const newOccurrence = (occId: Id, objectId: Id, box: Box) => ({
+    id: occId,
+    objectId,
+    parentOccurrenceId: null,
+    x: box.x,
+    y: box.y,
+    w: box.w,
+    h: box.h,
+    z: nextZ,
+    style: {},
+    drillDownDiagramId: null,
+    pinned: false,
+  });
 
-  const createObject = (type: string, at: Point, name: string) => {
+  const createObject = (type: string, box: Box, parent: Id | null, name: string) => {
     const objectId = ulid();
-    const occId = ulid();
-    const ok = edit(`Create ${name} on ${diagram.name}`, [
+    const place = placement(objectId, true, type, box, parent);
+    const ok = edit(`Create ${name} ${place.inside ? `in ${place.inside}` : `on ${diagram.name}`}`, [
       { edit: "createObject", id: objectId, type, name, folderId: defaultFolderFor(state, metamodel, type, diagram) },
-      { edit: "addObjectOccurrence", diagramId: id, occurrence: newOccurrence(occId, objectId, type, at) },
+      ...place.edits,
     ]);
-    if (ok) choose(occId);
+    if (ok) {
+      if (place.note) notify(place.note);
+      choose(place.occId);
+    }
     return ok;
   };
 
@@ -553,7 +668,7 @@ export function DiagramEditor({ id }: { id: Id }) {
 
   return (
     <div className="diagram-editor">
-      <Palette diagram={diagram} zoom={zoom} onZoom={(z) => setZoom(clampZoom(z))} />
+      <Palette diagram={diagram} zoom={zoom} onZoom={(z) => setZoom(clampZoom(z))} onAdd={addInView} />
       <div
         ref={canvas}
         className="canvas"
@@ -563,6 +678,9 @@ export function DiagramEditor({ id }: { id: Id }) {
         style={{ width: width * zoom, height: height * zoom }}
         data-zoom={zoom}
         onDragOver={onDragOver}
+        onDragLeave={(e) => {
+          if (!canvas.current?.contains(e.relatedTarget as Node | null)) setDropTarget(null);
+        }}
         onDrop={onDrop}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -625,6 +743,7 @@ export function DiagramEditor({ id }: { id: Id }) {
               siblings.has(o.id) && "sibling",
               flash.has(o.id) && "flash",
               traced?.has(o.objectId) && "traced",
+              o.id === dropTarget && "drop-target",
             ].filter(Boolean);
             return (
               <g
@@ -724,20 +843,40 @@ export function DiagramEditor({ id }: { id: Id }) {
         </svg>
 
         {naming && (
-          <FindOrCreate
-            className="name-box"
-            style={{ left: naming.at.x * zoom, top: naming.at.y * zoom }}
-            type={naming.type}
-            folderId={defaultFolderFor(state, metamodel, naming.type, diagram)}
-            label={`Name of the new ${metamodel.objectType(naming.type)?.definition.name ?? naming.type}`}
-            commitOnBlur
-            onPick={(object) => placeExisting(object, naming.at)}
-            onCreate={(name) => createObject(naming.type, naming.at, name)}
-            onDone={() => {
-              setNaming(null);
-              canvas.current?.focus();
+          <div
+            className="new-symbol"
+            style={{
+              left: naming.box.x * zoom,
+              top: naming.box.y * zoom,
+              width: Math.max(naming.box.w * zoom, 200),
+              minHeight: naming.box.h * zoom,
             }}
-          />
+          >
+            <div className="new-symbol-type">
+              <Glyph glyph={notationFor(metamodel.objectType(naming.type)).glyph} size={12} />
+              New {metamodel.objectType(naming.type)?.definition.name ?? naming.type}
+              {naming.parent && <> in {nameOf(state.objectOccurrences.get(naming.parent)?.objectId ?? "")}</>}
+            </div>
+            <FindOrCreate
+              key={naming.key}
+              type={naming.type}
+              folderId={defaultFolderFor(state, metamodel, naming.type, diagram)}
+              label={`Name of the new ${metamodel.objectType(naming.type)?.definition.name ?? naming.type}`}
+              commitOnBlur
+              hint="Enter adds · Ctrl+Enter adds another · Esc cancels"
+              onPick={(object) => placeExisting(object, naming.box, naming.parent)}
+              onCreate={(name) => createObject(naming.type, naming.box, naming.parent, name)}
+              onDone={(again) => {
+                // Ctrl+Enter: the next one of the same type goes beside it, ready to be named.
+                if (again)
+                  startNaming(naming.type, { ...naming.box, x: naming.box.x + naming.box.w + 24 }, naming.parent);
+                else {
+                  setNaming(null);
+                  canvas.current?.focus();
+                }
+              }}
+            />
+          </div>
         )}
         {renaming && boxes.get(renaming) && (
           <RenameBox
@@ -783,7 +922,8 @@ export function DiagramEditor({ id }: { id: Id }) {
 const clampZoom = (z: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(z * 100) / 100));
 const scaleBox = (b: Box, zoom: number): Box => ({ x: b.x * zoom, y: b.y * zoom, w: b.w * zoom, h: b.h * zoom });
 
-function Palette({ diagram, zoom, onZoom }: { diagram: DiagramRow; zoom: number; onZoom(zoom: number): void }) {
+function Palette(props: { diagram: DiagramRow; zoom: number; onZoom(zoom: number): void; onAdd(type: string): void }) {
+  const { diagram, zoom, onZoom, onAdd } = props;
   const { metamodel } = useModel();
   const types = paletteTypes(metamodel, diagram);
   return (
@@ -792,11 +932,13 @@ function Palette({ diagram, zoom, onZoom }: { diagram: DiagramRow; zoom: number;
         const symbol = symbolFor(metamodel, diagram, t.definition.key);
         const notation = notationFor(t);
         return (
-          <div
+          <button
+            type="button"
             key={t.definition.key}
             className="palette-item"
             draggable
-            title={`Drag onto the diagram to add a new ${t.definition.name}`}
+            title={`Click to add a new ${t.definition.name} where there is room, or drag it to a spot (onto a symbol to put it inside)`}
+            onClick={() => onAdd(t.definition.key)}
             onDragStart={(e) => {
               e.dataTransfer.setData(DRAG_TYPE, t.definition.key);
               e.dataTransfer.effectAllowed = "copy";
@@ -806,7 +948,7 @@ function Palette({ diagram, zoom, onZoom }: { diagram: DiagramRow; zoom: number;
               <Glyph glyph={notation.glyph} size={12} />
             </span>
             {t.definition.name}
-          </div>
+          </button>
         );
       })}
       <div className="zoom" role="group" aria-label="Zoom">

@@ -6,7 +6,9 @@ import {
   defaultFolderFor,
   deletionImpact,
   edgePoint,
+  freeSpot,
   layoutBoxes,
+  nestingChoice,
   paletteTypes,
   snap,
   symbolFor,
@@ -91,5 +93,36 @@ describe("diagram editor helpers", () => {
     expect(impact.children.sort()).toEqual(["O-CAP-2", "O-CAP-3"]);
     expect(impact.diagrams.map((d) => d.id)).toEqual(["D-01"]);
     expect(deletionImpact(state, metamodel, "O-CAP-1", "D-01").diagrams).toEqual([]);
+  });
+});
+
+describe("adding at speed", () => {
+  it("finds room for a new symbol in view, clear of the others", () => {
+    const area = { x: 0, y: 0, w: 600, h: 400 };
+    const size = { w: 120, h: 48 };
+    expect(freeSpot([], size, area)).toEqual({ x: 16, y: 16 });
+    const spot = freeSpot([{ x: 0, y: 0, w: 300, h: 100 }], size, area);
+    expect(spot.x >= 316 || spot.y >= 116).toBe(true);
+    // A full area: the middle.
+    expect(freeSpot([area], size, area)).toEqual({ x: 240, y: 176 });
+  });
+
+  it("nests a capability inside a capability by containment, and refuses an application with the reason", () => {
+    const choice = nestingChoice(state, metamodel, diagram, "O-CAP-1", "capability", null);
+    expect(choice && "type" in choice && choice.type.semantic).toBe("containment");
+    // Claim Intake is already inside Claims Management: that relationship is reused.
+    expect(nestingChoice(state, metamodel, diagram, "O-CAP-1", "capability", "O-CAP-2")).toMatchObject({
+      existingId: "R-01",
+    });
+    expect(nestingChoice(state, metamodel, diagram, "O-CAP-1", "application", "O-APP-1")).toEqual({
+      refused: "No rule lets an Application go inside Claims Management",
+    });
+  });
+
+  it("keeps an object inside its one container", () => {
+    // Claim Intake is inside Claims Management; Claim Settlement cannot take it too.
+    expect(nestingChoice(state, metamodel, diagram, "O-CAP-3", "capability", "O-CAP-2")).toEqual({
+      refused: "Claim Intake is already inside Claims Management",
+    });
   });
 });
