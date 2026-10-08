@@ -38,6 +38,7 @@ import {
   type DraftChanges,
 } from "../property-admin";
 import { Glyph } from "./Glyph";
+import { MatrixGrid } from "./MatrixGrid";
 import { PropertiesView, TypePropertiesPanel } from "./PropertyAdmin";
 
 const VIEWS: { view: MetamodelView; label: string }[] = [
@@ -369,85 +370,73 @@ function MatrixView(props: { metamodel: Metamodel; rules: Rule[]; published: Rul
         <span className="spacer" />
         <Legend />
       </div>
-      <div className="mm-matrix-scroll">
-        <table className="mm-matrix" aria-label="Connection matrix">
-          <thead>
-            <tr>
-              <th className="corner">
-                <span className="muted">From ↓ · to →</span>
-              </th>
-              {cols.map(({ type: t }) => (
-                <th key={t.definition.key} scope="col" className="col">
-                  <span className="vertical" title={t.definition.name}>
-                    {t.definition.name}
-                  </span>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(({ type: s, depth }) => (
-              <tr key={s.definition.key}>
-                <th scope="row" style={{ paddingLeft: 6 + depth * 12 }}>
-                  <span className="mm-type">
-                    <Glyph glyph={notationFor(s).glyph} colour={notationFor(s).ink} />
-                    {s.definition.name}
-                  </span>
-                </th>
-                {cols.map(({ type: t }) => {
-                  const source = s.definition.key;
-                  const target = t.definition.key;
-                  const entries = matrixCell(metamodel, rules, source, target).filter(shown);
-                  const isOpen = open?.source === source && open.target === target;
-                  const label = `${s.definition.name} to ${t.definition.name}: ${
-                    entries.length ? entries.map((e) => e.relationshipType.verb).join(", ") : "nothing allowed"
-                  }`;
-                  return (
-                    <td
-                      key={target}
-                      className={`cell${pairUsed(source, target) ? " used" : ""}${isOpen ? " open" : ""}`}
-                    >
-                      <button
-                        className="cell-button"
-                        aria-label={label}
-                        title={label}
-                        data-source={source}
-                        data-target={target}
-                        onClick={(e) => {
-                          const r = e.currentTarget.getBoundingClientRect();
-                          setOpen(isOpen ? null : { source, target, at: { x: r.left, y: r.bottom } });
-                        }}
-                      >
-                        {entries.map((e) => (
-                          <span
-                            key={e.relationshipType.key}
-                            className={`dot ${KIND_FAMILY[e.relationshipType.semantic]}${
-                              e.enforcement === "warn" ? " warn" : ""
-                            }${e.own ? "" : " inherited"}${
-                              e.own && !publishedKeys.has(ruleKey(e.own)) ? " added" : ""
-                            }`}
-                          />
-                        ))}
-                      </button>
-                      {isOpen && (
-                        <CellEditor
-                          metamodel={metamodel}
-                          rules={rules}
-                          source={source}
-                          target={target}
-                          at={open.at}
-                          onChange={onChange}
-                          onClose={() => setOpen(null)}
-                        />
-                      )}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <MatrixGrid
+        ariaLabel="Connection matrix"
+        corner={<span className="muted">From ↓ · to →</span>}
+        rows={rows.map(({ type: s, depth }) => ({
+          key: s.definition.key,
+          title: s.definition.name,
+          depth,
+          label: (
+            <span className="mm-type">
+              <Glyph glyph={notationFor(s).glyph} colour={notationFor(s).ink} />
+              {s.definition.name}
+            </span>
+          ),
+        }))}
+        columns={cols.map(({ type: t }) => ({
+          key: t.definition.key,
+          title: t.definition.name,
+          label: t.definition.name,
+        }))}
+        cellClass={(r, c) =>
+          `${pairUsed(r.key, c.key) ? "used" : ""}${open?.source === r.key && open.target === c.key ? " open" : ""}`
+        }
+        renderCell={(r, c) => {
+          const source = r.key;
+          const target = c.key;
+          const entries = matrixCell(metamodel, rules, source, target).filter(shown);
+          const isOpen = open?.source === source && open.target === target;
+          const label = `${r.title} to ${c.title}: ${
+            entries.length ? entries.map((e) => e.relationshipType.verb).join(", ") : "nothing allowed"
+          }`;
+          return (
+            <>
+              <button
+                className="cell-button"
+                aria-label={label}
+                title={label}
+                data-source={source}
+                data-target={target}
+                onClick={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  setOpen(isOpen ? null : { source, target, at: { x: rect.left, y: rect.bottom } });
+                }}
+              >
+                {entries.map((e) => (
+                  <span
+                    key={e.relationshipType.key}
+                    className={`dot ${KIND_FAMILY[e.relationshipType.semantic]}${
+                      e.enforcement === "warn" ? " warn" : ""
+                    }${e.own ? "" : " inherited"}${e.own && !publishedKeys.has(ruleKey(e.own)) ? " added" : ""}`}
+                  />
+                ))}
+              </button>
+              {isOpen && (
+                <CellEditor
+                  metamodel={metamodel}
+                  rules={rules}
+                  source={source}
+                  target={target}
+                  at={open.at}
+                  onChange={onChange}
+                  onClose={() => setOpen(null)}
+                />
+              )}
+            </>
+          );
+        }}
+      />
     </div>
   );
 }

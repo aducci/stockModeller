@@ -33,7 +33,7 @@ export interface NewRepository {
 /** Creates a repository with its baseline scenario and installs its metamodel. */
 export async function createRepository(tx: Tx, repo: NewRepository): Promise<void> {
   Metamodel.compile(repo.metamodel, repo.diagramTypes); // refuse a broken metamodel before writing anything
-  const { name, version, layers, exchangeMappings } = repo.metamodel;
+  const { name, version, layers, exchangeMappings, documentPatterns } = repo.metamodel;
   await tx
     .insertInto("repository")
     .values({
@@ -42,7 +42,10 @@ export async function createRepository(tx: Tx, repo: NewRepository): Promise<voi
       name: repo.name,
       metamodel_version: version,
       // Package-level parts with no table of their own (yet).
-      settings: json({ ...(repo.settings ?? { currency: "EUR" }), metamodel: { name, layers, exchangeMappings } }),
+      settings: json({
+        ...(repo.settings ?? { currency: "EUR" }),
+        metamodel: { name, layers, exchangeMappings, documentPatterns },
+      }),
     })
     .execute();
   await tx
@@ -243,6 +246,7 @@ export async function loadMetamodelPackage(
     validationRules: ofKind("validation"),
     derivationRules: ofKind("derivation"),
     ...(meta.exchangeMappings ? { exchangeMappings: meta.exchangeMappings } : {}),
+    ...(meta.documentPatterns ? { documentPatterns: meta.documentPatterns } : {}),
   };
   return { metamodel, diagramTypes: diagramTypes.map((d) => d.definition) };
 }
@@ -278,12 +282,12 @@ export async function saveMetamodel(
     .select("settings")
     .where("id", "=", repositoryId)
     .executeTakeFirstOrThrow();
-  const { name, layers, exchangeMappings } = pkg;
+  const { name, layers, exchangeMappings, documentPatterns } = pkg;
   await tx
     .updateTable("repository")
     .set({
       metamodel_version: pkg.version,
-      settings: json({ ...(repo.settings as object), metamodel: { name, layers, exchangeMappings } }),
+      settings: json({ ...(repo.settings as object), metamodel: { name, layers, exchangeMappings, documentPatterns } }),
     })
     .where("id", "=", repositoryId)
     .execute();

@@ -103,3 +103,4 @@ flowchart LR
 | Validation, calculations, derived relationships | [rules-and-calculations.md](rules-and-calculations.md) |
 | Semantic kinds, containment, payloads, interactions, tracing | [semantics.md](semantics.md) |
 | Glyphs, renditions, style rules, markers, lenses, stencils; administering the rules | [notation-and-metamodel-admin.md](notation-and-metamodel-admin.md)  |
+| Matrix, list, specification and sequence views; design artifacts (templated documents) | [views-and-design-artifacts.md](views-and-design-artifacts.md) |

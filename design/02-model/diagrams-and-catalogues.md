@@ -87,6 +87,8 @@ Features:
 
 ## 6. Other views
 
+*Proposed 2026-10-07:* every view kind becomes a diagram with a `kind` and a `definition`, and design artifacts compose them into templated documents ([views and design artifacts](views-and-design-artifacts.md)).
+
 | View | Shows | Edits |
 |---|---|---|
 | **Matrix** | Objects (rows) × objects (columns); a cell = a relationship of a chosen type | Clicking a cell creates or deletes the relationship |

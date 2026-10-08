@@ -1,0 +1,80 @@
+{
+  "key": "integrationSpec",
+  "name": "Integration specification",
+  "description": "A design artifact about how one application or interface integrates: its context, a described row per integration, and per integration its details, sequence and error handling.",
+  "kind": "document",
+  "objectTypes": ["applicationBase", "interface", "service"],
+  "document": {
+    "subject": {
+      "type": ["applicationBase", "interface", "service"]
+    },
+    "sections": [
+      {
+        "key": "purpose",
+        "title": "Purpose",
+        "component": "prose",
+        "required": true,
+        "lock": "fixed",
+        "guidance": "What these integrations are for. Type @ to mention an element of the model, @+ to create one.",
+        "config": {
+          "mentions": {
+            "create": true
+          }
+        }
+      },
+      {
+        "use": "contextAndIntegrations"
+      },
+      {
+        "key": "details",
+        "title": "Integration details",
+        "component": "repeater",
+        "guidance": "One block per integration in the table above.",
+        "lock": "fixed",
+        "config": {
+          "source": {
+            "section": "integrations"
+          },
+          "sections": [
+            {
+              "key": "facts",
+              "title": "Details",
+              "component": "facts",
+              "config": {
+                "of": "relationship",
+                "properties": [
+                  "interaction.operation",
+                  "interaction.pattern",
+                  "interaction.protocol",
+                  "flow.protocol",
+                  "flow.frequency"
+                ]
+              }
+            },
+            {
+              "key": "sequence",
+              "title": "Sequence",
+              "component": "sequenceLink",
+              "config": {
+                "diagramType": "sequence"
+              }
+            },
+            {
+              "key": "errors",
+              "title": "Error handling",
+              "component": "prose",
+              "required": true,
+              "guidance": "What happens when this integration fails: retries, timeouts, who is told."
+            }
+          ]
+        }
+      },
+      {
+        "region": "additional",
+        "title": "Additional sections",
+        "palette": ["heading", "prose", "diagramLink", "relationTable"],
+        "max": 4
+      }
+    ]
+  }
+}

@@ -150,6 +150,19 @@ function candidates(state: ModelState, next: () => number, n: number): Edit[] {
     d ? { edit: "updateDiagram", id: d.id, baseVersion: d.version, set: { name: `${d.name}'` } } : null,
     d
       ? {
+          edit: "setViewDefinition",
+          diagramId: d.id,
+          baseVersion: d.version,
+          set: pick([
+            { hideEmpty: n % 2 === 0 },
+            { groupRows: null },
+            { rows: { from: { type: ["capability"] } }, hideEmpty: null },
+            ...(o ? [{ subject: o.id, summary: { paragraphs: [["See ", { mention: o.id }]] } }] : []),
+          ])!,
+        }
+      : null,
+    d
+      ? {
           edit: "setDiagramProperties",
           id: d.id,
           baseVersion: d.version,
@@ -235,6 +248,7 @@ function candidates(state: ModelState, next: () => number, n: number): Edit[] {
           set: { x: n, content: { shape: "frame", title: "T" } },
         }
       : null,
+    ro ? { edit: "setMessageStep", diagramId: ro.diagramId, occurrenceId: ro.id, step: pick([`a${n}`, null])! } : null,
     an ? { edit: "removeAnnotation", diagramId: an.diagramId, annotationId: an.id } : null,
   ];
   return all.filter((e): e is Edit => e !== null);

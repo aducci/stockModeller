@@ -1,0 +1,68 @@
+{
+  "key": "hld",
+  "name": "High-level design",
+  "description": "A design artifact about one application: summary, key facts, its context diagram and a described row for every integration drawn on it.",
+  "kind": "document",
+  "objectTypes": ["applicationBase", "service"],
+  "document": {
+    "subject": {
+      "type": ["applicationBase", "service"]
+    },
+    "sections": [
+      {
+        "key": "summary",
+        "title": "Summary",
+        "component": "prose",
+        "required": true,
+        "lock": "fixed",
+        "guidance": "What changes and why, in a few lines. Type @ to mention an element of the model, @+ to create one.",
+        "config": {
+          "mentions": {
+            "create": true
+          }
+        }
+      },
+      {
+        "key": "facts",
+        "title": "Key facts",
+        "component": "facts",
+        "allow": {
+          "addProperties": true
+        },
+        "config": {
+          "properties": [
+            "lifecycle.status",
+            "ownership.businessOwner",
+            "ownership.technicalOwner",
+            "assessment.criticality",
+            "cost.runCost"
+          ]
+        }
+      },
+      {
+        "use": "contextAndIntegrations",
+        "with": {
+          "perRow": {
+            "sequence": "sequence"
+          }
+        }
+      },
+      {
+        "key": "risks",
+        "title": "Risks and open points",
+        "component": "prose",
+        "allow": {
+          "hide": true
+        },
+        "guidance": "What could go wrong, and what is still to decide."
+      },
+      {
+        "region": "additional",
+        "title": "Additional sections",
+        "guidance": "Add what this design needs beyond the template.",
+        "palette": ["heading", "prose", "facts", "diagramLink", "relationTable"],
+        "max": 6
+      }
+    ]
+  }
+}

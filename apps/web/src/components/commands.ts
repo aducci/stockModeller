@@ -8,6 +8,7 @@ import { navigate } from "../route";
 import { itemName, targetFolder, whyFolderNotDeletable } from "../explorer";
 import { addToGroupPlan, isGroup, removeFromGroupPlan, type Plan } from "../dragdrop";
 import { byName } from "../text";
+import { newDocumentPlan, templatesFor } from "../document";
 import type { MenuEntry } from "./Menu";
 
 const store = () => useWorkbench.getState();
@@ -82,6 +83,21 @@ function addToGroupMenu(state: ModelState, metamodel: Metamodel, objectIds: Id[]
   };
 }
 
+/** "New ▸ High-level design" and the like: a document about the object (views-and-design-artifacts.md §7.4). */
+function documentItems(metamodel: Metamodel, object: NonNullable<ReturnType<ModelState["objects"]["get"]>>) {
+  const templates = templatesFor(metamodel, object);
+  return [
+    ...(templates.length ? (["separator"] as MenuEntry[]) : []),
+    ...templates.map((t): MenuEntry => ({
+      label: t.name,
+      run: () => {
+        const plan = newDocumentPlan(t, object);
+        if (store().edit(plan.label, plan.edits)) store().openTab({ kind: "diagram", id: plan.edits[0]!.id });
+      },
+    })),
+  ];
+}
+
 /** The right-click menu of one explorer row. */
 export function itemMenu(state: ModelState, metamodel: Metamodel, item: Selection): MenuEntry[] {
   const folderId = targetFolder(state, item);
@@ -92,7 +108,7 @@ export function itemMenu(state: ModelState, metamodel: Metamodel, item: Selectio
   const object = item.kind === "object" ? state.objects.get(item.id) : undefined;
   return [
     ...open,
-    { label: "New", submenu: newItems(folderId) },
+    { label: "New", submenu: [...newItems(folderId), ...(object ? documentItems(metamodel, object) : [])] },
     "separator",
     { label: "Rename", shortcut: "F2", run: () => renameItem(item) },
     ...(item.kind === "object" ? [addToGroupMenu(state, metamodel, [item.id])] : []),

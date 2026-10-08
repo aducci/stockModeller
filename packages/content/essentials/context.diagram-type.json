@@ -1,0 +1,24 @@
+{
+  "key": "context",
+  "name": "Context diagram",
+  "description": "An application and what it exchanges with: the systems around it and the flows and interactions between them.",
+  "objectTypes": ["applicationBase", "interface", "service", "organisationUnit", "dataObject"],
+  "relationshipTypes": ["flowsTo", "calls", "serves", "accesses"],
+  "nesting": "lines",
+  "showExistingRelationships": true,
+  "symbols": {
+    "application": {
+      "width": 140,
+      "height": 52
+    },
+    "saasApplication": {
+      "width": 140,
+      "height": 52
+    },
+    "interface": {
+      "shape": "ellipse",
+      "width": 110,
+      "height": 40
+    }
+  }
+}

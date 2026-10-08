@@ -157,6 +157,7 @@ function fromDiagram(r: any): DiagramRow {
     folderId: r.folder_id,
     ...rank(r.rank),
     generatedBy: r.generated_by,
+    ...(r.definition && Object.keys(r.definition).length > 0 ? { definition: r.definition } : {}),
     ...(r.properties && Object.keys(r.properties).length > 0 ? { properties: r.properties } : {}),
     version: r.version,
     fieldVersions: r.field_versions,
@@ -195,6 +196,7 @@ function fromRelationshipOccurrence(r: any): RelationshipOccurrenceRow {
     route: r.route,
     labelPosition: r.label_position,
     style: r.style,
+    ...(r.step !== null && r.step !== undefined ? { step: r.step } : {}),
     deleted: r.deleted,
     scenarioId: r.scenario_id,
   };
@@ -310,6 +312,7 @@ function toDatabase(touched: TouchedRow, ctx: WriteContext): Record<string, unkn
         rank: r.rank ?? null,
         description: r.description,
         generated_by: r.generatedBy === null ? null : json(r.generatedBy),
+        definition: json(r.definition ?? {}),
         properties: json(r.properties ?? {}),
         version: r.version,
         field_versions: json(r.fieldVersions),
@@ -348,6 +351,7 @@ function toDatabase(touched: TouchedRow, ctx: WriteContext): Record<string, unkn
         route: json(r.route),
         label_position: r.labelPosition,
         style: json(r.style),
+        step: r.step ?? null,
         deleted: r.deleted,
       };
     }

@@ -331,7 +331,12 @@ function OccursOnView({ object, state, metamodel }: ViewProps) {
   const [filter, setFilter] = useState("");
   const all = occurrences(state, object.id);
   const rows = filter ? occurrences(state, object.id, filter) : all;
-  const open = activeTab?.kind === "diagram" ? state.diagrams.get(activeTab.id) : undefined;
+  const tabDiagram = activeTab?.kind === "diagram" ? state.diagrams.get(activeTab.id) : undefined;
+  // Only canvases take symbols; a matrix shows what its definition selects.
+  const open =
+    tabDiagram && (metamodel.diagramType(tabDiagram.diagramType)?.definition.kind ?? "canvas") === "canvas"
+      ? tabDiagram
+      : undefined;
   const onOpen = open && all.some((r) => r.diagramId === open.id);
   const add = () => {
     if (!open) return;

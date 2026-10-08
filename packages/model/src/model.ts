@@ -242,6 +242,8 @@ export interface Diagram {
   folderId: Id;
   version: number;
   generatedBy: { rule: string; focusObjectId: Id } | null;
+  /** build (slice V-1): what a matrix or other view shows (02-model/views-and-design-artifacts.md); absent = {}. */
+  definition?: Record<string, unknown>;
   /** build: values of its diagram type's `properties` (slice A-1b); absent means none. */
   properties?: Record<PropertyKey, PropertyValue>;
   objectOccurrences: ObjectOccurrence[];
@@ -268,6 +270,8 @@ export interface RelationshipOccurrence {
   route: { mode: "auto" } | { mode: "manual"; points: Array<[number, number]> };
   labelPosition: number;
   style: Partial<LineStyle>;
+  /** build (slice V-3): a message's place in a sequence view, a fractional-index key; absent elsewhere. */
+  step?: string;
 }
 
 export interface Annotation extends Rect {

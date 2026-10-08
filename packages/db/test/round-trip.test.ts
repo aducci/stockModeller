@@ -84,13 +84,14 @@ describeDb("engine + database", () => {
     expect(metamodel.version).toBe(pkg.version);
     expect(metamodel.layers).toEqual(pkg.layers);
     expect(metamodel.exchangeMappings).toEqual(pkg.exchangeMappings);
+    expect(metamodel.documentPatterns).toEqual(pkg.documentPatterns);
     expect(sortByKey(metamodel.objectTypes)).toEqual(sortByKey(pkg.objectTypes));
     expect(sortByKey(metamodel.relationshipTypes)).toEqual(sortByKey(pkg.relationshipTypes));
     expect(sortByKey(metamodel.propertyTypes)).toEqual(sortByKey(pkg.propertyTypes));
     expect(sortByKey(metamodel.valueLists)).toEqual(sortByKey(pkg.valueLists));
     expect(sortByKey(metamodel.validationRules)).toEqual(sortByKey(pkg.validationRules));
     expect(metamodel.relationshipRules).toHaveLength(pkg.relationshipRules!.length);
-    expect(diagramTypes).toEqual(essentials.diagramTypes);
+    expect(sortByKey(diagramTypes)).toEqual(sortByKey(essentials.diagramTypes));
   });
 
   let committedBaseline: ModelState;
@@ -176,6 +177,22 @@ describeDb("engine + database", () => {
     expect(after.state.objects.get("O-SRV-1")!.confirmations).toEqual({
       "semantic.level": { by: "U-DANA", at: result.state.objects.get("O-SRV-1")!.updatedAt },
     });
+    expect(snapshot(after.state)).toEqual(snapshot(result.state));
+  });
+
+  it("stores a view definition and reads it back exactly", async () => {
+    const before = await withWorkspace(t.conn, WS, (tx) => loadState(tx, REPO, BASELINE));
+    const diagram = [...before.state.diagrams.live()][0]!;
+    const set = { hideEmpty: true, rows: { from: { type: ["capability"] } } };
+    const result = await submit(t.conn, {
+      id: "C-VIEW",
+      scenarioId: BASELINE,
+      label: "Define view",
+      edits: [{ edit: "setViewDefinition", diagramId: diagram.id, baseVersion: diagram.version, set }],
+    });
+    if (!result.ok) throw new Error(JSON.stringify(result.reasons));
+    const after = await withWorkspace(t.conn, WS, (tx) => loadState(tx, REPO, BASELINE));
+    expect(after.state.diagrams.get(diagram.id)!.definition).toEqual(set);
     expect(snapshot(after.state)).toEqual(snapshot(result.state));
   });
 

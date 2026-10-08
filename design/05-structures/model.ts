@@ -152,6 +152,7 @@ export interface Diagram {
   id: Id; name: string; description: string; diagramType: TypeKey; folderId: Id; version: number;
   rank?: string;                                // build: place among its siblings in the explorer
   generatedBy: { rule: string; focusObjectId: Id } | null;
+  definition?: Record<string, unknown>;        // build (slice V-1): a view's definition (views-and-design-artifacts.md); absent = {}
   properties?: Record<PropertyKey, PropertyValue>; // build: values of its diagram type's `properties` (A-1b)
   objectOccurrences: ObjectOccurrence[];
   relationshipOccurrences: RelationshipOccurrence[];
@@ -172,6 +173,7 @@ export interface RelationshipOccurrence {
   shownAs: "line" | "nesting";
   route: { mode: "auto" } | { mode: "manual"; points: Array<[number, number]> };
   labelPosition: number; style: Partial<LineStyle>;
+  step?: string;                  // build (slice V-3): order in a sequence view (fractional-index key)
 }
 
 export interface Annotation extends Rect {

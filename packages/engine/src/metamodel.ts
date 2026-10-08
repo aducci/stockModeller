@@ -1,10 +1,20 @@
 // A metamodel compiled for fast lookups: resolved inheritance, rule matching and diagram types.
 import {
+  COMPONENT_KEYS,
+  LAYOUT_KEY,
   LEVEL_PROPERTY,
+  REGION_COMPONENT_KEYS,
+  SEMANTIC_KINDS,
+  SUBJECT_KEY,
   corePackage,
+  isRegion,
   isRendition,
+  resolveTemplate,
   semanticKindInfo,
   type DiagramType,
+  type ResolvedSection,
+  type ResolvedTemplate,
+  type SectionDefinition,
   type MetamodelPackage,
   type ObjectType,
   type PayloadUse,
@@ -18,6 +28,7 @@ import {
   type SymbolStyle,
   type TypeKey,
   type ValueList,
+  validateSection,
 } from "@connectome/model";
 
 export class MetamodelError extends Error {
@@ -62,6 +73,8 @@ export interface ResolvedDiagramType {
   nesting: "nested" | "lines";
   /** Property types diagrams of this type carry. */
   properties: ReadonlySet<string>;
+  /** A document type's template with its base and patterns resolved (views-and-design-artifacts.md §8.4). */
+  template?: ResolvedTemplate;
 }
 
 export class Metamodel {
@@ -311,6 +324,22 @@ export class Metamodel {
       for (const r of [dt.renditions?.default, ...(dt.renditions?.semanticZoom ?? []).map((z) => z.rendition)]) {
         if (r !== undefined && !isRendition(r)) problems.push(`Diagram type "${dt.key}" uses unknown rendition "${r}"`);
       }
+      if (dt.matrix) {
+        const where = `Diagram type "${dt.key}"`;
+        const scopes = [dt.matrix.rows, dt.matrix.columns];
+        for (const scope of scopes) {
+          for (const t of scope.from.type ?? []) typeRef(t, where);
+          for (const step of scope.steps ?? []) for (const t of step.to?.type ?? []) typeRef(t, where);
+        }
+        const relTypes = [
+          ...(dt.matrix.relationships.types ?? []),
+          ...(dt.matrix.create ? [dt.matrix.create] : []),
+          ...scopes.flatMap((s) => (s.steps ?? []).flatMap((st) => st.type ?? [])),
+        ];
+        for (const t of relTypes) {
+          if (!mm.relationshipTypes.has(t)) problems.push(`${where} uses unknown relationship type "${t}"`);
+        }
+      }
       for (const p of dt.properties ?? []) {
         if (!mm.propertyTypes.has(p)) problems.push(`Diagram type "${dt.key}" uses unknown property type "${p}"`);
       }
@@ -320,8 +349,124 @@ export class Metamodel {
         properties: new Set(dt.properties ?? []),
       });
     }
+    // Document templates last: their linked diagrams may name any diagram type, and they may extend each other.
+    const patternKeys = new Set<string>();
+    for (const p of pkg.documentPatterns ?? []) {
+      if (patternKeys.has(p.key)) duplicate("Document pattern", p.key);
+      patternKeys.add(p.key);
+    }
+    const templateOf = (key: TypeKey) => diagramTypes.find((d) => d.key === key)?.document;
+    for (const dt of diagramTypes) {
+      if (!dt.document) continue;
+      const template = resolveTemplate(dt.key, templateOf, pkg.documentPatterns ?? [], problems);
+      checkDocument(mm, dt.key, template, typeRef, problems);
+      mm.diagramTypes.get(dt.key)!.template = template;
+    }
 
     if (problems.length > 0) throw new MetamodelError(problems);
     return mm;
   }
+}
+
+/** A resolved document template (views-and-design-artifacts.md §7.1, §8.4 "Validation"): everything it names must exist. */
+function checkDocument(
+  mm: Metamodel,
+  key: TypeKey,
+  template: ResolvedTemplate,
+  typeRef: (t: TypeKey, where: string) => void,
+  problems: string[],
+): void {
+  const where = `Document template "${key}"`;
+  for (const t of template.subject.type ?? []) typeRef(t, where);
+  const keys = new Set<string>();
+  const sections = template.entries.filter((e): e is ResolvedSection => !isRegion(e));
+  for (const entry of template.entries) {
+    const entryKey = isRegion(entry) ? entry.region : entry.key;
+    if (entryKey === SUBJECT_KEY || entryKey === LAYOUT_KEY)
+      problems.push(`${where}, section "${entryKey}": "${entryKey}" is reserved for the document's own state`);
+    if (keys.has(entryKey))
+      problems.push(`${where} has two sections "${entryKey}" (a pattern used twice needs a prefix)`);
+    keys.add(entryKey);
+    if (isRegion(entry)) {
+      for (const c of entry.palette)
+        if (!REGION_COMPONENT_KEYS.includes(c))
+          problems.push(`${where}, region "${entry.region}" offers "${c}", which authors cannot add`);
+      continue;
+    }
+    problems.push(...checkSection(mm, entry, sections, `${where}, section "${entry.key}"`));
+  }
+}
+
+/**
+ * One section of a document, against the metamodel and its sibling sections: a template's, or one an author added in
+ * a region. `inRow` is true for a repeater's children, which see the row.
+ */
+export function checkSection(
+  mm: Metamodel,
+  section: SectionDefinition,
+  siblings: readonly SectionDefinition[],
+  at: string,
+  inRow = false,
+): string[] {
+  const problems: string[] = [];
+  if (!COMPONENT_KEYS.includes(section.component)) return [`${at} uses unknown component "${section.component}"`];
+  const schema = validateSection(section);
+  if (!schema.ok) return [`${at} is not a valid section: ${schema.errors.slice(0, 3).join("; ")}`];
+  const kinds = (list: readonly string[] | undefined) => {
+    for (const k of list ?? [])
+      if (!SEMANTIC_KINDS.some((x) => x.kind === k)) problems.push(`${at} uses unknown kind "${k}"`);
+  };
+  const relTypes = (list: readonly string[] | undefined) => {
+    for (const t of list ?? [])
+      if (!mm.relationshipType(t)) problems.push(`${at} uses unknown relationship type "${t}"`);
+  };
+  const ofKind = (typeKey: TypeKey, kind: string, what: string) => {
+    const dt = mm.diagramType(typeKey);
+    if (!dt) problems.push(`${at} ${what} unknown diagram type "${typeKey}"`);
+    else if ((dt.definition.kind ?? "canvas") !== kind)
+      problems.push(`${at} ${what} "${typeKey}", which is not a ${kind === "canvas" ? "canvas" : `${kind} type`}`);
+  };
+  if (inRow && !["heading", "prose", "facts", "sequenceLink"].includes(section.component))
+    problems.push(`${at}: a repeater shows headings, prose, facts and sequences, not "${section.component}"`);
+  if (!inRow && section.component === "sequenceLink") problems.push(`${at}: a sequence link belongs in a repeater`);
+  if (section.component === "facts") {
+    if (!inRow && section.config.of !== undefined) problems.push(`${at}: only a repeater's facts are of a row`);
+    for (const p of section.config.properties)
+      if (!mm.propertyType(p)) problems.push(`${at} uses unknown property "${p}"`);
+  }
+  if (section.component === "diagramLink") ofKind(section.config.diagramType, "canvas", "links");
+  if (section.component === "sequenceLink") ofKind(section.config.diagramType, "sequence", "opens");
+  if (section.component === "relationTable") {
+    const c = section.config;
+    relTypes(c.source.relationships.types);
+    kinds(c.source.relationships.kinds);
+    relTypes(c.add?.types);
+    kinds(c.add?.kinds);
+    if (c.perRow) ofKind(c.perRow.sequence, "sequence", "has rows open");
+    if (c.source.section !== undefined) {
+      const linked = siblings.find((x) => x.key === c.source.section);
+      if (linked?.component !== "diagramLink")
+        problems.push(`${at} reads section "${c.source.section}", which is not a linked diagram`);
+    }
+    const columnKeys = new Set<string>();
+    for (const col of c.columns) {
+      const props = typeof col === "string" ? (col === "direction" || col === "payload" ? [] : [col]) : col.properties;
+      for (const p of props) if (!mm.propertyType(p)) problems.push(`${at} uses unknown property "${p}"`);
+      columnKeys.add(typeof col === "string" ? col : col.key);
+    }
+    for (const r of c.required ?? [])
+      if (!columnKeys.has(r)) problems.push(`${at} requires "${r}", which is not one of its columns`);
+  }
+  if (section.component === "repeater") {
+    const source = siblings.find((x) => x.key === section.config.source.section);
+    if (source?.component !== "relationTable")
+      problems.push(`${at} repeats section "${section.config.source.section}", which is not a relation table`);
+    const childKeys = new Set<string>();
+    for (const child of section.config.sections) {
+      if (childKeys.has(child.key)) problems.push(`${at} has two sections "${child.key}"`);
+      childKeys.add(child.key);
+      problems.push(...checkSection(mm, child, section.config.sections, `${at}, section "${child.key}"`, true));
+    }
+  }
+  return problems;
 }

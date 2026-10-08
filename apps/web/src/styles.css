@@ -1578,33 +1578,33 @@ button.toggle .badge {
   flex: none;
 }
 
-/* The connection matrix */
-.mm-matrix-scroll {
+/* Matrices: the connection matrix and matrix views (MatrixGrid) */
+.matrix-grid-scroll {
   overflow: auto;
 }
-.mm-matrix {
+.matrix-grid {
   border-collapse: separate;
   border-spacing: 0;
 }
-.mm-matrix th {
+.matrix-grid th {
   font-weight: 400;
   text-align: left;
   white-space: nowrap;
   background: var(--pane);
 }
-.mm-matrix tbody th {
+.matrix-grid tbody th {
   position: sticky;
   left: 0;
   z-index: 1;
   padding-right: 10px;
   border-right: 1px solid var(--line);
 }
-.mm-matrix th.col {
+.matrix-grid th.col {
   height: 120px;
   vertical-align: bottom;
   padding: 0 0 6px;
 }
-.mm-matrix .vertical {
+.matrix-grid .vertical {
   display: inline-block;
   width: 34px;
   writing-mode: vertical-rl;
@@ -1615,7 +1615,7 @@ button.toggle .badge {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.mm-matrix td.cell {
+.matrix-grid td.cell {
   position: relative;
   width: 34px;
   height: 30px;
@@ -1623,12 +1623,55 @@ button.toggle .badge {
   border-right: 1px solid var(--grid, var(--line));
   border-bottom: 1px solid var(--grid, var(--line));
 }
-.mm-matrix td.cell.used {
+.matrix-grid td.cell.used {
   background: var(--pane-2);
 }
-.mm-matrix td.cell.open {
+.matrix-grid td.cell.open {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
+}
+.matrix-grid td.total {
+  min-width: 34px;
+  padding: 0 6px;
+  text-align: center;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-2);
+  background: var(--pane-2);
+  border-bottom: 1px solid var(--grid, var(--line));
+}
+.matrix-grid tr.totals th {
+  color: var(--fg-2);
+}
+.matrix-grid tr.group > th {
+  font-weight: 600;
+}
+.matrix-grid td.cell.refused {
+  background: repeating-linear-gradient(135deg, transparent 0 5px, var(--grid, var(--line)) 5px 6px);
+}
+.matrix-grid td.cell.refused .cell-button {
+  cursor: not-allowed;
+}
+.cell-button .count {
+  font-size: 10px;
+  color: var(--fg-2);
+}
+.matrix-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.matrix-view .matrix-grid-scroll {
+  flex: 1;
+  min-height: 0;
+}
+.matrix-cell-menu .matrix-cell-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 0;
 }
 .cell-button {
   display: flex;
@@ -1797,6 +1840,331 @@ button.toggle .badge {
 }
 .dialog ul.added li {
   color: var(--added, inherit);
+}
+
+/* ---------------------------------------------------------------- document view (views §7–§8) */
+.document-view {
+  height: 100%;
+  overflow: auto;
+  background: var(--pane-2);
+}
+.document {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 32px 64px;
+  background: var(--pane);
+  min-height: 100%;
+  box-sizing: border-box;
+}
+.doc-header {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 12px;
+  margin-bottom: 8px;
+}
+.doc-header h1 {
+  margin: 2px 0 8px;
+  font-size: 22px;
+}
+.doc-kind {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.doc-subject {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.doc-complete {
+  margin-left: auto;
+  border: 1px solid var(--amber-ink);
+  color: var(--amber-ink);
+  background: var(--amber-fill);
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+.doc-complete.done {
+  border-color: var(--green-ink);
+  color: var(--green-ink);
+  background: var(--green-fill);
+}
+.doc-findings {
+  margin: 8px 0 0;
+  padding: 8px 12px 8px 28px;
+  background: var(--pane-2);
+  border-radius: 6px;
+  font-size: 13px;
+}
+.doc-section {
+  padding: 14px 0 6px;
+}
+.doc-section h2,
+.doc-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+  font-size: 16px;
+}
+.doc-required {
+  font-size: 11px;
+  font-weight: normal;
+}
+.doc-state {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1.5px solid var(--amber-ink);
+  flex: none;
+}
+.doc-state.done {
+  background: var(--green-ink);
+  border-color: var(--green-ink);
+}
+.doc-guidance {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+.doc-warning {
+  color: var(--removed);
+}
+.doc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--pane-2);
+  font: inherit;
+  line-height: 1.6;
+  cursor: pointer;
+  vertical-align: baseline;
+}
+.doc-chip:hover {
+  border-color: var(--accent);
+}
+.doc-chip.deleted {
+  color: var(--fg-2);
+  text-decoration: line-through;
+  cursor: default;
+}
+.doc-mention {
+  position: relative;
+}
+.doc-chip-menu {
+  position: absolute;
+  z-index: 15;
+  top: 100%;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  min-width: 240px;
+  padding: 6px;
+  background: var(--pane);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.18);
+  font-size: 13px;
+}
+.doc-chip-menu button {
+  text-align: left;
+}
+.doc-prose p {
+  margin: 0 0 8px;
+  line-height: 1.6;
+}
+.doc-prose.editing {
+  position: relative;
+}
+.doc-prose textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  line-height: 1.6;
+  padding: 8px;
+}
+.doc-hint {
+  margin: 4px 0 0;
+  font-size: 12px;
+}
+.doc-placeholder {
+  width: 100%;
+  text-align: left;
+  padding: 10px;
+  border: 1px dashed var(--line);
+  background: none;
+  color: var(--fg-2);
+  border-radius: 6px;
+  cursor: text;
+}
+.doc-mentions {
+  position: absolute;
+  z-index: 15;
+  left: 8px;
+  top: 100%;
+  width: 340px;
+  max-height: 320px;
+  overflow: auto;
+  background: var(--pane);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.18);
+}
+.doc-mentions [role="option"] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.doc-mentions [role="option"] .muted {
+  margin-left: auto;
+  font-size: 12px;
+}
+.doc-mentions [role="option"].active,
+.doc-mentions [role="option"]:hover {
+  background: var(--sky-fill);
+}
+.doc-mention-create {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-top: 1px solid var(--line);
+}
+.doc-diagram-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.doc-diagram-bar > span {
+  margin-right: auto;
+}
+.doc-diagram.empty {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.doc-diagram.empty .doc-warning {
+  flex-basis: 100%;
+  margin: 0;
+}
+.doc-preview {
+  display: block;
+  width: 100%;
+  background: var(--canvas);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  cursor: zoom-in;
+}
+.doc-preview-box {
+  fill: var(--sky-fill);
+  stroke: var(--sky-ink);
+  stroke-width: 1;
+}
+.doc-preview .subject .doc-preview-box {
+  stroke-width: 2.5;
+}
+.doc-preview text {
+  font-size: 13px;
+  fill: var(--fg);
+}
+.doc-preview-line {
+  stroke: var(--fg-2);
+  stroke-width: 1.5;
+}
+.doc-preview-arrow {
+  fill: var(--fg-2);
+}
+.doc-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  background: var(--amber-fill);
+  color: var(--amber-ink);
+  border-radius: 6px;
+  font-size: 13px;
+}
+.doc-banner > span {
+  flex: 1 1 300px;
+}
+.doc-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.doc-table th,
+.doc-table td {
+  border-bottom: 1px solid var(--line);
+  padding: 4px 6px;
+  text-align: left;
+  vertical-align: middle;
+}
+.doc-table thead th {
+  color: var(--fg-2);
+  font-weight: 600;
+}
+.doc-table tr.to-describe th[scope="row"] {
+  box-shadow: inset 3px 0 0 var(--amber-ink);
+}
+.doc-table td.na {
+  text-align: center;
+}
+.doc-cell-input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  background: none;
+  font: inherit;
+  padding: 2px 4px;
+}
+.doc-cell-input:hover,
+.doc-cell-input:focus {
+  border-color: var(--line);
+  background: var(--pane);
+}
+.doc-badge {
+  white-space: nowrap;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--amber-fill);
+  color: var(--amber-ink);
+}
+.doc-row-state {
+  width: 1%;
+}
+.doc-add {
+  margin-top: 8px;
+}
+.doc-add-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 8px;
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+@media (max-width: 700px) {
+  .document {
+    padding: 16px;
+  }
 }
 
 /* Property administration (slice A-1b): the Properties view, a type's properties, values not on their type. */
@@ -2014,4 +2382,218 @@ button.toggle .badge {
     position: static;
     max-height: none;
   }
+}
+
+/* ---------------------------------------------------------------- sequence view (views §6) */
+.sequence-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.sequence-toolbar .sequence-selected {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+.sequence-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--canvas);
+}
+.sequence {
+  display: block;
+  user-select: none;
+}
+.seq-stem {
+  stroke: var(--fg-2);
+  stroke-dasharray: 5 4;
+}
+.seq-hit {
+  fill: transparent;
+  cursor: crosshair;
+}
+.seq-head-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 0 6px;
+  border: 1.5px solid var(--sky-ink);
+  border-radius: 6px;
+  background: var(--sky-fill);
+  font-size: 13px;
+}
+.seq-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  color: var(--fg);
+}
+.seq-lane-actions {
+  display: none;
+}
+.seq-head-box:hover .seq-lane-actions {
+  display: inline-flex;
+}
+.seq-lane-actions button {
+  padding: 0 4px;
+  min-width: 0;
+}
+.seq-activation {
+  fill: var(--pane);
+  stroke: var(--sky-ink);
+}
+.seq-line {
+  stroke: var(--fg);
+  stroke-width: 1.5;
+}
+.seq-message.response .seq-line {
+  stroke-dasharray: 6 4;
+}
+.seq-hit-line {
+  stroke: transparent;
+  stroke-width: 14;
+  cursor: pointer;
+}
+.seq-message text {
+  font-size: 12px;
+  fill: var(--fg);
+  cursor: pointer;
+}
+.seq-message.selected .seq-line {
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}
+.seq-message.selected text {
+  fill: var(--accent);
+  font-weight: 600;
+}
+.seq-head.filled {
+  fill: var(--fg);
+}
+.seq-head.open {
+  fill: none;
+  stroke: var(--fg);
+  stroke-width: 1.5;
+}
+.sequence-form {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--pane-2);
+}
+.sequence-form-row,
+.sequence-choices {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.sequence-choices {
+  margin-top: 8px;
+}
+.sequence-steps {
+  border-collapse: collapse;
+  font-size: 13px;
+  margin: 8px 12px;
+}
+.sequence-steps th,
+.sequence-steps td {
+  border-bottom: 1px solid var(--line);
+  padding: 3px 8px;
+  text-align: left;
+}
+.sequence-steps tbody tr {
+  cursor: pointer;
+}
+
+/* Documents: locks, section options, regions and repeaters (views-and-design-artifacts.md §8.2, slice V-4) */
+.doc-lock {
+  font-size: 11px;
+  font-weight: normal;
+}
+.doc-section-menu {
+  position: relative;
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: normal;
+}
+.doc-section h2,
+.doc-heading {
+  position: relative;
+}
+.doc-section-menu .doc-chip-menu {
+  left: auto;
+  right: 0;
+  min-width: 160px;
+}
+.doc-section.hidden {
+  padding: 4px 0;
+}
+.doc-region {
+  border-top: 1px dashed var(--line);
+  margin-top: 12px;
+  padding-top: 4px;
+}
+.doc-region-add {
+  margin: 10px 0;
+}
+.doc-facts-more,
+.doc-columns {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 13px;
+}
+.doc-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 2px 1px 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.doc-column-hide {
+  margin-left: 2px;
+  padding: 0 3px;
+  opacity: 0.35;
+}
+.doc-table th:hover .doc-column-hide,
+.doc-column-hide:focus {
+  opacity: 1;
+}
+.doc-repeater {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.doc-repeat-row {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 12px 4px;
+}
+.doc-repeat-row h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+.doc-section.nested {
+  padding: 6px 0 2px;
+}
+.doc-section.nested h4 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 4px;
+  font-size: 13px;
 }

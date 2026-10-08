@@ -141,6 +141,7 @@ export interface DiagramTable extends ScenarioRow {
   rank: string | null;
   description: string;
   generated_by: Json<{ rule: string; focusObjectId: string } | null> | null;
+  definition: Generated<Json<Record<string, unknown>>>;
   properties: Json<Record<string, unknown>>;
   version: number;
   field_versions: Json<Record<string, { v: number; by: string }>>;
@@ -170,6 +171,7 @@ export interface RelationshipOccurrenceTable extends ScenarioRow {
   route: Json;
   label_position: number;
   style: Json<Record<string, unknown>>;
+  step: string | null;
 }
 
 export interface AnnotationTable extends ScenarioRow {

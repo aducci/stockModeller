@@ -107,6 +107,8 @@ export type DiagramEdit =
       folderId: Id;
       /** build: so that restoring a deleted diagram is exact. */
       description?: string;
+      /** build (slice V-1): a view's definition (02-model/views-and-design-artifacts.md); absent = {}. */
+      definition?: Record<string, unknown>;
       /** build: so that restoring a deleted diagram is exact (slice A-1b). */
       properties?: Record<PropertyKey, PropertyValue>;
     }
@@ -119,6 +121,11 @@ export type DiagramEdit =
   /** build: a diagram's property values (its diagram type's `properties`); null clears a value. */
   | ({ edit: "setDiagramProperties"; set: Record<PropertyKey, PropertyValue> } & OnExisting)
   | { edit: "deleteDiagram"; id: Id }
+  /**
+   * build (slice V-1): patches a view's definition key by key; a value of null removes that key, so the inverse is
+   * exact. Conflicts are checked per key ("definition.<key>").
+   */
+  | { edit: "setViewDefinition"; diagramId: Id; baseVersion: number; set: Record<string, unknown> }
   | { edit: "addObjectOccurrence"; diagramId: Id; occurrence: ObjectOccurrence }
   | {
       edit: "moveObjectOccurrence";
@@ -141,6 +148,8 @@ export type DiagramEdit =
       route: RelationshipOccurrence["route"];
       labelPosition?: number;
     }
+  /** build (slice V-3): moves a message in a sequence view; `null` drops the step. Last writer wins, like layout. */
+  | { edit: "setMessageStep"; diagramId: Id; occurrenceId: Id; step: string | null }
   | { edit: "addAnnotation"; diagramId: Id; annotation: Annotation }
   | { edit: "updateAnnotation"; diagramId: Id; annotationId: Id; set: Partial<Omit<Annotation, "id">> }
   /** build: annotations could be added and updated but not removed. */

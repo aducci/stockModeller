@@ -11,6 +11,7 @@ import type {
   TypeKey,
   ValueList,
 } from "./model";
+import type { DocumentPattern, DocumentTemplate, MatrixDefinition, ViewKind } from "./views";
 
 export interface Layer {
   key: string;
@@ -55,6 +56,8 @@ export interface MetamodelPackage {
   validationRules?: ValidationRule[];
   derivationRules?: DerivationRule[];
   exchangeMappings?: ExchangeMapping[];
+  /** Reusable groups of document sections (views-and-design-artifacts.md §8.4), used by the package's templates. */
+  documentPatterns?: DocumentPattern[];
 }
 
 export type ColourRuleAction =
@@ -78,6 +81,12 @@ export interface DiagramType {
   key: TypeKey;
   name: string;
   description?: string;
+  /** build (slice V-1): the view kind (02-model/views-and-design-artifacts.md §2); absent = canvas. */
+  kind?: ViewKind;
+  /** build (slice V-1): a matrix type's default definition; a diagram's own definition overrides it key by key. */
+  matrix?: MatrixDefinition;
+  /** build (slice V-2): a document template (views-and-design-artifacts.md §7.1). */
+  document?: DocumentTemplate;
   objectTypes: TypeKey[];
   relationshipTypes?: TypeKey[];
   /** build: property types diagrams of this type carry (slice A-1b). */
