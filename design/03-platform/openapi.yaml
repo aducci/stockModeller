@@ -443,6 +443,11 @@ components:
           type: object
           description: 'Who last confirmed each property value and when (edit confirmProperties); absent when none'
           additionalProperties: { type: object, required: [by, at], properties: { by: { type: string }, at: { type: string } } }
+        aliases: { type: array, items: { type: string }, description: 'Other names it goes by (edit setAliases); absent when none' }
+        notDuplicates:
+          type: array
+          description: 'Objects it was judged not to duplicate, with both names at the time (edit setNotDuplicates); absent when none'
+          items: { type: object, required: [of, name, otherName], properties: { of: { type: string }, name: { type: string }, otherName: { type: string } } }
         version: { type: integer }
     Relationship:
       type: object
@@ -494,7 +499,7 @@ components:
                  createDiagram, updateDiagram, deleteDiagram, setViewDefinition, setMessageStep,
                  addObjectOccurrence, moveObjectOccurrence, styleOccurrence, removeOccurrence,
                  addRelationshipOccurrence, routeRelationshipOccurrence, addAnnotation, updateAnnotation, removeAnnotation,
-                 setTags, setDescription, confirmProperties, setConfirmations,
+                 setTags, setDescription, confirmProperties, setConfirmations, setAliases, setNotDuplicates,
                  setRelationshipProperties, setDiagramProperties]
       additionalProperties: true
     ChangeRequestBody:

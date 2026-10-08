@@ -89,8 +89,15 @@ function wordPrefixes(query: string[], candidate: string[]): boolean {
   return true;
 }
 
-/** How alike two names are, 0–1, and why. Both are raw names; they are normalised here. */
-export function nameSimilarity(query: string, candidate: string): { score: number; reason: string } {
+/**
+ * How alike two names are, 0–1, and why. Both are raw names; they are normalised here. `prefixes: false` leaves out
+ * the signals for a name still being typed, so comparing two finished names is symmetric.
+ */
+export function nameSimilarity(
+  query: string,
+  candidate: string,
+  { prefixes = true }: { prefixes?: boolean } = {},
+): { score: number; reason: string } {
   const q = normaliseName(query);
   const c = normaliseName(candidate);
   if (!q || !c) return { score: 0, reason: "" };
@@ -110,13 +117,32 @@ export function nameSimilarity(query: string, candidate: string): { score: numbe
   if (cw.length === 1 && c.length >= 2 && qw.length >= 2 && initials(q).includes(c))
     consider(0.85, `${candidate.trim()} stands for ${query.trim()}`);
   // What has been typed so far starts the name (or each of its words).
-  if (c.startsWith(q)) consider(0.6 + 0.35 * (q.length / c.length), "Starts with what you typed");
-  else if (wordPrefixes(qw, cw)) consider(0.55 + 0.35 * (q.replace(/ /g, "").length / c.length), "Matches its words");
+  if (prefixes && c.startsWith(q)) consider(0.6 + 0.35 * (q.length / c.length), "Starts with what you typed");
+  else if (prefixes && wordPrefixes(qw, cw))
+    consider(0.55 + 0.35 * (q.replace(/ /g, "").length / c.length), "Matches its words");
   // Spelling: typos, plurals, abbreviations.
   const t = trigramSimilarity(q, c);
   consider(t, "Similar spelling");
   return best;
 }
+
+/**
+ * Keys under which two names may match, for comparing only likely pairs in a large model: the start of each word, the
+ * initials, and the word set. Names that match on spelling, word order or an acronym share at least one.
+ */
+export function nameKeys(name: string): string[] {
+  const n = normaliseName(name);
+  const ws = words(n);
+  if (ws.length === 0) return [];
+  const keys = new Set<string>([`s:${[...ws].sort().join(" ")}`]);
+  for (const w of ws) if (!STOP_WORDS.has(w)) keys.add(`w:${w.slice(0, 4)}`);
+  if (ws.length > 1) for (const i of initials(n)) keys.add(`i:${i}`);
+  else keys.add(`i:${ws[0]}`);
+  return [...keys];
+}
+
+/** An object's name and its other names (aliases). */
+export const namesOf = (object: ObjectRow): string[] => [object.name, ...(object.aliases ?? [])];
 
 /** Same type, a parent or child type (an application and a SaaS application), or unrelated. */
 export function kinshipOf(metamodel: Metamodel, wanted: TypeKey, candidate: TypeKey): Kinship {
@@ -141,7 +167,12 @@ export function findSimilarObjects(state: ModelState, metamodel: Metamodel, quer
   const found: SimilarObject[] = [];
   for (const object of state.objects.live()) {
     if (exclude?.has(object.id)) continue;
-    const { score, reason } = nameSimilarity(name, object.name);
+    // Its other names count too: typing "Claims Mgmt" finds the object that is also known by it.
+    let { score, reason } = nameSimilarity(name, object.name);
+    for (const alias of object.aliases ?? []) {
+      const viaAlias = nameSimilarity(name, alias);
+      if (viaAlias.score > score) ({ score, reason } = { score: viaAlias.score, reason: `Also known as ${alias}` });
+    }
     if (score < minScore) continue;
     const kinship = type ? kinshipOf(metamodel, type, object.type) : "same";
     // Unrelated types only show when they are close: they are a hint ("link instead?"), not a candidate to reuse.

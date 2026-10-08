@@ -25,9 +25,11 @@ export {
   findSimilarObjects,
   kinshipOf,
   nameSimilarity,
+  namesOf,
   normaliseName,
   type Kinship,
   type SimilarObject,
   type SimilarQuery,
 } from "./similar";
 export { containerOf, duplicateRelationships, nameClash, sameName, type NameClash, type NamedPlace } from "./identity";
+export { judgedDistinct, possibleDuplicates, type DuplicatePair, type DuplicateQuery } from "./duplicates";

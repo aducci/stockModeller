@@ -210,6 +210,20 @@ export interface ModelObject extends ModelItem {
   rank?: string;
   /** build: who last confirmed each property's value, and when (reviews in the properties panel); absent = none. */
   confirmations?: Record<PropertyKey, Confirmation>;
+  /** build: other names it goes by, for search and duplicate detection (edit `setAliases`); absent = none. */
+  aliases?: string[];
+  /** build: objects someone judged it is not a duplicate of (edit `setNotDuplicates`); absent = none. */
+  notDuplicates?: NotDuplicate[];
+}
+
+/**
+ * build: "not the same thing as `of`", judged while the two had these names (duplicates-and-identity.md §6). A rename
+ * of either makes the pair a candidate again.
+ */
+export interface NotDuplicate {
+  of: Id;
+  name: string;
+  otherName: string;
 }
 
 /** build: "this value is still right", as of a commit (edit `confirmProperties`). */

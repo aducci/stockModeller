@@ -16,12 +16,14 @@ export type Focus = Selection | { kind: "relationship"; id: Id };
 export const itemSelected = (focus: Focus | null): Selection | null =>
   focus && focus.kind !== "relationship" ? focus : null;
 export interface Tab {
-  kind: "object" | "diagram" | "metamodel";
+  kind: "object" | "diagram" | "metamodel" | "duplicates";
   id: Id;
 }
 
 /** The metamodel tab's id: there is one, whatever view it shows. */
 export const METAMODEL_TAB = "metamodel";
+/** The Possible duplicates tab's id (design/02-model/duplicates-and-identity.md §6). */
+export const DUPLICATES_TAB = "duplicates";
 export type MetamodelView = "types" | "diagramTypes" | "properties" | "matrix" | "sentences" | "try";
 
 /** The metamodel being edited (package and diagram types), and the version it was edited from. */

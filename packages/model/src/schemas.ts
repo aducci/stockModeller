@@ -25,6 +25,10 @@ const tags = z.array(z.string().min(1).max(100)).max(100);
 const externalIds = z.record(z.string().min(1).max(64), z.string().min(1).max(256));
 const confirmation = z.strictObject({ by: id, at: z.iso.datetime({ offset: true }) });
 const confirmations = z.record(propertyKey, confirmation);
+const aliases = z.array(z.string().max(200)).max(50);
+const notDuplicates = z
+  .array(z.strictObject({ of: id, name: z.string().max(200), otherName: z.string().max(200) }))
+  .max(1000);
 /** A view's definition (slice V-1): top-level keys, any JSON below them; the web app and packages/views read it. */
 const viewDefinition = z
   .record(z.string().regex(/^[a-z][a-zA-Z0-9]*$/), z.unknown())
@@ -131,6 +135,8 @@ export const editSchema = z.discriminatedUnion("edit", [
     tags: tags.optional(),
     externalIds: externalIds.optional(),
     confirmations: confirmations.optional(),
+    aliases: aliases.optional(),
+    notDuplicates: notDuplicates.optional(),
   }),
   z.strictObject({ edit: z.literal("setProperties"), ...onExisting, set: properties }),
   z.strictObject({ edit: z.literal("renameObject"), ...onExisting, name: z.string() }),
@@ -146,6 +152,8 @@ export const editSchema = z.discriminatedUnion("edit", [
     ...onExisting,
     set: z.record(propertyKey, confirmation.nullable()),
   }),
+  z.strictObject({ edit: z.literal("setAliases"), ...onExisting, aliases }),
+  z.strictObject({ edit: z.literal("setNotDuplicates"), ...onExisting, notDuplicates }),
   z.strictObject({ edit: z.literal("moveToFolder"), ...onExisting, folderId: id }),
   z.strictObject({
     edit: z.literal("changeObjectType"),

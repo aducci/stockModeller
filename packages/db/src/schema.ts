@@ -113,6 +113,8 @@ export interface ObjectTable extends ScenarioRow {
   updated_at: Timestamp;
   updated_by: string | null;
   confirmations: Json<Record<string, { by: string; at: string }>> | null;
+  aliases: Json<string[]> | null;
+  not_duplicates: Json<{ of: string; name: string; otherName: string }[]> | null;
 }
 
 export interface RelationshipTable extends ScenarioRow {

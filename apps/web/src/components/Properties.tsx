@@ -1,7 +1,13 @@
 // The Properties window (design/04-ux/workbench.md "Properties panel"): the generic inspector (Inspector.tsx) filled
 // for each kind of selection: header, property sets and groups, tags. Every edit is one change, shown at once.
-import { useState } from "react";
-import type { ModelState, Metamodel, RelationshipRow } from "@connectome/engine";
+import { useMemo, useState } from "react";
+import {
+  possibleDuplicates,
+  type ModelState,
+  type Metamodel,
+  type ObjectRow,
+  type RelationshipRow,
+} from "@connectome/engine";
 import { LEVEL_PROPERTY, SUBJECT_KEY, type Id, type PropertyValue } from "@connectome/model";
 import { useModel, useWorkbench } from "../state/workbench";
 import { confirmationOf, fieldGroups, mySet, strandedValues, toggleInSet } from "../inspector";
@@ -20,6 +26,7 @@ import { addPayloadPlan, messagePlan, messagesOf, payloadChoices } from "../sema
 import { folderPath } from "../text";
 import { KIND_GLYPH, KIND_NAME, documentsLinking, kindOfType, sequenceType } from "../views";
 import { sequenceForInteractionEdits } from "../sequence";
+import { notDuplicatesEdits, parseNames, percent } from "../duplicates";
 
 /** The Properties tab of the Properties window: the selection's inspector. */
 export function PropertiesTabContent() {
@@ -138,7 +145,9 @@ export function ObjectProperties({ id, withRelations = false }: { id: Id; withRe
         hidden={hidden}
         sectionIds={[
           ...groups.map((g) => `${prefix}:${g.key}`),
-          ...["tags", ...(withRelations ? ["relationships", "trace", "occurs"] : [])].map((s) => `object:${s}`),
+          ...["tags", "aliases", "duplicates", ...(withRelations ? ["relationships", "trace", "occurs"] : [])].map(
+            (s) => `object:${s}`,
+          ),
         ]}
         sets={sets}
         review={{
@@ -190,10 +199,65 @@ export function ObjectProperties({ id, withRelations = false }: { id: Id; withRe
               }
             />
           </Section>
+          <Section id="object:aliases" title="Also known as" count={object.aliases?.length || undefined}>
+            <TextField
+              label="Also known as"
+              className="value"
+              placeholder="Abbreviations, former names, separated by commas"
+              value={(object.aliases ?? []).join(", ")}
+              onCommit={(text) =>
+                edit(`Set other names of ${object.name}`, [
+                  { edit: "setAliases", id, baseVersion: object.version, aliases: parseNames(text) },
+                ])
+              }
+            />
+          </Section>
+          <DuplicatesSection object={object} />
           {withRelations && <RelationsSections object={object} />}
         </>
       )}
     </div>
+  );
+}
+
+/** Objects this one may duplicate (duplicates-and-identity.md §6); shown only when there are some. */
+function DuplicatesSection({ object }: { object: ObjectRow }) {
+  const { state, metamodel } = useModel();
+  const edit = useWorkbench((s) => s.edit);
+  const select = useWorkbench((s) => s.select);
+  const revision = useWorkbench((s) => s.revision);
+  const pairs = useMemo(
+    () => possibleDuplicates(state, metamodel, { objectId: object.id }),
+    [state, metamodel, object.id, revision],
+  );
+  if (pairs.length === 0) return null;
+  return (
+    <Section id="object:duplicates" title="Possible duplicates" count={pairs.length} className="duplicates">
+      <ul className="dup-list" aria-label="Possible duplicates">
+        {pairs.map((p) => {
+          const other = p.a.id === object.id ? p.b : p.a;
+          return (
+            <li key={other.id}>
+              <button className="link" onClick={() => select({ kind: "object", id: other.id })}>
+                {other.name}
+              </button>{" "}
+              <span className="muted">
+                {metamodel.objectType(other.type)?.definition.name ?? other.type} · {percent(p.score)}
+              </span>
+              <div className="muted small">{p.reasons.join(". ")}</div>
+              <button
+                className="small"
+                onClick={() =>
+                  edit(`${object.name} and ${other.name} are not duplicates`, notDuplicatesEdits(object, other))
+                }
+              >
+                Not duplicates
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </Section>
   );
 }
 

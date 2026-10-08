@@ -14,6 +14,7 @@ import {
   type KeyboardEvent,
   type MouseEvent,
 } from "react";
+import { namesOf } from "@connectome/engine";
 import { ulid, type Edit, type Id } from "@connectome/model";
 import { useAuth } from "../state/auth";
 import { itemSelected, useModel, useWorkbench, type Selection } from "../state/workbench";
@@ -359,7 +360,7 @@ function FilterResults({ query }: { query: string }) {
   const rows = [
     ...[...state.folders.live()].filter((f) => match(f.name)).map((f) => ({ kind: "folder" as const, ...f })),
     ...[...state.diagrams.live()].filter((d) => match(d.name)).map((d) => ({ kind: "diagram" as const, ...d })),
-    ...[...state.objects.live()].filter((o) => match(o.name)).map((o) => ({ kind: "object" as const, ...o })),
+    ...[...state.objects.live()].filter((o) => namesOf(o).some(match)).map((o) => ({ kind: "object" as const, ...o })),
   ].sort(byName);
   if (rows.length === 0) return <li className="muted empty">Nothing matches.</li>;
   return (
