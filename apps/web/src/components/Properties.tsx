@@ -2,7 +2,7 @@
 // for each kind of selection: header, property sets and groups, tags. Every edit is one change, shown at once.
 import { useState } from "react";
 import type { ModelState, Metamodel, RelationshipRow } from "@connectome/engine";
-import { LEVEL_PROPERTY, type Id, type PropertyValue } from "@connectome/model";
+import { LEVEL_PROPERTY, SUBJECT_KEY, type Id, type PropertyValue } from "@connectome/model";
 import { useModel, useWorkbench } from "../state/workbench";
 import { confirmationOf, fieldGroups, mySet, strandedValues, toggleInSet } from "../inspector";
 import {
@@ -18,6 +18,8 @@ import {
 import { RelationsSections } from "./Relations";
 import { addPayloadPlan, messagePlan, messagesOf, payloadChoices } from "../semantics";
 import { folderPath } from "../text";
+import { KIND_GLYPH, KIND_NAME, documentsLinking, kindOfType, sequenceType } from "../views";
+import { sequenceForInteractionEdits } from "../sequence";
 
 /** The Properties tab of the Properties window: the selection's inspector. */
 export function PropertiesTabContent() {
@@ -201,12 +203,14 @@ function RelationshipProperties({ id }: { id: Id }) {
   const edit = useWorkbench((s) => s.edit);
   const select = useWorkbench((s) => s.select);
   const notify = useWorkbench((s) => s.notify);
+  const openTab = useWorkbench((s) => s.openTab);
   const relationship = state.relationships.get(id);
   if (!relationship) return <p className="muted pad">This relationship was deleted.</p>;
   const type = metamodel.relationshipType(relationship.type);
   const name = (objectId: Id) => state.objects.get(objectId)?.name ?? "(deleted)";
   const parent = relationship.parentId ? state.relationships.get(relationship.parentId) : undefined;
   const messages = type?.semantic === "interaction" ? messagesOf(state, relationship) : [];
+  const sequence = type?.semantic === "interaction" ? sequenceType(metamodel) : undefined;
   const carried = metamodel.relationshipTypeProperties(relationship.type);
   const { groups } = fieldGroups(metamodel, carried, relationship.properties);
   const title = `${name(relationship.sourceId)} ${type?.verb ?? relationship.type} ${name(relationship.targetId)}`;
@@ -285,6 +289,28 @@ function RelationshipProperties({ id }: { id: Id }) {
           <div className="actions">
             <button onClick={() => run(messagePlan(state, metamodel, id, "request"))}>Add request</button>
             <button onClick={() => run(messagePlan(state, metamodel, id, "response"))}>Add response</button>
+            {sequence && (
+              <button
+                onClick={() => {
+                  const source = state.objects.get(relationship.sourceId);
+                  const plan = sequenceForInteractionEdits(
+                    state,
+                    metamodel,
+                    id,
+                    sequence.definition.key,
+                    source?.folderId ?? "",
+                  );
+                  if ("error" in plan) return notify(plan.error, "error");
+                  const diagramId = (plan.edits[0] as { id: Id }).id;
+                  if (edit(`Create ${plan.name}`, plan.edits)) {
+                    select({ kind: "diagram", id: diagramId });
+                    openTab({ kind: "diagram", id: diagramId });
+                  }
+                }}
+              >
+                New sequence
+              </button>
+            )}
           </div>
         </Section>
       )}
@@ -404,6 +430,7 @@ function DiagramProperties({ id }: { id: Id }) {
           ])
         }
       />
+      <ViewSection id={id} />
       <PropertyGroups groups={groups} ctx={ctx} prefix={`diagram:${diagram.diagramType}`} />
       <StrandedSection
         id={`diagram:${diagram.diagramType}:stranded`}
@@ -418,6 +445,87 @@ function DiagramProperties({ id }: { id: Id }) {
         </p>
       </Section>
     </div>
+  );
+}
+
+/** What kind of view a diagram is, what it is about and which documents it is part of (views in the app, U-1). */
+function ViewSection({ id }: { id: Id }) {
+  const { state, metamodel } = useModel();
+  const edit = useWorkbench((s) => s.edit);
+  const select = useWorkbench((s) => s.select);
+  const openTab = useWorkbench((s) => s.openTab);
+  const diagram = state.diagrams.get(id)!;
+  const type = metamodel.diagramType(diagram.diagramType);
+  const kind = kindOfType(type);
+  const own = diagram.definition ?? {};
+  const subjectId = own[SUBJECT_KEY];
+  const subject = typeof subjectId === "string" ? state.objects.getAny(subjectId) : undefined;
+  const partOf = documentsLinking(state, metamodel, id);
+  const open = (target: Id) => {
+    select({ kind: "diagram", id: target });
+    openTab({ kind: "diagram", id: target });
+  };
+  const customised = kind === "matrix" ? Object.keys(own).length : 0;
+  return (
+    <Section id="diagram:view" title="View">
+      <dl className="view-facts">
+        <dt>Kind</dt>
+        <dd>
+          <span aria-hidden>{KIND_GLYPH[kind]}</span> {KIND_NAME[kind]}
+        </dd>
+        <dt>Type</dt>
+        <dd>{type?.definition.name ?? diagram.diagramType}</dd>
+        {kind === "document" && (
+          <>
+            <dt>About</dt>
+            <dd>
+              {subject ? (
+                <button className="link" onClick={() => select({ kind: "object", id: subject.id })}>
+                  {subject.name}
+                  {subject.deleted ? " (deleted)" : ""}
+                </button>
+              ) : (
+                <span className="muted">Nothing yet</span>
+              )}
+            </dd>
+          </>
+        )}
+        {partOf.length > 0 && (
+          <>
+            <dt>Part of</dt>
+            <dd>
+              {partOf.map((d) => (
+                <button key={d.id} className="link" onClick={() => open(d.id)}>
+                  {KIND_GLYPH.document} {d.name}
+                </button>
+              ))}
+            </dd>
+          </>
+        )}
+      </dl>
+      {kind === "matrix" && (
+        <p className="muted small">
+          {customised ? "Rows, columns or relationships differ from the type. " : "Shows what its type defines. "}
+          {customised > 0 && (
+            <button
+              className="link"
+              onClick={() =>
+                edit(`Reset ${diagram.name} to its type`, [
+                  {
+                    edit: "setViewDefinition",
+                    diagramId: id,
+                    baseVersion: diagram.version,
+                    set: Object.fromEntries(Object.keys(own).map((k) => [k, null])),
+                  },
+                ])
+              }
+            >
+              Reset to the type
+            </button>
+          )}
+        </p>
+      )}
+    </Section>
   );
 }
 

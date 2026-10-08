@@ -1,7 +1,7 @@
 // The commands behind the explorer's right-click menu and the File menu (design/04-ux/workbench.md, "Menus").
 // Both menus build their items here so an item reads and behaves the same wherever it appears.
-import type { Metamodel, ModelState } from "@connectome/engine";
-import type { Id } from "@connectome/model";
+import type { Metamodel, ModelState, ObjectRow } from "@connectome/engine";
+import type { Edit, Id } from "@connectome/model";
 import { useAuth } from "../state/auth";
 import { itemSelected, useWorkbench, type Selection } from "../state/workbench";
 import { navigate } from "../route";
@@ -9,6 +9,8 @@ import { itemName, targetFolder, whyFolderNotDeletable } from "../explorer";
 import { addToGroupPlan, isGroup, removeFromGroupPlan, type Plan } from "../dragdrop";
 import { byName } from "../text";
 import { newDocumentPlan, templatesFor } from "../document";
+import { interactionPartners } from "../sequence";
+import { canvasTypesFor, diagramAroundPlan, sequenceOfPlan, sequenceType } from "../views";
 import type { MenuEntry } from "./Menu";
 
 const store = () => useWorkbench.getState();
@@ -22,7 +24,7 @@ function newItems(folderId: string | null): MenuEntry[] {
   return [
     { label: "New folder", run: create("folder") },
     { label: "New object", disabled: folderId ? null : NO_FOLDER, run: create("object") },
-    { label: "New diagram", disabled: folderId ? null : NO_FOLDER, run: create("diagram") },
+    { label: "New diagram", run: create("diagram") },
     { label: "New group", disabled: folderId ? null : NO_FOLDER, run: create("group") },
   ];
 }
@@ -83,19 +85,38 @@ function addToGroupMenu(state: ModelState, metamodel: Metamodel, objectIds: Id[]
   };
 }
 
-/** "New ▸ High-level design" and the like: a document about the object (views-and-design-artifacts.md §7.4). */
-function documentItems(metamodel: Metamodel, object: NonNullable<ReturnType<ModelState["objects"]["get"]>>) {
+/**
+ * "New ▸" views around an object (views in the app, U-1): a canvas of each type that can draw it, with what it is
+ * related to; a sequence of its interactions; a document of each template it can be the subject of (§7.4).
+ */
+function viewItems(state: ModelState, metamodel: Metamodel, object: ObjectRow): MenuEntry[] {
+  const open = (plan: { label: string; edits: Edit[] }) => {
+    if (store().edit(plan.label, plan.edits)) {
+      const id = (plan.edits[0] as { id: Id }).id;
+      store().select({ kind: "diagram", id });
+      store().openTab({ kind: "diagram", id });
+    }
+  };
+  const canvases = canvasTypesFor(metamodel, object);
+  const sequence = sequenceType(metamodel);
+  const partners = sequence ? interactionPartners(state, metamodel, object.id) : [];
   const templates = templatesFor(metamodel, object);
-  return [
-    ...(templates.length ? (["separator"] as MenuEntry[]) : []),
-    ...templates.map((t): MenuEntry => ({
-      label: t.name,
-      run: () => {
-        const plan = newDocumentPlan(t, object);
-        if (store().edit(plan.label, plan.edits)) store().openTab({ kind: "diagram", id: plan.edits[0]!.id });
-      },
+  const entries: MenuEntry[] = [
+    ...canvases.map((t): MenuEntry => ({
+      label: t.definition.name,
+      run: () => open(diagramAroundPlan(state, metamodel, t, object)),
     })),
+    ...(sequence && partners.length
+      ? [
+          {
+            label: "Sequence of its interactions",
+            run: () => open(sequenceOfPlan(state, metamodel, sequence, object)),
+          } as MenuEntry,
+        ]
+      : []),
+    ...templates.map((t): MenuEntry => ({ label: t.name, run: () => open(newDocumentPlan(t, object)) })),
   ];
+  return entries.length ? ["separator", ...entries] : [];
 }
 
 /** The right-click menu of one explorer row. */
@@ -108,7 +129,7 @@ export function itemMenu(state: ModelState, metamodel: Metamodel, item: Selectio
   const object = item.kind === "object" ? state.objects.get(item.id) : undefined;
   return [
     ...open,
-    { label: "New", submenu: [...newItems(folderId), ...(object ? documentItems(metamodel, object) : [])] },
+    { label: "New", submenu: [...newItems(folderId), ...(object ? viewItems(state, metamodel, object) : [])] },
     "separator",
     { label: "Rename", shortcut: "F2", run: () => renameItem(item) },
     ...(item.kind === "object" ? [addToGroupMenu(state, metamodel, [item.id])] : []),
@@ -164,6 +185,10 @@ export function marksMenu(state: ModelState, metamodel: Metamodel, marked: Selec
 export function backgroundMenu(): MenuEntry[] {
   return [
     { label: "New folder", run: () => store().setExplorerTask({ kind: "create", what: "folder", folderId: null }) },
+    {
+      label: "New diagram",
+      run: () => store().setExplorerTask({ kind: "create", what: "diagram", folderId: null }),
+    },
   ];
 }
 
@@ -206,6 +231,7 @@ export function metamodelMenu(): MenuEntry[] {
   const pending = store().metamodelDraft;
   return [
     { label: "Types", run: open("types") },
+    { label: "Diagram types", run: open("diagramTypes") },
     { label: "Properties", run: open("properties") },
     { label: "Connection matrix", run: open("matrix") },
     { label: "Rule sentences", run: open("sentences") },

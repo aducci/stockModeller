@@ -2,7 +2,7 @@
 // moved, and a sequence created for an interaction from a document's table.
 import type { DiagramRow, Metamodel, ModelState } from "@connectome/engine";
 import { ulid, type Edit, type Id } from "@connectome/model";
-import type { SequenceModel } from "@connectome/views";
+import { undrawnMessages, type SequenceModel } from "@connectome/views";
 import { rankBetween } from "./dragdrop";
 import { symbolFor } from "./diagram";
 
@@ -178,4 +178,82 @@ export function sequenceForInteractionEdits(
       ...messages,
     ],
   };
+}
+
+/**
+ * A new sequence diagram with these objects as lifelines, left to right, and when `withMessages` the messages of
+ * their interactions with each other in each interaction's order (§6, "Generate from interactions").
+ */
+export function newSequenceEdits(
+  state: ModelState,
+  metamodel: Metamodel,
+  objectIds: readonly Id[],
+  diagram: { id?: Id; name: string; diagramType: string; folderId: Id },
+  withMessages = true,
+): Edit[] {
+  const id = diagram.id ?? ulid();
+  const row = { id, diagramType: diagram.diagramType } as DiagramRow;
+  const lanes = objectIds.flatMap((objectId, index) => {
+    const object = state.objects.get(objectId);
+    if (!object) return [];
+    const symbol = symbolFor(metamodel, row, object.type);
+    return [
+      {
+        id: ulid(),
+        objectId,
+        parentOccurrenceId: null,
+        x: LANE_SPACING / 2 + index * LANE_SPACING,
+        y: 40,
+        w: symbol.width,
+        h: symbol.height,
+        z: 1,
+        style: {},
+        drillDownDiagramId: null,
+        pinned: false,
+      },
+    ];
+  });
+  const laneOf = (objectId: Id) => lanes.find((l) => l.objectId === objectId)?.id;
+  let at: string | undefined;
+  const messages = withMessages
+    ? undrawnMessages(state, id, objectIds).flatMap((m): Edit[] => {
+        const source = laneOf(m.sourceId);
+        const target = laneOf(m.targetId);
+        if (!source || !target) return [];
+        return [
+          {
+            edit: "addRelationshipOccurrence",
+            diagramId: id,
+            occurrence: {
+              id: ulid(),
+              relationshipId: m.id,
+              sourceOccurrenceId: source,
+              targetOccurrenceId: target,
+              shownAs: "line",
+              route: { mode: "auto" },
+              labelPosition: 0.5,
+              style: {},
+              step: (at = rankBetween(at, undefined)),
+            },
+          },
+        ];
+      })
+    : [];
+  return [
+    { edit: "createDiagram", id, name: diagram.name, diagramType: diagram.diagramType, folderId: diagram.folderId },
+    ...lanes.map((occurrence): Edit => ({ edit: "addObjectOccurrence", diagramId: id, occurrence })),
+    ...messages,
+  ];
+}
+
+/** The objects an object has interactions with, either way round, by name. */
+export function interactionPartners(state: ModelState, metamodel: Metamodel, objectId: Id): Id[] {
+  const ids = new Set<Id>();
+  for (const r of [
+    ...state.relationships.find("bySource", objectId),
+    ...state.relationships.find("byTarget", objectId),
+  ])
+    if (metamodel.relationshipType(r.type)?.semantic === "interaction")
+      ids.add(r.sourceId === objectId ? r.targetId : r.sourceId);
+  return [...ids].sort((a, b) => (state.objects.get(a)?.name ?? "").localeCompare(state.objects.get(b)?.name ?? ""));
 }

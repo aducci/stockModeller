@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { essentials } from "@connectome/content";
 import type { MetamodelPackage } from "@connectome/model";
-import { Metamodel, metamodelImpact, propertyUsage, strandedValues } from "../src";
+import { Metamodel, ModelState, metamodelImpact, propertyUsage, strandedValues } from "../src";
 import { exampleState, metamodel } from "./fixtures";
 
 const compile = (change: (pkg: MetamodelPackage) => void) => {
@@ -47,5 +47,19 @@ describe("property usage", () => {
     expect(problems.some((p) => p.includes('Object type "server" is removed'))).toBe(true);
     expect(problems.some((p) => p.includes("data type cannot change"))).toBe(true);
     expect(problems.some((p) => p.includes('value "active" is removed'))).toBe(true);
+  });
+
+  it("refuses changing the kind of a diagram type that diagrams use, and allows it for an unused one", () => {
+    const retyped = (key: string) =>
+      Metamodel.compile(
+        essentials.metamodel,
+        essentials.diagramTypes.map((d) =>
+          d.key === key ? { ...d, kind: "sequence" as const, matrix: undefined, document: undefined } : d,
+        ),
+      );
+    expect(metamodelImpact(state, metamodel, retyped("applicationLandscape")).problems).toEqual([
+      'Diagram type "applicationLandscape" changes from canvas to sequence but 1 diagrams still use it',
+    ]);
+    expect(metamodelImpact(new ModelState(), metamodel, retyped("applicationLandscape")).problems).toEqual([]);
   });
 });

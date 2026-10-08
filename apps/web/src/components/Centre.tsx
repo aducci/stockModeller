@@ -1,6 +1,6 @@
 // Centre tabs: diagrams and object pages. A dot marks a tab whose item someone else changed meanwhile.
-import type { Metamodel, ModelState } from "@connectome/engine";
-import type { ViewKind } from "@connectome/model";
+import type { ModelState } from "@connectome/engine";
+import { KIND_GLYPH, viewKind } from "../views";
 import { useModel, useWorkbench, type Tab } from "../state/workbench";
 import { ObjectProperties } from "./Properties";
 import { DiagramEditor } from "./DiagramEditor";
@@ -30,11 +30,7 @@ export function Centre() {
             onClick={() => activate(t.id)}
           >
             <span aria-hidden>
-              {t.kind === "diagram"
-                ? { matrix: "▦", document: "▤", sequence: "⇅", canvas: "⧉" }[viewKind(state, metamodel, t.id)]
-                : t.kind === "metamodel"
-                  ? "◇"
-                  : "▭"}
+              {t.kind === "diagram" ? KIND_GLYPH[viewKind(state, metamodel, t.id)] : t.kind === "metamodel" ? "◇" : "▭"}
             </span>
             <span>{tabName(state, t)}</span>
             {changedTabs.has(t.id) && <span className="change-dot" title="Changed by someone else" />}
@@ -76,12 +72,6 @@ export function Centre() {
       </div>
     </main>
   );
-}
-
-/** Which renderer a diagram tab uses: its diagram type's kind (views-and-design-artifacts.md §2). */
-function viewKind(state: ModelState, metamodel: Metamodel, id: string): ViewKind {
-  const diagram = state.diagrams.get(id);
-  return (diagram && metamodel.diagramType(diagram.diagramType)?.definition.kind) || "canvas";
 }
 
 function tabName(state: ModelState, tab: Tab): string {

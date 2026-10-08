@@ -394,6 +394,13 @@ Rule endpoints therefore become: a type key, `*`, an abstract type (inherited th
 - **Panel:** relationships and diagrams now have editable properties too (edits `setRelationshipProperties`, `setDiagramProperties`), so objects, relationships and diagrams all show exactly the properties their type carries.
 - **Not yet:** creating, renaming or removing object, relationship and diagram types (A-1c); calculated properties and formulas; moving values from one property to another.
 
+### 10.6c Built in slice U-3: diagram types
+
+- **Where:** *Metamodel › Diagram types*, a view beside Types. The list groups the draft's diagram types by kind (Diagrams, Matrices, Documents, Sequences) with how many diagrams use each, and marks the new and changed ones.
+- **New types are copies** (B48): *Duplicate* copies a type with everything it has (template, matrix, symbols) under "… copy" and a key made from the name, so a new type works at once. *Delete* is offered only for a type no diagram uses.
+- **Editor tabs:** *General* for every kind (name, description, kind, the element types it can show with their subtypes, every relationship type or a list, and the properties its diagrams carry). Then one tab for the kind: *Notation* for canvases (nesting, drawing existing relationships, the rendition shapes start as, and per element type its shape, fill, width and height); *Matrix* (rows, columns, the relationship and its direction, nesting rows, hiding empty ones, with a count of rows, columns and filled cells on this repository); *Sequence* (what can be a lifeline, which relationships are messages); *Template* (the resolved sections with their locks, read-only until the designer, V-5).
+- **Publishing:** the review lists diagram types added, changed and removed, and what existing diagrams still show that their type no longer allows (it stays drawn; no more can be added). A type in use keeps its kind, and the server refuses a publish that changes it. `colourRules`, `labels`, `legend` and `generate` are kept as they are: nothing reads them yet.
+
 ### 10.7 Notation studio
 
 The notation lives on the type editor, not in a separate tool:

@@ -106,6 +106,7 @@ Found while building the change engine (M0 slices 0.2–0.4). `schema.sql` stays
 | A `relationTable` section's state may hold `sequences: { relationshipId: diagramId }` (slice V-3; no migration) | The per-row sequence of a table with `perRow` (B38): created on demand and linked in the same change |
 | A document's `definition.layout` holds what authors changed within each section's lock and the sections they added in regions (slice V-4; no migration) | `{ sections: { key: { hidden, title, properties, hiddenColumns, columns } }, regions: { region: [section definitions] } }` (B42, B43). `layout`, like `subject`, is reserved: no section may use the key. A repeater's state is `{ rows: { relationshipId: { childKey: state } } }` |
 | `repository.settings.metamodel.documentPatterns` (slice V-4; no migration) | The package's document patterns (B40), stored and published with `layers` and `exchangeMappings`. Absent for repositories created before V-4 |
+| The example repository's diagrams may carry `definition`, and its relationship occurrences `step` (slice U-2; no migration) | So the example holds views of every kind: `baselineChange()` passes a diagram's `definition` to `createDiagram`, and an occurrence's `step` goes through `addRelationshipOccurrence` unchanged |
 
 Edit types added in [changes.ts](../05-structures/changes.ts) (marked `build:`):
 

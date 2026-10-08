@@ -316,7 +316,13 @@ describe("inverses", () => {
     const result = applyOk(state, [{ edit: "deleteObject", id: "O-APP-1", baseVersion: 1 }]);
     applyOk(state, invertLog(result.log));
     const ids = (rows: Iterable<{ id: Id }>) => [...rows].map((r) => r.id).sort();
-    expect(ids(state.objectOccurrences.find("byObject", "O-APP-1"))).toEqual(["OO-4", "OO-6"]);
+    expect(ids(state.objectOccurrences.find("byObject", "O-APP-1"))).toEqual([
+      "OO-31",
+      "OO-4",
+      "OO-51",
+      "OO-6",
+      "OO-62",
+    ]);
     expect(state.relationshipOccurrences.get("RO-3")).toBeDefined();
     expect(state.relationshipOccurrences.get("RO-4")).toBeDefined();
   });

@@ -160,8 +160,8 @@ test("the Relations window shows relationships by view, traces and where an obje
   await explorer(page).locator(".row", { hasText: "Diagrams" }).first().click();
   await page.getByRole("menubar").getByRole("menuitem", { name: "File" }).click();
   await page.getByRole("menuitem", { name: "New diagram", exact: true }).click();
-  await explorer(page).getByLabel("New diagram name").fill("Relations Lab");
-  await explorer(page).getByLabel("New diagram name").press("Enter");
+  await page.getByRole("dialog", { name: "New diagram" }).getByLabel("Diagram name").fill("Relations Lab");
+  await page.getByRole("dialog", { name: "New diagram" }).getByLabel("Diagram name").press("Enter");
   await expect(page.getByRole("tab", { name: /Relations Lab/ })).toBeVisible();
   await select(page, "Payments Hub");
   await relations.getByRole("button", { name: "Add to Relations Lab" }).click();

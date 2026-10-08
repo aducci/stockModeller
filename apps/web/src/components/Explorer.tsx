@@ -21,6 +21,8 @@ import { byName } from "../text";
 import { explorerGroups, payloadText, type RelationshipGroup } from "../semantics";
 import { folderChain, targetFolder } from "../explorer";
 import { notationFor } from "../notation";
+import { KIND_GLYPH, viewKind } from "../views";
+import { NewDiagramDialog } from "./NewDiagramDialog";
 import {
   childrenOf,
   containAsPlan,
@@ -136,6 +138,9 @@ export function Explorer() {
           >
             + Object
           </button>
+          <button title="New diagram" onClick={() => setTask({ kind: "create", what: "diagram", folderId })}>
+            + Diagram
+          </button>
         </span>
       </div>
       <input
@@ -145,7 +150,10 @@ export function Explorer() {
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
       />
-      {task?.kind === "create" && (
+      {task?.kind === "create" && task.what === "diagram" && (
+        <NewDiagramDialog key={`diagram:${task.folderId}`} folderId={task.folderId} onDone={() => setTask(null)} />
+      )}
+      {task?.kind === "create" && task.what !== "diagram" && (
         <CreateForm
           key={`${task.what}:${task.folderId}`}
           kind={task.what}
@@ -187,7 +195,12 @@ function Children({ parent, depth }: { parent: Parent; depth: number }) {
           <ObjectNode key={c.id} id={c.id} depth={depth} />
         ) : (
           <li key={c.id} role="treeitem">
-            <Row item={{ kind: "diagram", id: c.id }} depth={depth} icon="⧉" label={c.name} />
+            <Row
+              item={{ kind: "diagram", id: c.id }}
+              depth={depth}
+              icon={KIND_GLYPH[viewKind(state, metamodel, c.id)]}
+              label={c.name}
+            />
           </li>
         ),
       )}
@@ -341,7 +354,7 @@ function ObjectGlyph({ type, group }: { type: string; group?: boolean }) {
 }
 
 function FilterResults({ query }: { query: string }) {
-  const { state } = useModel();
+  const { state, metamodel } = useModel();
   const match = (name: string) => name.toLocaleLowerCase().includes(query);
   const rows = [
     ...[...state.folders.live()].filter((f) => match(f.name)).map((f) => ({ kind: "folder" as const, ...f })),
@@ -356,7 +369,15 @@ function FilterResults({ query }: { query: string }) {
           <Row
             item={{ kind: r.kind, id: r.id }}
             depth={0}
-            icon={r.kind === "object" ? <ObjectGlyph type={r.type} /> : r.kind === "folder" ? "📁" : "⧉"}
+            icon={
+              r.kind === "object" ? (
+                <ObjectGlyph type={r.type} />
+              ) : r.kind === "folder" ? (
+                "📁"
+              ) : (
+                KIND_GLYPH[viewKind(state, metamodel, r.id)]
+              )
+            }
             label={r.name}
           />
         </li>
@@ -639,7 +660,7 @@ function RenameBox({ item, depth, icon, name }: { item: Selection; depth: number
 }
 
 function CreateForm(props: {
-  kind: "folder" | "object" | "diagram" | "group";
+  kind: "folder" | "object" | "group";
   folderId: Id | null;
   /** For a new group: the objects it gathers. */
   members: Id[];
@@ -649,15 +670,11 @@ function CreateForm(props: {
   const { metamodel } = useModel();
   const edit = useWorkbench((s) => s.edit);
   const select = useWorkbench((s) => s.select);
-  const openTab = useWorkbench((s) => s.openTab);
   const notify = useWorkbench((s) => s.notify);
-  const types =
-    kind === "diagram"
-      ? metamodel.allDiagramTypes().map((t) => ({ key: t.definition.key, name: t.definition.name }))
-      : metamodel
-          .allObjectTypes()
-          .filter((t) => !t.definition.abstract)
-          .map((t) => ({ key: t.definition.key, name: t.definition.name }));
+  const types = metamodel
+    .allObjectTypes()
+    .filter((t) => !t.definition.abstract)
+    .map((t) => ({ key: t.definition.key, name: t.definition.name }));
   const [name, setName] = useState("");
   const [type, setType] = useState(types[0]?.key ?? "");
 
@@ -675,37 +692,28 @@ function CreateForm(props: {
         ? edit(`Create folder ${trimmed}`, [{ edit: "createFolder", id, parentId: folderId, name: trimmed }])
         : kind === "object"
           ? edit(`Create ${trimmed}`, [{ edit: "createObject", id, type, name: trimmed, folderId: folderId! }])
-          : kind === "diagram"
-            ? edit(`Create diagram ${trimmed}`, [
-                { edit: "createDiagram", id, name: trimmed, diagramType: type, folderId: folderId! },
-              ])
-            : // A group, with the objects it was made from (decision B22).
-              edit(members.length ? `Group ${members.length} items as ${trimmed}` : `Create group ${trimmed}`, [
-                { edit: "createObject", id, type: "group", name: trimmed, folderId: folderId! },
-                ...members.map((m): Edit => ({
-                  edit: "createRelationship",
-                  id: ulid(),
-                  type: "groups",
-                  sourceId: id,
-                  targetId: m,
-                })),
-              ]);
+          : // A group, with the objects it was made from (decision B22).
+            edit(members.length ? `Group ${members.length} items as ${trimmed}` : `Create group ${trimmed}`, [
+              { edit: "createObject", id, type: "group", name: trimmed, folderId: folderId! },
+              ...members.map((m): Edit => ({
+                edit: "createRelationship",
+                id: ulid(),
+                type: "groups",
+                sourceId: id,
+                targetId: m,
+              })),
+            ]);
     if (ok) {
       useWorkbench.getState().toggleMark(null);
       select({ kind: kind === "group" ? "object" : kind, id });
-      if (kind === "diagram") openTab({ kind, id });
     }
     return ok;
   };
   const words = kind;
   return (
     <form className="create" onSubmit={submit} onKeyDown={(e) => e.key === "Escape" && onDone()}>
-      {(kind === "object" || kind === "diagram") && (
-        <select
-          aria-label={kind === "object" ? "Object type" : "Diagram type"}
-          value={type}
-          onChange={(e) => setType(e.target.value)}
-        >
+      {kind === "object" && (
+        <select aria-label="Object type" value={type} onChange={(e) => setType(e.target.value)}>
           {types.map((t) => (
             <option key={t.key} value={t.key}>
               {t.name}

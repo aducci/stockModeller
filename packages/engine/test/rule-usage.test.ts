@@ -10,7 +10,7 @@ describe("rule usage", () => {
   it("counts each combination of relationship type, source type and target type, most used first", () => {
     const combos = relationshipCombinations(state);
     const flows = combos.filter((c) => c.relationshipType === "flowsTo");
-    expect(flows.reduce((n, c) => n + c.count, 0)).toBe(3);
+    expect(flows.reduce((n, c) => n + c.count, 0)).toBe(6); // three flows and three messages
     expect(combos.map((c) => c.count)).toEqual([...combos.map((c) => c.count)].sort((a, b) => b - a));
   });
 

@@ -138,8 +138,8 @@ test("connects two symbols with a relationship type the rules allow", async ({ p
   await drag(page, { x: from.x + from.width / 2, y: from.y + from.height / 2 }, await centre(page, "Payments Hub"));
 
   const menu = canvas(page).getByRole("menu", { name: "Relationship type" });
-  // Only what the rules allow from an application to a SaaS application, most used first.
-  await expect(menu.getByRole("menuitem")).toHaveText(["contains", "flows to"]);
+  // Only what the rules allow from an application to a SaaS application, most used first (flows, then containments).
+  await expect(menu.getByRole("menuitem")).toHaveText(["flows to", "contains"]);
   await menu.getByRole("menuitem", { name: "flows to" }).click();
   await expect(canvas(page).locator('.line[data-relationship="flows to"]')).toHaveCount(3);
   await expect(relations(page)).toContainText("Payments Hub");
@@ -155,7 +155,7 @@ test("does not offer an existing relationship already drawn between the two symb
   const from = (await canvas(page).getByLabel("Connect").boundingBox())!;
   await drag(page, { x: from.x + from.width / 2, y: from.y + from.height / 2 }, await centre(page, "Payments Hub"));
   const menu = canvas(page).getByRole("menu", { name: "Relationship type" });
-  await expect(menu.getByRole("menuitem")).toHaveText(["contains", "flows to"]);
+  await expect(menu.getByRole("menuitem")).toHaveText(["flows to", "contains"]);
   await page.keyboard.press("Escape");
 });
 

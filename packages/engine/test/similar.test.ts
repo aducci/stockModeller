@@ -54,8 +54,8 @@ describe("findSimilarObjects", () => {
 
   it("finds partial names while typing, ranking the same type above an equally good other type", () => {
     const state = exampleState();
-    const found = findSimilarObjects(state, metamodel, { name: "claim", type: "capability" });
-    expect(found.map((f) => f.object.name)).toContain("Claim Intake");
+    const found = findSimilarObjects(state, metamodel, { name: "claim in", type: "capability" });
+    expect(found[0]!.object.name).toBe("Claim Intake");
     expect(found[0]!.kinship).toBe("same");
     expect(found.every((f) => !f.exact)).toBe(true);
     // Unrelated types appear only when they are close.
@@ -75,6 +75,11 @@ describe("findSimilarObjects", () => {
   it("leaves out excluded and deleted objects", () => {
     const state = exampleState();
     const id = findSimilarObjects(state, metamodel, { name: "Payments Hub" })[0]!.object.id;
-    expect(findSimilarObjects(state, metamodel, { name: "Payments Hub", exclude: new Set([id]) })).toEqual([]);
+    const ids = (exclude?: Set<string>) =>
+      findSimilarObjects(state, metamodel, { name: "Payments Hub", exclude }).map((f) => f.object.id);
+    expect(ids(new Set([id]))).not.toContain(id);
+    const object = state.objects.get(id)!;
+    applyOk(state, [{ edit: "deleteObject", id, baseVersion: object.version }]);
+    expect(ids()).not.toContain(id);
   });
 });

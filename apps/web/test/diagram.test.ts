@@ -75,8 +75,8 @@ describe("diagram editor helpers", () => {
     const choices = connectChoices(state, metamodel, diagram, "O-APP-1", "O-APP-3");
     expect(choices.map((c) => [c.type.key, c.existingId ?? null])).toEqual([
       ["flowsTo", "R-08"],
+      ["flowsTo", null], // three flows and three messages in the example, against four containments
       ["contains", null],
-      ["flowsTo", null],
     ]);
     // An application realises a capability; `serves` (to a process) is not offered.
     expect(connectChoices(state, metamodel, diagram, "O-APP-2", "O-CAP-1").map((c) => c.type.key)).toEqual([

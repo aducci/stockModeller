@@ -66,15 +66,15 @@ test("the File menu creates a diagram, renames it and closes its tab", async ({ 
 
   // Nothing selected: only a folder can be made, and the menu says why the rest cannot.
   await file.click();
-  await expect(menuItem(page, "New diagram")).toHaveAttribute("aria-disabled", "true");
+  await expect(menuItem(page, "New object")).toHaveAttribute("aria-disabled", "true");
   await expect(menuItem(page, "Close tab")).toHaveAttribute("title", "No tab is open");
   await page.keyboard.press("Escape");
 
   await row(page, "Diagrams").click();
   await file.click();
   await menuItem(page, "New diagram").click();
-  await explorer(page).getByLabel("New diagram name").fill("Menu Landscape");
-  await explorer(page).getByLabel("New diagram name").press("Enter");
+  await page.getByRole("dialog", { name: "New diagram" }).getByLabel("Diagram name").fill("Menu Landscape");
+  await page.getByRole("dialog", { name: "New diagram" }).getByLabel("Diagram name").press("Enter");
   await expect(page.getByRole("tab", { name: /Menu Landscape/ })).toBeVisible();
 
   await file.click();
