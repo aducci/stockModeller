@@ -42,6 +42,7 @@ import { MatrixGrid } from "./MatrixGrid";
 import { PropertiesView, TypePropertiesPanel } from "./PropertyAdmin";
 import { DiagramTypesView } from "./DiagramTypeAdmin";
 import { diagramTypeChanges, offTypeOccurrences, type DiagramTypeChanges } from "../diagram-type-admin";
+import { existingRepeats, identityChanges, type IdentityChange } from "../identity-admin";
 
 const VIEWS: { view: MetamodelView; label: string }[] = [
   { view: "types", label: "Types" },
@@ -82,8 +83,16 @@ export function MetamodelAdmin() {
   const combinations = useMemo(() => relationshipCombinations(state), [state]);
   const changes = useMemo(() => draftChanges(publishedDraft, draft), [publishedDraft, draft]);
   const typeChanges = useMemo(() => diagramTypeChanges(publishedDraft, draft), [publishedDraft, draft]);
+  const identity = useMemo(
+    () => identityChanges(store.metamodel, compiled.metamodel ?? store.metamodel),
+    [store.metamodel, compiled.metamodel],
+  );
   const pending =
-    countDraftChanges(changes) + typeChanges.added.length + typeChanges.removed.length + typeChanges.changed.length;
+    countDraftChanges(changes) +
+    identity.length +
+    typeChanges.added.length +
+    typeChanges.removed.length +
+    typeChanges.changed.length;
 
   const update = (next: Draft) =>
     setDraft(sameAsPublished(publishedDraft, next) ? null : { baseVersion: saved?.baseVersion ?? version, ...next });
@@ -164,6 +173,7 @@ export function MetamodelAdmin() {
           draft={draft}
           draftMetamodel={compiled.metamodel}
           changes={changes}
+          identity={identity}
           typeChanges={typeChanges}
           onClose={() => setReviewing(false)}
         />
@@ -755,10 +765,11 @@ function PublishDialog(props: {
   draft: Draft;
   draftMetamodel: Metamodel;
   changes: DraftChanges;
+  identity: IdentityChange[];
   typeChanges: DiagramTypeChanges;
   onClose(): void;
 }) {
-  const { draft, draftMetamodel, changes, typeChanges, onClose } = props;
+  const { draft, draftMetamodel, changes, identity, typeChanges, onClose } = props;
   const { store, state, metamodel } = useModel();
   const session = useWorkbench((s) => s.session)!;
   const saved = useWorkbench((s) => s.metamodelDraft);
@@ -837,6 +848,25 @@ function PublishDialog(props: {
           Everyone working in {store.repository.name} gets the new metamodel at once, in every scenario. Nothing in the
           model is changed or deleted.
         </p>
+        {section(
+          "Duplicates settings changed",
+          identity.map((c) => {
+            const repeats = c.kind === "object" ? existingRepeats(state, draftMetamodel, c.type) : 0;
+            return (
+              <li key={`${c.kind}|${c.type}`}>
+                {typeName(c.kind, c.type)} · <strong>{c.now}</strong>
+                {repeats > 0 && (
+                  <span className="muted small">
+                    {" "}
+                    {repeats} {repeats === 1 ? "object already repeats a name" : "objects already repeat a name"}; they
+                    stay as they are
+                  </span>
+                )}
+              </li>
+            );
+          }),
+          "changed",
+        )}
         {section(
           "Properties added",
           changes.properties.added.map((p) => (

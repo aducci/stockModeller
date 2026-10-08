@@ -30,3 +30,4 @@ export {
   type SimilarObject,
   type SimilarQuery,
 } from "./similar";
+export { containerOf, duplicateRelationships, nameClash, sameName, type NameClash, type NamedPlace } from "./identity";

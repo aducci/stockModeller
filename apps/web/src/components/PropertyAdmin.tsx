@@ -7,6 +7,7 @@ import { LEVEL_PROPERTY, type DataType, type PropertyEditor, type PropertyType, 
 import { useModel, useWorkbench } from "../state/workbench";
 import { groupName } from "../inspector";
 import { typeTree } from "../metamodel-admin";
+import { DISTINCT_LABEL, UNIQUE_NAME_LABEL, setIdentityField, type IdentityField } from "../identity-admin";
 import {
   CARRIER_LABEL,
   DATA_TYPES,
@@ -654,6 +655,9 @@ export function TypePropertiesPanel(props: {
           New property…
         </button>
       </div>
+      {kind !== "diagram" && (
+        <DuplicatesSettings kind={kind} type={type} draft={draft} metamodel={metamodel} onChange={onChange} />
+      )}
       {fixed.length > 0 && (
         <>
           <h4>Inherited and built in ({fixed.length})</h4>
@@ -668,5 +672,82 @@ export function TypePropertiesPanel(props: {
         </>
       )}
     </aside>
+  );
+}
+
+/** How unique the type's names are, or what counts as a repeated relationship (duplicates-and-identity.md §4). */
+function DuplicatesSettings(props: {
+  kind: "object" | "relationship";
+  type: TypeKey;
+  draft: Draft;
+  metamodel: Metamodel;
+  onChange(draft: Draft): void;
+}) {
+  const { kind, type, draft, metamodel, onChange } = props;
+  const set = (field: IdentityField, value: string | boolean | undefined) =>
+    onChange(setIdentityField(draft, kind, type, field, value));
+  if (kind === "relationship") {
+    const rt = metamodel.relationshipType(type);
+    if (!rt) return null;
+    return (
+      <section className="mm-identity" aria-label="Duplicates">
+        <h4>Duplicates</h4>
+        <label>
+          Allowed between the same two objects
+          <select value={rt.distinct} onChange={(e) => set("distinct", e.target.value)}>
+            {Object.entries(DISTINCT_LABEL).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className="muted small">A repeat is saved with a warning.</p>
+      </section>
+    );
+  }
+  const t = metamodel.objectType(type);
+  if (!t) return null;
+  return (
+    <section className="mm-identity" aria-label="Duplicates">
+      <h4>Duplicates</h4>
+      <label>
+        Uniqueness
+        <select value={t.uniqueName} onChange={(e) => set("uniqueName", e.target.value)}>
+          {Object.entries(UNIQUE_NAME_LABEL).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </label>
+      {t.uniqueName !== "none" && (
+        <>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={t.uniqueAcross === "family"}
+              onChange={(e) => set("uniqueAcross", e.target.checked ? "family" : "type")}
+            />
+            Also against related types (parent, subtypes, siblings)
+          </label>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={!t.uniquePerLevel}
+              onChange={(e) => set("uniquePerLevel", !e.target.checked)}
+            />
+            Also across levels (conceptual, logical, …)
+          </label>
+          <label>
+            A repeated name is
+            <select value={t.onClash} onChange={(e) => set("onClash", e.target.value)}>
+              <option value="block">Refused</option>
+              <option value="warn">Saved with a warning</option>
+            </select>
+          </label>
+        </>
+      )}
+    </section>
   );
 }

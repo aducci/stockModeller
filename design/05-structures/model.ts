@@ -86,7 +86,10 @@ export interface ObjectType {
   extends?: TypeKey; abstract?: boolean; layer?: string;
   properties: PropertyKey[];
   symbol?: Partial<SymbolStyle>;
-  uniqueName?: "repository" | "folder" | "none";
+  uniqueName?: "repository" | "folder" | "container" | "none"; // 02-model/duplicates-and-identity.md §4
+  uniqueAcross?: "type" | "family";             // family: also clashes with parent, child and sibling types
+  uniquePerLevel?: boolean;                     // default true: the same name may exist at another level
+  onClash?: "block" | "warn";                   // default block; warn saves and adds a finding
   keyPattern?: string;                          // "APP-{0000}"
   defaultFolder?: string;                       // folder path
   category?: SemanticCategory;                  // 02-model/semantics.md §4.1; inherited through extends
@@ -104,6 +107,7 @@ export interface RelationshipType {
   semanticDirection?: "forward" | "reverse";    // reverse: the source plays the kind's target role
   cascadeDelete?: boolean;                      // composition: deleting the whole deletes its parts
   payload?: PayloadUse;                         // whether relationships carry objects (default "optional" for flow and trigger, else "none")
+  distinct?: "pair" | "pairAndPayload" | "none";  // what counts as a duplicate relationship (default by kind)
   properties?: PropertyKey[];
   line?: Partial<LineStyle>;
 }

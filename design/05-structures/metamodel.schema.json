@@ -448,8 +448,27 @@
           "enum": [
             "repository",
             "folder",
+            "container",
             "none"
           ]
+        },
+        "uniqueAcross": {
+          "enum": [
+            "type",
+            "family"
+          ],
+          "description": "family: a name also clashes with objects of parent, child and sibling types"
+        },
+        "uniquePerLevel": {
+          "type": "boolean",
+          "description": "Default true: names only clash at the same semantic level"
+        },
+        "onClash": {
+          "enum": [
+            "block",
+            "warn"
+          ],
+          "description": "Default block; warn saves the object and adds a finding"
         },
         "keyPattern": {
           "type": "string"
@@ -533,6 +552,14 @@
         "cascadeDelete": {
           "type": "boolean",
           "description": "composition only: deleting the whole deletes its parts"
+        },
+        "distinct": {
+          "enum": [
+            "pair",
+            "pairAndPayload",
+            "none"
+          ],
+          "description": "What counts as a duplicate relationship of this type: same ends, or same ends and payload. Default by kind: pairAndPayload for flow, trigger and interaction, pair otherwise"
         },
         "payload": {
           "enum": [

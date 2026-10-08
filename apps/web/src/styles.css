@@ -1179,6 +1179,13 @@ button.switch[aria-checked="true"]::after {
   background: var(--removed);
   color: #fff;
 }
+.toast.warning {
+  background: var(--changed);
+  color: #fff;
+}
+.toast.warning button.link {
+  color: #fff;
+}
 
 @media (max-width: 900px) {
   .workbench {
@@ -2852,7 +2859,13 @@ button.toggle .badge {
   background: var(--sky-fill);
 }
 .foc-list .foc-create {
+  flex-wrap: wrap;
   border-top: 1px solid var(--line);
+}
+.foc-warning {
+  flex-basis: 100%;
+  font-size: 12px;
+  color: var(--changed);
 }
 .foc-list .foc-create[aria-disabled="true"] {
   color: var(--removed);
@@ -2861,4 +2874,19 @@ button.toggle .badge {
 .foc-list .foc-create[aria-disabled="true"]:hover,
 .foc-list .foc-create[aria-disabled="true"].active {
   background: none;
+}
+
+/* Duplicates settings of a type (design/02-model/duplicates-and-identity.md §4) */
+.mm-identity label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+.mm-identity label select {
+  margin-left: auto;
+  max-width: 60%;
+}
+.mm-identity label.check {
+  justify-content: flex-start;
 }

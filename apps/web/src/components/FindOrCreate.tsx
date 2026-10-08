@@ -50,7 +50,7 @@ export function FindOrCreate(props: {
     () => findOrCreateOptions(state, metamodel, name, type, folderId),
     [state, metamodel, name, type, folderId],
   );
-  const { matches, refused } = options;
+  const { matches, refused, warning } = options;
   const count = matches.length + 1;
   const current = active ?? options.defaultIndex;
   const typeName = metamodel.objectType(type)?.definition.name ?? type;
@@ -148,6 +148,7 @@ export function FindOrCreate(props: {
             {refused ?? (
               <>
                 ＋ Create “{name.trim()}” as a new {typeName}
+                {warning && <span className="foc-warning">{warning}: allowed, but discouraged</span>}
               </>
             )}
           </div>

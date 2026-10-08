@@ -55,12 +55,14 @@ Extend the object type's `uniqueName` into an **identity policy**. Existing valu
 | Field | Values | Default | Notes |
 |---|---|---|---|
 | `uniqueName` | `none`, `folder`, `container`, `repository` | `none` | **New: `container`**: unique among objects with the same container (process steps within a process, attributes within a class). Fits Sem-2, where containment is the structure |
-| `uniqueAcross` | `type`, `family` | `type` | `family` = this type, its parent and its subtypes. *Salesforce* the `application` and *Salesforce* the `saasApplication` clash. Revisits B8, which stays the default |
-| `uniquePerLevel` | boolean | `true` when the type's level is not fixed | Names only clash within one semantic level, so *Payment* (conceptual) and *Payment* (logical) are not duplicates (`semantics.md §4`) |
+| `uniqueAcross` | `type`, `family` | `type` | `family` = this type, its parents, its subtypes and its siblings under the same parent. *Salesforce* the `application` and *Salesforce* the `saasApplication` clash. Revisits B8, which stays the default |
+| `uniquePerLevel` | boolean | `true` | Names only clash within one semantic level, so *Payment* (conceptual) and *Payment* (logical) are not duplicates (`semantics.md §4`) |
 | `onClash` | `block`, `warn` | `block` | `warn` saves and raises a finding. `block` is today's behaviour |
-| `matchOn` | property keys | `[]` | Extra identifying properties for detection and import matching, e.g. `server: [hostname]`, `application: [vendor, product]`. Like ServiceNow's identification rules, ranked |
+| `matchOn` *(proposed, D-3)* | property keys | `[]` | Extra identifying properties for detection and import matching, e.g. `server: [hostname]`, `application: [vendor, product]`. Like ServiceNow's identification rules, ranked |
 
-Recommended defaults in Essentials:
+Every field is inherited through `extends`. `container` scope only applies inside a container: two top-level objects may share a name. The engine checks the policy on create, rename, a change of type or level, a move to another folder, and when a containment gives the object a new container; a clash is refused (`invalid` on `name`) or, with `warn`, saved with a finding that the workbench shows in the change's toast. Admins set all four in the Metamodel tab: select a type, then *Duplicates* in its panel. The publish review lists the types whose setting changes and how many objects already repeat a name under the new one; publishing never changes them.
+
+**Essentials 1.5.0** (slice D-2) sets: Application and SaaS application `repository` and `family` (on *Application (any)*, so both inherit it); Capability `folder` (as before); Process step `container`; Data object `repository` with `warn`. Every other type keeps `none`. The table below is where the defaults should go over time:
 
 | Kind of type | Policy | Why |
 |---|---|---|
@@ -77,11 +79,11 @@ Recommended defaults in Essentials:
 |---|---|---|
 | `distinct` | `pair`, `pairAndPayload`, `none` | By semantic kind (below) |
 
-- `pair`: at most one relationship of this type between the same source and target. Default for **containment, composition, specialisation, realisation, assignment, access, influence, association**: a second *contains* between the same two objects says nothing new.
-- `pairAndPayload`: duplicates only when type, ends, payload and parent interaction all match. Default for **flow, trigger, interaction, serving**: three flows with three payloads stay three relationships (`semantics.md §5` holds).
+- `pair`: at most one relationship of this type between the same source and target. Default for every kind except the three below: a second *contains* between the same two objects says nothing new.
+- `pairAndPayload`: duplicates only when type, ends, payload (in order) and parent interaction all match. Default for **flow, trigger, interaction**: three flows with three payloads stay three relationships (`semantics.md §5` holds).
 - `none`: anything goes.
 
-A clash on `distinct` is a `warn` finding by default, and the canvas never creates one silently: the connect menu already offers *Show existing* instead.
+A repeat is always saved, with a finding (rule `<type>:distinct`), checked on create, reconnect, change of type and a new payload; and the canvas never creates one silently: the connect menu already offers *Show existing* instead.
 
 ## 5. Search and add: find or create
 
@@ -184,7 +186,7 @@ A client-side `mergePlan(state, metamodel, survivorId, mergedIds, choices)` buil
 | Slice | What | Size |
 |---|---|---|
 | **D-1 Find or create** | ✅ Built: name normaliser and matcher (`packages/engine/src/similar.ts`); the find-or-create box on the canvas and in the explorer, exact-match reuse; external-id uniqueness in the engine. Still to do: the payload picker and document mentions | S–M |
-| **D-2 Type policy** | `container` scope, `uniqueAcross: family`, `uniquePerLevel`, `onClash`; relationship `distinct` with kind-based defaults; metamodel admin fields for them | M |
+| **D-2 Type policy** | ✅ Built: `container` scope, `uniqueAcross: family`, `uniquePerLevel`, `onClash`; relationship `distinct` with kind-based defaults; *Duplicates* in the metamodel type panel; findings shown in toasts; Essentials 1.5.0. Not yet: `matchOn` | M |
 | **D-3 Possible duplicates** | Background finding with scores and reasons, shared-neighbour signal, *not duplicates* verdicts stored, `aliases` field | M |
 | **D-4 Compare and merge** | Compare view; `mergePlan`; new edits (`retargetObjectOccurrence`, `setAliases`, `setExternalIds`, `addRedirect`); redirects table; inverse tests; API endpoints | L |
 | **D-5 Import matching** | Match order and probable-match preview in import | M |

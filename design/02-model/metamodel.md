@@ -17,7 +17,7 @@ It also holds the **rules** between them. Model owners edit it in the UI. It is 
 | `layer` | Optional grouping for palettes and colours (Strategy, Business, Application, Data, Technology) |
 | `properties` | Property types assigned to this object type |
 | `symbol` | Default look on diagrams: shape, fill, icon, default size, label |
-| `uniqueName` | `repository`, `folder` or `none` |
+| `uniqueName`, `uniqueAcross`, `uniquePerLevel`, `onClash` | How unique names are: `repository`, `folder`, `container` or `none`; also against related types; per level; refused or warned ([duplicates-and-identity §4](duplicates-and-identity.md#4-uniqueness-per-element-type)) |
 | `keyPattern` | Optional auto-numbering, e.g. `APP-{0000}` |
 | `defaultFolder` | Where new objects of this type go when created from a diagram |
 | `category`, `level`, `levelFixed` | Semantic category and default level ([semantics §4](semantics.md#4-semantic-categories-and-levels-object-types-and-objects)) |
@@ -32,6 +32,7 @@ It also holds the **rules** between them. Model owners edit it in the UI. It is 
 | `properties` | Property types for relationships of this type |
 | `line` | Default look: line style, arrows, colour |
 | `rules` | Allowed source → target object types (below) |
+| `distinct` | What counts as a repeated relationship: `pair`, `pairAndPayload` or `none` (default by kind; [duplicates-and-identity §4](duplicates-and-identity.md#4-uniqueness-per-element-type)) |
 | `semantic`, `semanticDirection`, `payload`, `cascadeDelete` | The semantic kind the type maps to and its options (`payload` and `cascadeDelete` arrive with slices Sem-3 and Sem-2) ([semantics §2.2](semantics.md#22-relationship-type-fields-additions-to-metamodel-2)) |
 
 ## 3. Property types

@@ -1,6 +1,6 @@
 {
   "name": "Essentials",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "layers": [
     {
       "key": "strategy",
@@ -285,6 +285,7 @@
       "layer": "business",
       "category": "behaviour",
       "level": "logical",
+      "uniqueName": "container",
       "defaultFolder": "Business/Processes",
       "symbol": {
         "shape": "roundRect",
@@ -332,6 +333,8 @@
       "layer": "application",
       "category": "component",
       "level": "implementation",
+      "uniqueName": "repository",
+      "uniqueAcross": "family",
       "properties": [
         "lifecycle.status",
         "lifecycle.activeFrom",
@@ -424,6 +427,8 @@
       "layer": "data",
       "category": "information",
       "level": "logical",
+      "uniqueName": "repository",
+      "onClash": "warn",
       "defaultFolder": "Data",
       "symbol": {
         "shape": "rect",

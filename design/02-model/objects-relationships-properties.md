@@ -6,7 +6,7 @@
 |---|---|---|
 | `id` | ULID | Global, never changes |
 | `type` | object type key | e.g. `application` |
-| `name` | text (1–200) | Uniqueness configurable per object type: `repository`, `folder` or `none` |
+| `name` | text (1–200) | Uniqueness configurable per object type: `repository`, `folder`, `container` or `none` ([duplicates-and-identity §4](duplicates-and-identity.md#4-uniqueness-per-element-type)) |
 | `key` | text, optional | Human key (e.g. `APP-0042`), unique per object type; can be auto-numbered |
 | `folderId` | folder | Exactly one |
 | `description` | rich text | |
