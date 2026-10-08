@@ -10,7 +10,8 @@ import { Glyph } from "./Glyph";
 /**
  * A name box for a new object that first offers the objects it may already be. Enter (or leaving the box) takes
  * the highlighted option: an exact match of the same type is highlighted by default, so retyping an existing
- * name reuses that object instead of making a copy. Arrow keys move between options; Escape cancels.
+ * name reuses that object instead of making a copy. Arrow keys move between options; Ctrl/⌘+Enter takes it and asks
+ * for another (`onDone(true)`); Escape cancels.
  */
 export function FindOrCreate(props: {
   type: TypeKey;
@@ -21,12 +22,15 @@ export function FindOrCreate(props: {
   style?: CSSProperties;
   /** Whether leaving the box takes the highlighted option (the canvas name box) or leaves it open (a form). */
   commitOnBlur?: boolean;
+  /** The keys, in a line under the box (and under the list while it is open). */
+  hint?: string;
   onPick(object: ObjectRow): void;
   /** Returns false when the create was refused, to keep the box open for a correction. */
   onCreate(name: string): boolean;
-  onDone(): void;
+  /** `again`: Ctrl/⌘+Enter took an option, and another of the same type is wanted. */
+  onDone(again?: boolean): void;
 }) {
-  const { type, folderId, label, className, style, commitOnBlur = false, onPick, onCreate, onDone } = props;
+  const { type, folderId, label, className, style, commitOnBlur = false, hint, onPick, onCreate, onDone } = props;
   const { state, metamodel } = useModel();
   const [name, setName] = useState("");
   const [active, setActive] = useState<number | null>(null);
@@ -55,18 +59,20 @@ export function FindOrCreate(props: {
   const current = active ?? options.defaultIndex;
   const typeName = metamodel.objectType(type)?.definition.name ?? type;
 
-  const take = (index: number, keepIfRefused: boolean) => {
+  const take = (index: number, keepIfRefused: boolean, again = false) => {
     if (done.current) return;
     const trimmed = name.trim();
     const match = matches[index];
     if (match) onPick(match.object);
     else if (!trimmed) {
-      /* nothing typed: nothing to create */
+      /* nothing typed: nothing to create, and nothing more wanted */
+      again = false;
     } else if (refused || !onCreate(trimmed)) {
       if (keepIfRefused) return;
+      again = false;
     }
     done.current = true;
-    onDone();
+    onDone(again);
   };
   const cancel = () => {
     if (done.current) return;
@@ -99,11 +105,12 @@ export function FindOrCreate(props: {
             setActive((current + (e.key === "ArrowDown" ? 1 : count - 1)) % count);
           } else if (e.key === "Enter") {
             e.preventDefault();
-            take(current, true);
+            take(current, true, e.ctrlKey || e.metaKey);
           } else if (e.key === "Escape") cancel();
         }}
         onBlur={() => commitOnBlur && take(current, false)}
       />
+      {hint && !open && <div className="foc-hint muted">{hint}</div>}
       {open && (
         <div
           className="foc-list"
@@ -152,6 +159,7 @@ export function FindOrCreate(props: {
               </>
             )}
           </div>
+          {hint && <div className="foc-hint muted">{hint}</div>}
         </div>
       )}
     </div>

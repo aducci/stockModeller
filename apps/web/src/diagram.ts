@@ -1,6 +1,13 @@
 // The diagram editor's arithmetic and model look-ups (design/04-ux/diagram-editor.md), kept free of React so
 // they can be tested on their own.
-import type { DiagramRow, Metamodel, ModelState, ObjectRow, ResolvedObjectType } from "@connectome/engine";
+import type {
+  DiagramRow,
+  Metamodel,
+  ModelState,
+  ObjectRow,
+  ResolvedObjectType,
+  ResolvedRelationshipType,
+} from "@connectome/engine";
 import {
   DEFAULT_SEMANTIC_ZOOM,
   RENDITIONS,
@@ -175,6 +182,77 @@ export function defaultFolderFor(state: ModelState, metamodel: Metamodel, type: 
   }
   return diagram.folderId;
 }
+
+/**
+ * Where a symbol added without a drop point goes: the first place in `area` (the part of the diagram in view) where it
+ * covers no other symbol, scanning rows from the top left; the middle of the area when it is full.
+ */
+export function freeSpot(boxes: Iterable<Box>, size: { w: number; h: number }, area: Box): { x: number; y: number } {
+  const taken = [...boxes];
+  const gap = 16;
+  const clear = (x: number, y: number) =>
+    taken.every(
+      (b) => x + size.w + gap <= b.x || b.x + b.w + gap <= x || y + size.h + gap <= b.y || b.y + b.h + gap <= y,
+    );
+  for (let y = snap(area.y + gap); y + size.h <= area.y + area.h; y += GRID * 2)
+    for (let x = snap(area.x + gap); x + size.w <= area.x + area.w; x += GRID * 2) if (clear(x, y)) return { x, y };
+  return { x: snap(area.x + area.w / 2 - size.w / 2), y: snap(area.y + area.h / 2 - size.h / 2) };
+}
+
+/** How a symbol dropped inside another is nested: by an existing relationship, a new one of `type`, or not at all. */
+export type NestingChoice = { type: ResolvedRelationshipType; existingId?: Id } | { refused: string };
+
+/**
+ * What nests an object of `childType` (an existing object, or a new one when `childId` is null) inside `parentId` on
+ * a diagram (design/04-ux/diagram-editor.md §8): a nesting relationship already between them, else the nesting types
+ * the rules allow, containment first, then the most used. Null when the diagram shows nesting as lines.
+ */
+export function nestingChoice(
+  state: ModelState,
+  metamodel: Metamodel,
+  diagram: DiagramRow,
+  parentId: Id,
+  childType: TypeKey,
+  childId: Id | null,
+): NestingChoice | null {
+  const diagramType = metamodel.diagramType(diagram.diagramType);
+  const parent = state.objects.get(parentId);
+  if (!diagramType || diagramType.nesting !== "nested" || !parent) return null;
+  const shown = (t: TypeKey) => metamodel.diagramAllowsRelationshipType(diagramType, t);
+  const nests = (t: TypeKey) => metamodel.relationshipType(t)?.nesting === true && shown(t);
+  if (childId) {
+    const existing = state.relationships
+      .find("bySource", parentId)
+      .find((r) => r.targetId === childId && nests(r.type));
+    if (existing) return { type: metamodel.relationshipType(existing.type)!, existingId: existing.id };
+  }
+  const uses = new Map<TypeKey, number>();
+  for (const r of state.relationships.live()) uses.set(r.type, (uses.get(r.type) ?? 0) + 1);
+  const [type] = metamodel
+    .allowedRelationshipTypes(parent.type, childType)
+    .filter((t) => nests(t.key))
+    .sort(
+      (a, b) =>
+        Number(b.semantic === "containment") - Number(a.semantic === "containment") ||
+        (uses.get(b.key) ?? 0) - (uses.get(a.key) ?? 0) ||
+        a.name.localeCompare(b.name),
+    );
+  const typeName = metamodel.objectType(childType)?.definition.name ?? childType;
+  if (!type) return { refused: `No rule lets ${article(typeName)} ${typeName} go inside ${parent.name}` };
+  // One parent only: an object already inside something else stays there.
+  const other = childId
+    ? state.relationships.find("byTarget", childId).find((r) => r.type === type.key && r.sourceId !== parentId)
+    : undefined;
+  if (other && type.singleParent) {
+    const child = state.objects.get(childId!)!;
+    return {
+      refused: `${child.name} is already inside ${state.objects.get(other.sourceId)?.name ?? "another object"}`,
+    };
+  }
+  return { type };
+}
+
+const article = (word: string) => (/^[aeiou]/i.test(word) ? "an" : "a");
 
 export interface ConnectChoice {
   type: RelationshipType;
