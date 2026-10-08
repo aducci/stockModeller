@@ -13,6 +13,8 @@
 
 Everything is stored in **folders**. A **catalogue** is a live, editable table of objects. A **scenario** is a branch of the repository for designing future states.
 
+New here? [guide.md](guide.md) is a one-page tour of what is built, and [ux-audit.md](ux-audit.md) lists what is missing.
+
 ## Contents
 
 | Folder | Documents |

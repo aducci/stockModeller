@@ -25,6 +25,9 @@
 | O2 | Hosted automation runtime (later) | Pick the cheapest scale-to-zero option when it is scheduled (e.g. container jobs vs. V8 isolates); the contract is fixed already |
 | O3 | First markup format | Mermaid (widest adoption), then PlantUML |
 | O4 | Second package after Essentials | ArchiMate 3.2 (most requested in EA); BPMN follows with the BPMN adapter |
+| O5 | Palette **More types ▾** ([ux-audit](ux-audit.md) #9): may a diagram take an object type its diagram type does not list? | Yes, with a warning on the symbol, the same way `warn` rules work; a diagram type can set `strict: true` to refuse instead |
+| O6 | Relationships in the explorer tree ([ux-audit](ux-audit.md) #8) | Off by default, a per-user switch turns them back on; the Relationships tab is where they are read |
+| O7 | Does one selection set serve the canvas, the explorer and the coming matrix and list views ([ux-audit](ux-audit.md) #1, #3)? | Yes: the explorer's marks become that selection, and every view reads and writes it in the workbench store |
 
 ## Semantics decisions
 
