@@ -68,12 +68,16 @@
     },
     "document": {
       "type": "object",
-      "required": ["subject", "sections"],
+      "required": ["sections"],
       "additionalProperties": false,
-      "description": "A document template (views-and-design-artifacts.md §7.1): the subject it is about and its sections, each one component.",
+      "description": "A document template (views-and-design-artifacts.md §7.1, §8): the subject it is about and its sections, regions and patterns, optionally extending another template.",
       "properties": {
         "subject": {
           "$ref": "#/$defs/scopeFilter"
+        },
+        "extends": {
+          "type": "string",
+          "description": "Another document diagram type whose sections come first"
         },
         "sections": {
           "type": "array",
@@ -81,251 +85,21 @@
           "items": {
             "oneOf": [
               {
-                "type": "object",
-                "required": ["key", "title", "component"],
-                "additionalProperties": false,
-                "properties": {
-                  "key": {
-                    "type": "string",
-                    "pattern": "^[a-z][a-zA-Z0-9]*$"
-                  },
-                  "title": {
-                    "type": "string"
-                  },
-                  "guidance": {
-                    "type": "string"
-                  },
-                  "required": {
-                    "type": "boolean"
-                  },
-                  "component": {
-                    "const": "heading"
-                  }
-                }
+                "$ref": "#/$defs/section"
               },
               {
-                "type": "object",
-                "required": ["key", "title", "component"],
-                "additionalProperties": false,
-                "properties": {
-                  "key": {
-                    "type": "string",
-                    "pattern": "^[a-z][a-zA-Z0-9]*$"
-                  },
-                  "title": {
-                    "type": "string"
-                  },
-                  "guidance": {
-                    "type": "string"
-                  },
-                  "required": {
-                    "type": "boolean"
-                  },
-                  "component": {
-                    "const": "prose"
-                  },
-                  "config": {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "properties": {
-                      "mentions": {
-                        "type": "object",
-                        "additionalProperties": false,
-                        "properties": {
-                          "create": {
-                            "type": "boolean"
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                "$ref": "#/$defs/region"
               },
               {
-                "type": "object",
-                "required": ["key", "title", "component", "config"],
-                "additionalProperties": false,
-                "properties": {
-                  "key": {
-                    "type": "string",
-                    "pattern": "^[a-z][a-zA-Z0-9]*$"
-                  },
-                  "title": {
-                    "type": "string"
-                  },
-                  "guidance": {
-                    "type": "string"
-                  },
-                  "required": {
-                    "type": "boolean"
-                  },
-                  "component": {
-                    "const": "facts"
-                  },
-                  "config": {
-                    "type": "object",
-                    "required": ["properties"],
-                    "additionalProperties": false,
-                    "properties": {
-                      "properties": {
-                        "type": "array",
-                        "items": {
-                          "type": "string"
-                        }
-                      }
-                    }
-                  }
-                }
-              },
-              {
-                "type": "object",
-                "required": ["key", "title", "component", "config"],
-                "additionalProperties": false,
-                "properties": {
-                  "key": {
-                    "type": "string",
-                    "pattern": "^[a-z][a-zA-Z0-9]*$"
-                  },
-                  "title": {
-                    "type": "string"
-                  },
-                  "guidance": {
-                    "type": "string"
-                  },
-                  "required": {
-                    "type": "boolean"
-                  },
-                  "component": {
-                    "const": "diagramLink"
-                  },
-                  "config": {
-                    "type": "object",
-                    "required": ["diagramType"],
-                    "additionalProperties": false,
-                    "properties": {
-                      "diagramType": {
-                        "type": "string"
-                      },
-                      "placeSubject": {
-                        "type": "boolean"
-                      }
-                    }
-                  }
-                }
-              },
-              {
-                "type": "object",
-                "required": ["key", "title", "component", "config"],
-                "additionalProperties": false,
-                "properties": {
-                  "key": {
-                    "type": "string",
-                    "pattern": "^[a-z][a-zA-Z0-9]*$"
-                  },
-                  "title": {
-                    "type": "string"
-                  },
-                  "guidance": {
-                    "type": "string"
-                  },
-                  "required": {
-                    "type": "boolean"
-                  },
-                  "component": {
-                    "const": "relationTable"
-                  },
-                  "config": {
-                    "type": "object",
-                    "required": ["source", "columns"],
-                    "additionalProperties": false,
-                    "properties": {
-                      "source": {
-                        "type": "object",
-                        "required": ["relationships"],
-                        "additionalProperties": false,
-                        "properties": {
-                          "section": {
-                            "type": "string"
-                          },
-                          "relationships": {
-                            "$ref": "#/$defs/relationshipFilter"
-                          }
-                        }
-                      },
-                      "columns": {
-                        "type": "array",
-                        "items": {
-                          "oneOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "object",
-                              "required": ["key", "label", "properties"],
-                              "additionalProperties": false,
-                              "properties": {
-                                "key": {
-                                  "type": "string"
-                                },
-                                "label": {
-                                  "type": "string"
-                                },
-                                "properties": {
-                                  "type": "array",
-                                  "items": {
-                                    "type": "string"
-                                  }
-                                }
-                              }
-                            }
-                          ]
-                        }
-                      },
-                      "required": {
-                        "type": "array",
-                        "items": {
-                          "type": "string"
-                        }
-                      },
-                      "add": {
-                        "type": "object",
-                        "additionalProperties": false,
-                        "properties": {
-                          "label": {
-                            "type": "string"
-                          },
-                          "types": {
-                            "type": "array",
-                            "items": {
-                              "type": "string"
-                            }
-                          },
-                          "kinds": {
-                            "type": "array",
-                            "items": {
-                              "type": "string"
-                            }
-                          }
-                        }
-                      },
-                      "missing": {
-                        "type": "boolean"
-                      },
-                      "perRow": {
-                        "type": "object",
-                        "required": ["sequence"],
-                        "additionalProperties": false,
-                        "properties": {
-                          "sequence": {
-                            "type": "string"
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                "$ref": "#/$defs/patternUse"
               }
             ]
+          }
+        },
+        "overrides": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/sectionOverride"
           }
         }
       }
@@ -656,6 +430,508 @@
           "items": {
             "type": "string"
           }
+        }
+      }
+    },
+    "sectionAllow": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Freedoms of a configurable section (§8.2)",
+      "properties": {
+        "addProperties": {
+          "type": "boolean"
+        },
+        "columns": {
+          "type": "boolean"
+        },
+        "hide": {
+          "type": "boolean"
+        }
+      }
+    },
+    "section": {
+      "description": "One section of a document template: one component with its configuration (§8.1)",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["key", "title", "component"],
+          "additionalProperties": false,
+          "properties": {
+            "key": {
+              "type": "string",
+              "pattern": "^[a-z][a-zA-Z0-9]*$"
+            },
+            "title": {
+              "type": "string"
+            },
+            "guidance": {
+              "type": "string"
+            },
+            "required": {
+              "type": "boolean"
+            },
+            "lock": {
+              "enum": ["fixed", "configurable", "free"],
+              "description": "What authors may change (views-and-design-artifacts.md §8.2); default configurable"
+            },
+            "allow": {
+              "$ref": "#/$defs/sectionAllow"
+            },
+            "after": {
+              "type": "string",
+              "description": "In a template that extends another: insert after this section of the base"
+            },
+            "component": {
+              "const": "heading"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["key", "title", "component"],
+          "additionalProperties": false,
+          "properties": {
+            "key": {
+              "type": "string",
+              "pattern": "^[a-z][a-zA-Z0-9]*$"
+            },
+            "title": {
+              "type": "string"
+            },
+            "guidance": {
+              "type": "string"
+            },
+            "required": {
+              "type": "boolean"
+            },
+            "lock": {
+              "enum": ["fixed", "configurable", "free"],
+              "description": "What authors may change (views-and-design-artifacts.md §8.2); default configurable"
+            },
+            "allow": {
+              "$ref": "#/$defs/sectionAllow"
+            },
+            "after": {
+              "type": "string",
+              "description": "In a template that extends another: insert after this section of the base"
+            },
+            "component": {
+              "const": "prose"
+            },
+            "config": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "mentions": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "create": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["key", "title", "component", "config"],
+          "additionalProperties": false,
+          "properties": {
+            "key": {
+              "type": "string",
+              "pattern": "^[a-z][a-zA-Z0-9]*$"
+            },
+            "title": {
+              "type": "string"
+            },
+            "guidance": {
+              "type": "string"
+            },
+            "required": {
+              "type": "boolean"
+            },
+            "lock": {
+              "enum": ["fixed", "configurable", "free"],
+              "description": "What authors may change (views-and-design-artifacts.md §8.2); default configurable"
+            },
+            "allow": {
+              "$ref": "#/$defs/sectionAllow"
+            },
+            "after": {
+              "type": "string",
+              "description": "In a template that extends another: insert after this section of the base"
+            },
+            "component": {
+              "const": "facts"
+            },
+            "config": {
+              "type": "object",
+              "required": ["properties"],
+              "additionalProperties": false,
+              "properties": {
+                "properties": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "of": {
+                  "enum": ["row", "relationship"],
+                  "description": "Inside a repeater: the row's counterpart (default) or its relationship"
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["key", "title", "component", "config"],
+          "additionalProperties": false,
+          "properties": {
+            "key": {
+              "type": "string",
+              "pattern": "^[a-z][a-zA-Z0-9]*$"
+            },
+            "title": {
+              "type": "string"
+            },
+            "guidance": {
+              "type": "string"
+            },
+            "required": {
+              "type": "boolean"
+            },
+            "lock": {
+              "enum": ["fixed", "configurable", "free"],
+              "description": "What authors may change (views-and-design-artifacts.md §8.2); default configurable"
+            },
+            "allow": {
+              "$ref": "#/$defs/sectionAllow"
+            },
+            "after": {
+              "type": "string",
+              "description": "In a template that extends another: insert after this section of the base"
+            },
+            "component": {
+              "const": "diagramLink"
+            },
+            "config": {
+              "type": "object",
+              "required": ["diagramType"],
+              "additionalProperties": false,
+              "properties": {
+                "diagramType": {
+                  "type": "string"
+                },
+                "placeSubject": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["key", "title", "component", "config"],
+          "additionalProperties": false,
+          "properties": {
+            "key": {
+              "type": "string",
+              "pattern": "^[a-z][a-zA-Z0-9]*$"
+            },
+            "title": {
+              "type": "string"
+            },
+            "guidance": {
+              "type": "string"
+            },
+            "required": {
+              "type": "boolean"
+            },
+            "lock": {
+              "enum": ["fixed", "configurable", "free"],
+              "description": "What authors may change (views-and-design-artifacts.md §8.2); default configurable"
+            },
+            "allow": {
+              "$ref": "#/$defs/sectionAllow"
+            },
+            "after": {
+              "type": "string",
+              "description": "In a template that extends another: insert after this section of the base"
+            },
+            "component": {
+              "const": "relationTable"
+            },
+            "config": {
+              "type": "object",
+              "required": ["source", "columns"],
+              "additionalProperties": false,
+              "properties": {
+                "source": {
+                  "type": "object",
+                  "required": ["relationships"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "section": {
+                      "type": "string"
+                    },
+                    "relationships": {
+                      "$ref": "#/$defs/relationshipFilter"
+                    }
+                  }
+                },
+                "columns": {
+                  "type": "array",
+                  "items": {
+                    "oneOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "object",
+                        "required": ["key", "label", "properties"],
+                        "additionalProperties": false,
+                        "properties": {
+                          "key": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "properties": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                "required": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "add": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "label": {
+                      "type": "string"
+                    },
+                    "types": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "kinds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "missing": {
+                  "type": "boolean"
+                },
+                "perRow": {
+                  "type": "object",
+                  "required": ["sequence"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "sequence": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["key", "title", "component", "config"],
+          "additionalProperties": false,
+          "properties": {
+            "key": {
+              "type": "string",
+              "pattern": "^[a-z][a-zA-Z0-9]*$"
+            },
+            "title": {
+              "type": "string"
+            },
+            "guidance": {
+              "type": "string"
+            },
+            "required": {
+              "type": "boolean"
+            },
+            "lock": {
+              "enum": ["fixed", "configurable", "free"],
+              "description": "What authors may change (views-and-design-artifacts.md §8.2); default configurable"
+            },
+            "allow": {
+              "$ref": "#/$defs/sectionAllow"
+            },
+            "after": {
+              "type": "string",
+              "description": "In a template that extends another: insert after this section of the base"
+            },
+            "component": {
+              "const": "repeater"
+            },
+            "config": {
+              "type": "object",
+              "required": ["source", "sections"],
+              "additionalProperties": false,
+              "properties": {
+                "source": {
+                  "type": "object",
+                  "required": ["section"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "section": {
+                      "type": "string",
+                      "description": "A relationTable section: one block per row"
+                    }
+                  }
+                },
+                "sections": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "$ref": "#/$defs/section"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["key", "title", "component", "config"],
+          "additionalProperties": false,
+          "properties": {
+            "key": {
+              "type": "string",
+              "pattern": "^[a-z][a-zA-Z0-9]*$"
+            },
+            "title": {
+              "type": "string"
+            },
+            "guidance": {
+              "type": "string"
+            },
+            "required": {
+              "type": "boolean"
+            },
+            "lock": {
+              "enum": ["fixed", "configurable", "free"],
+              "description": "What authors may change (views-and-design-artifacts.md §8.2); default configurable"
+            },
+            "allow": {
+              "$ref": "#/$defs/sectionAllow"
+            },
+            "after": {
+              "type": "string",
+              "description": "In a template that extends another: insert after this section of the base"
+            },
+            "component": {
+              "const": "sequenceLink"
+            },
+            "config": {
+              "type": "object",
+              "required": ["diagramType"],
+              "additionalProperties": false,
+              "properties": {
+                "diagramType": {
+                  "type": "string",
+                  "description": "A sequence diagram type; the row's interaction is drawn in it"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "region": {
+      "type": "object",
+      "required": ["region", "title", "palette"],
+      "additionalProperties": false,
+      "description": "A place where authors may add sections from a palette (§8.2)",
+      "properties": {
+        "region": {
+          "type": "string",
+          "pattern": "^[a-z][a-zA-Z0-9]*$"
+        },
+        "title": {
+          "type": "string"
+        },
+        "guidance": {
+          "type": "string"
+        },
+        "palette": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "enum": ["heading", "prose", "facts", "diagramLink", "relationTable"]
+          }
+        },
+        "max": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "after": {
+          "type": "string"
+        }
+      }
+    },
+    "patternUse": {
+      "type": "object",
+      "required": ["use"],
+      "additionalProperties": false,
+      "description": "Includes a pattern of the package with its parameters (§8.4)",
+      "properties": {
+        "use": {
+          "type": "string"
+        },
+        "with": {
+          "type": "object"
+        },
+        "prefix": {
+          "type": "string",
+          "pattern": "^[a-z][a-zA-Z0-9]*$",
+          "description": "Prefixes the pattern's section keys, so it can be used twice"
+        },
+        "after": {
+          "type": "string"
+        }
+      }
+    },
+    "sectionOverride": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "What a template may change in a section from a pattern or its base; never the bindings (§8.4)",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "guidance": {
+          "type": "string"
+        },
+        "lock": {
+          "enum": ["fixed", "configurable", "free"]
+        },
+        "allow": {
+          "$ref": "#/$defs/sectionAllow"
         }
       }
     }

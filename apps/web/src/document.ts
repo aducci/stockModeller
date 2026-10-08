@@ -13,8 +13,8 @@ const RADIUS = 240;
 export function templatesFor(metamodel: Metamodel, object: ObjectRow): DiagramType[] {
   return metamodel
     .allDiagramTypes()
-    .map((t) => t.definition)
-    .filter((t) => t.kind === "document" && t.document && canBeSubject(metamodel, t.document, object));
+    .filter((t) => t.definition.kind === "document" && t.template && canBeSubject(metamodel, t.template, object))
+    .map((t) => t.definition);
 }
 
 /** A new document about `subject`, in the subject's folder. */

@@ -143,4 +143,43 @@ describe("documents", () => {
       }),
     ).toThrow(/not a linked diagram[\s\S]*unknown property "nope"[\s\S]*not one of its columns/);
   });
+
+  it("resolve patterns and regions, and check what they add", () => {
+    const mm = Metamodel.compile(essentials.metamodel, essentials.diagramTypes);
+    const keys = (t: string) =>
+      mm.diagramType(t)!.template!.entries.map((e) => ("region" in e ? `[${e.region}]` : e.key));
+    expect(keys("hld")).toEqual(["summary", "facts", "context", "integrations", "risks", "[additional]"]);
+    expect(keys("integrationSpec")).toEqual(["purpose", "context", "integrations", "details", "[additional]"]);
+    const sections = hld.document!.sections;
+    expect(compile({ ...hld.document, sections: [...sections, { use: "contextAndIntegrations" }] })).toThrow(
+      /two sections "context" \(a pattern used twice needs a prefix\)/,
+    );
+    expect(
+      compile({ ...hld.document, sections: [...sections, { use: "contextAndIntegrations", prefix: "data" }] }),
+    ).not.toThrow();
+    expect(
+      compile({ ...hld.document, sections: [...sections, { key: "layout", title: "L", component: "heading" }] }),
+    ).toThrow(/reserved/);
+    expect(
+      compile({ ...hld.document, sections: [...sections, { region: "more", title: "More", palette: ["repeater"] }] }),
+    ).toThrow(/offers "repeater", which authors cannot add/);
+    expect(
+      compile({
+        ...hld.document,
+        sections: [
+          ...sections,
+          { key: "seq", title: "Seq", component: "sequenceLink", config: { diagramType: "sequence" } },
+          {
+            key: "rep",
+            title: "Rep",
+            component: "repeater",
+            config: {
+              source: { section: "summary" },
+              sections: [{ key: "d", title: "D", component: "diagramLink", config: { diagramType: "context" } }],
+            },
+          },
+        ],
+      }),
+    ).toThrow(/belongs in a repeater[\s\S]*not a relation table[\s\S]*not "diagramLink"/);
+  });
 });

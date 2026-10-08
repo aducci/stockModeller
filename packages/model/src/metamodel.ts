@@ -11,7 +11,7 @@ import type {
   TypeKey,
   ValueList,
 } from "./model";
-import type { DocumentTemplate, MatrixDefinition, ViewKind } from "./views";
+import type { DocumentPattern, DocumentTemplate, MatrixDefinition, ViewKind } from "./views";
 
 export interface Layer {
   key: string;
@@ -56,6 +56,8 @@ export interface MetamodelPackage {
   validationRules?: ValidationRule[];
   derivationRules?: DerivationRule[];
   exchangeMappings?: ExchangeMapping[];
+  /** Reusable groups of document sections (views-and-design-artifacts.md §8.4), used by the package's templates. */
+  documentPatterns?: DocumentPattern[];
 }
 
 export type ColourRuleAction =

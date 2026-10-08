@@ -22,3 +22,9 @@ export function validatePackage(value: unknown): SchemaResult<MetamodelPackage> 
 export function validateDiagramType(value: unknown): SchemaResult<DiagramType> {
   return result(checkDiagramType(value), value, checkDiagramType.errors);
 }
+
+/** One resolved document section (diagram-type.schema.json `$defs/section`): a pattern's sections once substituted. */
+export function validateSection(value: unknown): SchemaResult<unknown> {
+  const check = ajv.getSchema(`${diagramTypeSchema.$id}#/$defs/section`)!;
+  return result(check(value) as boolean, value, check.errors);
+}

@@ -14,7 +14,8 @@
         "title": "Summary",
         "component": "prose",
         "required": true,
-        "guidance": "What changes and why, in a few lines. Type @ to mention an element of the model.",
+        "lock": "fixed",
+        "guidance": "What changes and why, in a few lines. Type @ to mention an element of the model, @+ to create one.",
         "config": {
           "mentions": {
             "create": true
@@ -25,6 +26,9 @@
         "key": "facts",
         "title": "Key facts",
         "component": "facts",
+        "allow": {
+          "addProperties": true
+        },
         "config": {
           "properties": [
             "lifecycle.status",
@@ -36,45 +40,8 @@
         }
       },
       {
-        "key": "context",
-        "title": "Context",
-        "component": "diagramLink",
-        "required": true,
-        "guidance": "Draw what the subject exchanges with. Every flow or interaction on this diagram is a row under Integrations.",
-        "config": {
-          "diagramType": "context",
-          "placeSubject": true
-        }
-      },
-      {
-        "key": "integrations",
-        "title": "Integrations",
-        "component": "relationTable",
-        "required": true,
-        "guidance": "Describe every connector on the context diagram.",
-        "config": {
-          "source": {
-            "section": "context",
-            "relationships": {
-              "kinds": ["flow", "interaction"]
-            }
-          },
-          "columns": [
-            "direction",
-            {
-              "key": "protocol",
-              "label": "Protocol",
-              "properties": ["interaction.protocol", "flow.protocol"]
-            },
-            "interaction.pattern",
-            "payload"
-          ],
-          "required": ["protocol"],
-          "add": {
-            "label": "Add integration",
-            "kinds": ["flow", "interaction"]
-          },
-          "missing": true,
+        "use": "contextAndIntegrations",
+        "with": {
           "perRow": {
             "sequence": "sequence"
           }
@@ -84,7 +51,17 @@
         "key": "risks",
         "title": "Risks and open points",
         "component": "prose",
+        "allow": {
+          "hide": true
+        },
         "guidance": "What could go wrong, and what is still to decide."
+      },
+      {
+        "region": "additional",
+        "title": "Additional sections",
+        "guidance": "Add what this design needs beyond the template.",
+        "palette": ["heading", "prose", "facts", "diagramLink", "relationTable"],
+        "max": 6
       }
     ]
   }

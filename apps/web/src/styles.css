@@ -2512,3 +2512,88 @@ button.toggle .badge {
 .sequence-steps tbody tr {
   cursor: pointer;
 }
+
+/* Documents: locks, section options, regions and repeaters (views-and-design-artifacts.md §8.2, slice V-4) */
+.doc-lock {
+  font-size: 11px;
+  font-weight: normal;
+}
+.doc-section-menu {
+  position: relative;
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: normal;
+}
+.doc-section h2,
+.doc-heading {
+  position: relative;
+}
+.doc-section-menu .doc-chip-menu {
+  left: auto;
+  right: 0;
+  min-width: 160px;
+}
+.doc-section.hidden {
+  padding: 4px 0;
+}
+.doc-region {
+  border-top: 1px dashed var(--line);
+  margin-top: 12px;
+  padding-top: 4px;
+}
+.doc-region-add {
+  margin: 10px 0;
+}
+.doc-facts-more,
+.doc-columns {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 13px;
+}
+.doc-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 2px 1px 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.doc-column-hide {
+  margin-left: 2px;
+  padding: 0 3px;
+  opacity: 0.35;
+}
+.doc-table th:hover .doc-column-hide,
+.doc-column-hide:focus {
+  opacity: 1;
+}
+.doc-repeater {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.doc-repeat-row {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 12px 4px;
+}
+.doc-repeat-row h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+.doc-section.nested {
+  padding: 6px 0 2px;
+}
+.doc-section.nested h4 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 4px;
+  font-size: 13px;
+}

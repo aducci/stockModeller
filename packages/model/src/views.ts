@@ -50,21 +50,72 @@ export interface MatrixDefinition {
 
 // ================================================================ documents (§7–§8)
 
-/** The components a document section can be (§8.1). Built in V-2; the rest of §8.1 follows in later slices. */
-export type ComponentKey = "heading" | "prose" | "facts" | "diagramLink" | "relationTable";
-export const COMPONENT_KEYS: readonly ComponentKey[] = ["heading", "prose", "facts", "diagramLink", "relationTable"];
+/** The components a document section can be (§8.1). Built in V-2 and V-4; the rest of §8.1 follows in later slices. */
+export type ComponentKey =
+  "heading" | "prose" | "facts" | "diagramLink" | "relationTable" | "repeater" | "sequenceLink";
+export const COMPONENT_KEYS: readonly ComponentKey[] = [
+  "heading",
+  "prose",
+  "facts",
+  "diagramLink",
+  "relationTable",
+  "repeater",
+  "sequenceLink",
+];
+/** Components an author may add in a region; the repeater and sequenceLink need a row, so they come from templates. */
+export const REGION_COMPONENT_KEYS: readonly ComponentKey[] = [
+  "heading",
+  "prose",
+  "facts",
+  "diagramLink",
+  "relationTable",
+];
 
 /** A document's definition key holding its subject; a template may not name a section after it. */
 export const SUBJECT_KEY = "subject";
 
+/** What authors may change in a section (§8.2): `fixed` nothing but its content, `free` also its title and whether it shows. */
+export type SectionLock = "fixed" | "configurable" | "free";
+
+/** The freedoms a `configurable` section grants (§8.2); a `free` section has them all, a `fixed` one none. */
+export interface SectionAllow {
+  /** Facts: add more of the subject's properties. */
+  addProperties?: boolean;
+  /** Tables: hide optional columns, add property columns. */
+  columns?: boolean;
+  /** Hide the section when it is not required. */
+  hide?: boolean;
+}
+
+interface SectionCommon {
+  key: string;
+  title: string;
+  guidance?: string;
+  required?: boolean;
+  /** Default `configurable`. */
+  lock?: SectionLock;
+  allow?: SectionAllow;
+  /** In a template that `extends` another: insert after this section of the base (default: at the end). */
+  after?: string;
+}
+
 /** One section of a document template (§7.1). */
-export type SectionDefinition = { key: string; title: string; guidance?: string; required?: boolean } & (
-  | { component: "heading" }
-  | { component: "prose"; config?: { mentions?: { create?: boolean } } }
-  | { component: "facts"; config: { properties: PropertyKey[] } }
-  | { component: "diagramLink"; config: { diagramType: TypeKey; placeSubject?: boolean } }
-  | { component: "relationTable"; config: RelationTableConfig }
-);
+export type SectionDefinition = SectionCommon &
+  (
+    | { component: "heading" }
+    | { component: "prose"; config?: { mentions?: { create?: boolean } } }
+    | { component: "facts"; config: FactsConfig }
+    | { component: "diagramLink"; config: { diagramType: TypeKey; placeSubject?: boolean } }
+    | { component: "relationTable"; config: RelationTableConfig }
+    | { component: "repeater"; config: RepeaterConfig }
+    | { component: "sequenceLink"; config: { diagramType: TypeKey } }
+  );
+
+export interface FactsConfig {
+  properties: PropertyKey[];
+  /** Inside a repeater: the row's counterpart (`row`, the default there) or its relationship. Elsewhere the subject. */
+  of?: "row" | "relationship";
+}
 
 /** A table of relationships (§7.2): rows from a linked diagram's connectors, or from the subject's relationships. */
 export interface RelationTableConfig {
@@ -83,17 +134,77 @@ export interface RelationTableConfig {
 }
 
 /**
+ * For each row of a relation table section, a block of child sections (§8.1): the row's facts, its sequence, a note.
+ * Children see the row: facts of the counterpart or the relationship, a sequenceLink for the row's interaction.
+ */
+export interface RepeaterConfig {
+  /** The key of a relationTable section. */
+  source: { section: string };
+  sections: SectionDefinition[];
+}
+
+/**
  * A table column: "direction", "payload", a property key, or one column over several properties (the first that the
  * row's relationship type has), so a flow's and an interaction's protocol share a column.
  */
 export type TableColumn = string | { key: string; label: string; properties: PropertyKey[] };
 
+/** A place in a template where authors may add sections from a palette (§8.2). */
+export interface RegionDefinition {
+  region: string;
+  title: string;
+  guidance?: string;
+  palette: ComponentKey[];
+  /** At most this many added sections. */
+  max?: number;
+  after?: string;
+}
+
+/** A template includes a pattern (§8.4) with its parameters; `prefix` keeps keys apart when a pattern is used twice. */
+export interface PatternUse {
+  use: string;
+  with?: Record<string, unknown>;
+  prefix?: string;
+  after?: string;
+}
+
+export type TemplateEntry = SectionDefinition | RegionDefinition | PatternUse;
+
+/** What a template may change in a section it got from a pattern or a base template; never its bindings (§8.4). */
+export interface SectionOverride {
+  title?: string;
+  guidance?: string;
+  lock?: SectionLock;
+  allow?: SectionAllow;
+}
+
 /** A document template (§7.1): a diagram type of kind "document". */
 export interface DocumentTemplate {
-  /** Which objects may be the subject. */
-  subject: { type?: TypeKey[]; category?: SemanticCategory[] };
-  sections: SectionDefinition[];
+  /** Which objects may be the subject. Inherited when the template extends another. */
+  subject?: { type?: TypeKey[]; category?: SemanticCategory[] };
+  /** Another document type whose sections come first; this template's own are inserted (`after`) or appended. */
+  extends?: TypeKey;
+  sections: TemplateEntry[];
+  /** By section key, after patterns and the base are resolved. */
+  overrides?: Record<string, SectionOverride>;
 }
+
+/** A reusable, parameterised group of sections (§8.4), defined in a metamodel package. */
+export interface DocumentPattern {
+  key: string;
+  name: string;
+  description?: string;
+  /** A string value `"$template.<param>"` anywhere in the sections is replaced by the parameter; `null` removes it. */
+  params?: Record<string, { description?: string; default?: unknown }>;
+  sections: (SectionDefinition | RegionDefinition)[];
+}
+
+/** A template with its patterns and base resolved: sections and regions in order, every section with its lock. */
+export interface ResolvedTemplate {
+  subject: { type?: TypeKey[]; category?: SemanticCategory[] };
+  entries: (ResolvedSection | RegionDefinition)[];
+}
+export type ResolvedSection = SectionDefinition & { lock: SectionLock; allow: SectionAllow };
 
 /** Prose (§9): paragraphs of text runs and mentions, so a renamed object needs no rewrite. */
 export type ProseInline = string | { mention: Id };
@@ -108,4 +219,31 @@ export interface RelationTableState {
   ignored?: Id[];
   /** Each row's sequence diagram, by the row's relationship. */
   sequences?: Record<Id, Id>;
+}
+
+/**
+ * What an author changed in a section, within its lock (§8.2). Kept under the section's key in `definition.layout`,
+ * so changing the layout never conflicts with writing the content.
+ */
+export interface SectionLayout {
+  hidden?: boolean;
+  title?: string;
+  /** Facts: more properties. */
+  properties?: PropertyKey[];
+  /** Tables: optional columns not shown, and property columns added. */
+  hiddenColumns?: string[];
+  columns?: PropertyKey[];
+}
+
+/** The definition key holding every section's layout, and the sections authors added in regions. */
+export const LAYOUT_KEY = "layout";
+export interface DocumentLayout {
+  sections?: Record<string, SectionLayout>;
+  /** By region: the sections added there, in order (each `free`, its content under its own key). */
+  regions?: Record<string, SectionDefinition[]>;
+}
+
+/** A repeater's state: by row relationship, each child section's state. */
+export interface RepeaterState {
+  rows?: Record<Id, Record<string, unknown>>;
 }

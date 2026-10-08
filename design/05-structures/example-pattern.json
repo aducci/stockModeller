@@ -1,0 +1,83 @@
+{
+  "key": "contextAndIntegrations",
+  "name": "Context and integrations",
+  "description": "A context diagram the author draws, and a table with a row to describe for every flow or interaction drawn on it.",
+  "params": {
+    "diagramType": {
+      "description": "The canvas type of the context diagram.",
+      "default": "context"
+    },
+    "kinds": {
+      "description": "The relationship kinds that are integrations.",
+      "default": [
+        "flow",
+        "interaction"
+      ]
+    },
+    "columns": {
+      "description": "The table's columns after the counterpart.",
+      "default": [
+        "direction",
+        {
+          "key": "protocol",
+          "label": "Protocol",
+          "properties": [
+            "interaction.protocol",
+            "flow.protocol"
+          ]
+        },
+        "interaction.pattern",
+        "payload"
+      ]
+    },
+    "required": {
+      "description": "The columns a row must fill to be described.",
+      "default": [
+        "protocol"
+      ]
+    },
+    "perRow": {
+      "description": "A sequence per interaction row, as { \"sequence\": a sequence diagram type }, or null for none.",
+      "default": null
+    }
+  },
+  "sections": [
+    {
+      "key": "context",
+      "title": "Context",
+      "component": "diagramLink",
+      "required": true,
+      "guidance": "Draw what the subject exchanges with. Every flow or interaction on this diagram is a row under Integrations.",
+      "config": {
+        "diagramType": "$template.diagramType",
+        "placeSubject": true
+      }
+    },
+    {
+      "key": "integrations",
+      "title": "Integrations",
+      "component": "relationTable",
+      "required": true,
+      "guidance": "Describe every connector on the context diagram.",
+      "allow": {
+        "columns": true
+      },
+      "config": {
+        "source": {
+          "section": "context",
+          "relationships": {
+            "kinds": "$template.kinds"
+          }
+        },
+        "columns": "$template.columns",
+        "required": "$template.required",
+        "add": {
+          "label": "Add integration",
+          "kinds": "$template.kinds"
+        },
+        "missing": true,
+        "perRow": "$template.perRow"
+      }
+    }
+  ]
+}

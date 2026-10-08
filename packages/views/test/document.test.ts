@@ -3,10 +3,21 @@ import { describe, expect, it } from "vitest";
 import { essentials, insuranceGroup } from "@connectome/content";
 import { applyChange, Metamodel, ModelState } from "@connectome/engine";
 import type { Edit } from "@connectome/model";
-import { proseFromMarkup, proseToMarkup, projectDocument, tableAddOptions, type RelationTableModel } from "../src";
+import {
+  proseFromMarkup,
+  proseToMarkup,
+  projectDocument,
+  stateAt,
+  tableAddOptions,
+  withStateAt,
+  type FactsModel,
+  type RelationTableModel,
+  type RepeaterModel,
+} from "../src";
 
 const metamodel = Metamodel.compile(essentials.metamodel, essentials.diagramTypes);
 const hld = metamodel.diagramType("hld")!.definition;
+const spec = metamodel.diagramType("integrationSpec")!.definition;
 let n = 0;
 
 function exampleState() {
@@ -136,6 +147,97 @@ describe("documents", () => {
       expect.arrayContaining(["O-APP-1 flowsTo O-APP-2", "O-APP-2 flowsTo O-APP-1"]),
     );
     expect(options.every((o) => ["flowsTo", "calls"].includes(o.type))).toBe(true);
+  });
+});
+
+describe("what authors change (§8.2)", () => {
+  const context = { subject: "O-APP-1", context: { diagramId: "D-CTX" } };
+
+  it("hide sections and columns, add facts and columns, only where the lock allows", () => {
+    const state = withContext();
+    const doc = projectDocument(state, metamodel, hld, {
+      ...context,
+      layout: {
+        sections: {
+          // Risks allows hiding; Summary is fixed and required, so these are ignored.
+          risks: { hidden: true },
+          summary: { hidden: true, title: "Overview" },
+          facts: { properties: ["technical.hosting", "nope.nope"] },
+          integrations: { hiddenColumns: ["interaction.pattern", "protocol"], columns: ["flow.frequency"] },
+        },
+      },
+    });
+    const by = (key: string) => doc.sections.find((s) => s.definition.key === key)!;
+    expect(by("risks").hidden).toBe(true);
+    expect(by("summary")).toMatchObject({ hidden: false, title: "Summary", may: { hide: false, rename: false } });
+    expect([doc.complete, doc.total]).toEqual([2, 4]);
+    const facts = by("facts") as FactsModel & { findings: string[] };
+    expect(facts.facts.map((f) => f.key)).toContain("technical.hosting");
+    expect(facts.addable).not.toContain("technical.hosting");
+    // A required column cannot be hidden.
+    const t = table(doc);
+    expect(t.columns.map((c) => c.key)).toEqual(["direction", "protocol", "payload", "flow.frequency"]);
+    expect(t.hiddenColumns.map((c) => c.key)).toEqual(["interaction.pattern"]);
+    expect(t.rows[0]!.cells["flow.frequency"]!.applicable).toBe(true);
+  });
+
+  it("add sections in a region from its palette, and report the ones that do not fit", () => {
+    const doc = projectDocument(withContext(), metamodel, hld, {
+      ...context,
+      layout: {
+        regions: {
+          additional: [
+            { key: "additional1", title: "Security", component: "prose" },
+            { key: "additional2", title: "Bad", component: "facts", config: { properties: ["nope"] } },
+            { key: "summary", title: "Clash", component: "prose" },
+          ],
+        },
+      },
+      additional1: { paragraphs: [["Single sign-on."]] },
+    });
+    const region = doc.blocks.find((b) => b.kind === "region");
+    expect(region?.kind === "region" && region.region.sections.map((s) => [s.title, s.may.hide, s.may.rename])).toEqual(
+      [["Security", true, true]],
+    );
+    expect(doc.sections.map((s) => s.definition.key)).toContain("additional1");
+    expect(doc.findings).toEqual(
+      expect.arrayContaining([
+        'Additional sections, section "Bad" uses unknown property "nope"',
+        'Additional sections, section "Clash" cannot be added here',
+      ]),
+    );
+  });
+
+  it("repeat a block per table row, with the row's facts, sequence and prose", () => {
+    const state = withContext();
+    const definition = {
+      ...context,
+      details: { rows: { "R-08": { errors: { paragraphs: [["Retry three times."]] } } } },
+    };
+    const doc = projectDocument(state, metamodel, spec, definition);
+    const details = doc.sections.find((s) => s.definition.key === "details") as RepeaterModel & {
+      findings: string[];
+    };
+    expect(details.rows.map((r) => r.counterpart?.name)).toEqual(["Payments Hub"]);
+    const [facts, sequence, errors] = details.rows[0]!.sections;
+    expect(facts).toMatchObject({ component: "facts", target: { kind: "relationship" } });
+    expect((facts as FactsModel).facts.map((f) => f.key)).toEqual(["flow.protocol", "flow.frequency"]);
+    // R-08 is a flow, not an interaction: no sequence.
+    expect(sequence).toMatchObject({ component: "sequenceLink", interaction: null });
+    expect(errors).toMatchObject({ component: "prose", empty: false, path: ["details", "rows", "R-08", "errors"] });
+    expect(details.findings).toEqual([]);
+    const empty = projectDocument(state, metamodel, spec, context).sections.find((s) => s.definition.key === "details");
+    expect(empty?.findings).toEqual(["Integration details, Payments Hub: Error handling is empty"]);
+  });
+
+  it("write a row's state through its repeater's key", () => {
+    const definition = { details: { rows: { "R-1": { errors: { paragraphs: [] } } }, other: 1 } };
+    const path = ["details", "rows", "R-2", "notes"];
+    const { key, value } = withStateAt(definition, path, { paragraphs: [["x"]] });
+    expect(key).toBe("details");
+    expect(stateAt({ details: value }, path)).toEqual({ paragraphs: [["x"]] });
+    expect(stateAt({ details: value }, ["details", "rows", "R-1", "errors"])).toEqual({ paragraphs: [] });
+    expect(withStateAt(definition, ["summary"], null)).toEqual({ key: "summary", value: null });
   });
 });
 

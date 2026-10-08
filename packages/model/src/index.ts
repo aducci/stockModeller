@@ -7,3 +7,4 @@ export * from "./ids";
 export * from "./semantics";
 export * from "./notation";
 export * from "./views";
+export * from "./templates";

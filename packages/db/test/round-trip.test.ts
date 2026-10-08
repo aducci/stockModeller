@@ -84,6 +84,7 @@ describeDb("engine + database", () => {
     expect(metamodel.version).toBe(pkg.version);
     expect(metamodel.layers).toEqual(pkg.layers);
     expect(metamodel.exchangeMappings).toEqual(pkg.exchangeMappings);
+    expect(metamodel.documentPatterns).toEqual(pkg.documentPatterns);
     expect(sortByKey(metamodel.objectTypes)).toEqual(sortByKey(pkg.objectTypes));
     expect(sortByKey(metamodel.relationshipTypes)).toEqual(sortByKey(pkg.relationshipTypes));
     expect(sortByKey(metamodel.propertyTypes)).toEqual(sortByKey(pkg.propertyTypes));

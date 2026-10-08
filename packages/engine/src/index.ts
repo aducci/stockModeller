@@ -1,6 +1,7 @@
 export { applyChange, invertLog, type ApplyContext, type ApplyResult } from "./apply";
 export {
   Metamodel,
+  checkSection,
   MetamodelError,
   type CompiledRule,
   type ResolvedDiagramType,
