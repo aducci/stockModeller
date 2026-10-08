@@ -30,9 +30,11 @@ describe("relationship groups", () => {
     expect(
       groups.map((g) => [g.label, g.rows.map((r) => `${r.verb} ${r.arrow} ${state.objects.get(r.other)!.name}`)]),
     ).toEqual([
-      ["What this implements", ["realizes → Claim Intake"]],
+      ["What this implements", ["realizes → Claim Intake", "realizes → Claims API"]],
       ["Consumers", ["serves → Handle Claim"]],
-      ["Performed by", ["is hosted on → SRV-APP-01"]],
+      ["Performed by", ["is hosted on → SRV-APP-01", "is owned by ← Claims department"]],
+      ["Information used", ["accesses → Claim"]],
+      ["Interacts with", ["calls → Payments API"]],
       ["Downstream", ["flows to → Payments Hub"]],
       ["Upstream", ["receives from ← Legacy CRM"]],
     ]);
@@ -91,7 +93,7 @@ describe("payloads and messages", () => {
       scenarioId: insuranceGroup.baselineScenarioId,
       edits: [
         { edit: "createObject", id: "D-PAY", type: "dataObject", name: "Payment Information", folderId: "F04" },
-        { edit: "createObject", id: "I-API", type: "interface", name: "Payments API", folderId: "F04" },
+        { edit: "createObject", id: "I-API", type: "interface", name: "Quotes API", folderId: "F04" },
         { edit: "createRelationship", id: "C1", type: "calls", sourceId: "O-APP-1", targetId: "I-API" },
         {
           edit: "createRelationship",
@@ -121,18 +123,24 @@ describe("payloads and messages", () => {
       label: "Carry Payment Information",
       edits: [{ edit: "setPayload", id: "R-09", payload: ["D-PAY"] }],
     });
-    expect(payloadChoices(local, metamodel, local.relationships.get("R-09")!)[0]!.name).toBe("Payment Information");
+    // Information first (the example's Claim and Payment, then this one), by name.
+    expect(
+      payloadChoices(local, metamodel, local.relationships.get("R-09")!)
+        .slice(0, 3)
+        .map((o) => o.name),
+    ).toEqual(["Claim", "Payment", "Payment Information"]);
   });
 
   it("lists an interaction's messages under it, with requests and responses", () => {
     const calls = relationshipGroups(local, metamodel, "O-APP-1").find((g) => g.kind === "interaction")!;
-    expect(calls.rows.map((r) => r.relationship.id)).toEqual(["C1"]);
+    expect(calls.rows.map((r) => r.relationship.id)).toEqual(["R-16", "C1"]);
     expect(
       relationshipGroups(local, metamodel, "O-APP-1").flatMap((g) => g.rows.map((r) => r.relationship.id)),
     ).not.toContain("M1");
+    expect(messagesOf(local, local.relationships.get("R-16")!).map((m) => m.role)).toEqual(["request", "response"]);
     expect(messagesOf(local, local.relationships.get("C1")!).map((m) => m.role)).toEqual(["request"]);
     expect(messagePlan(local, metamodel, "C1", "response", "M2")).toEqual({
-      label: "Add a response from Payments API to Claims Manager",
+      label: "Add a response from Quotes API to Claims Manager",
       edits: [
         {
           edit: "createRelationship",
@@ -151,7 +159,7 @@ describe("explorer groups", () => {
   it("leaves containment to the tree and groups the rest by meaning", () => {
     expect(explorerGroups(state, metamodel, "O-CAP-1")).toEqual([]);
     expect(explorerGroups(state, metamodel, "O-CAP-2").map((g) => g.label)).toEqual(["Implementations"]);
-    expect(explorerGroups(state, metamodel, "O-APP-1", new Set(["R-05"])).map((g) => g.label)).not.toContain(
+    expect(explorerGroups(state, metamodel, "O-APP-1", new Set(["R-05", "R-14"])).map((g) => g.label)).not.toContain(
       "What this implements",
     );
   });

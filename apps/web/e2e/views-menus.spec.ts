@@ -72,3 +72,31 @@ test("creates views of every kind from one dialog and from an element's New menu
   await deleteDiagram(page, "Payments Hub context diagram");
   await deleteDiagram(page, "Legacy CRM high-level design");
 });
+
+test("the example repository has a view of every kind to start from", async ({ page }) => {
+  await signIn(page);
+  const open = async (name: string) => {
+    await explorer(page).getByLabel("Filter the explorer").fill(name);
+    await row(page, name).dblclick();
+  };
+
+  await open("Claims Manager high-level design");
+  await expect(page.getByRole("button", { name: /sections complete/ })).toHaveText("5 of 5 sections complete");
+  await page
+    .getByRole("region", { name: "Integrations", exact: true })
+    .getByRole("button", { name: "Open the sequence with Payments API" })
+    .click();
+  await expect(page.getByRole("tab", { name: /Pay a claim/ })).toBeVisible();
+
+  await open("Pay a claim");
+  await page.getByLabel("Steps table").check();
+  await expect(page.getByRole("table", { name: "Steps" }).locator("tbody tr")).toHaveCount(2);
+  const view = properties(page).locator('[data-section="diagram:view"]');
+  await expect(view).toContainText("Sequence");
+  await expect(view.getByRole("button", { name: /Claims Manager high-level design/ })).toBeVisible();
+  await expect(view.getByRole("button", { name: /Payments API integration specification/ })).toBeVisible();
+
+  await open("Capability × application matrix");
+  await expect(properties(page).locator('[data-section="diagram:view"]')).toContainText("Matrix");
+  await explorer(page).getByLabel("Filter the explorer").fill("");
+});

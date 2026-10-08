@@ -31,7 +31,14 @@ export function NewDiagramDialog({ folderId, onDone }: { folderId: Id | null; on
     [state],
   );
   const [typeKey, setTypeKey] = useState(types[0]?.definition.key ?? "");
-  const [folder, setFolder] = useState<Id>(folderId ?? folders[0]?.id ?? "");
+  // With nothing selected, the folder that already holds the most diagrams.
+  const [folder, setFolder] = useState<Id>(
+    () =>
+      folderId ??
+      [...folders].sort((a, b) => state.diagrams.count("byFolder", b.id) - state.diagrams.count("byFolder", a.id))[0]
+        ?.id ??
+      "",
+  );
   const [name, setName] = useState("");
   const [subjectId, setSubjectId] = useState<Id>("");
   const [around, setAround] = useState<Id>("");

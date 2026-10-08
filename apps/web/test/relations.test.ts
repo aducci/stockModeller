@@ -18,7 +18,7 @@ describe("the Relations window's views", () => {
   it("filters relationships by meaning on the other object's name, its type, the verb or the group", () => {
     const rows = (filter: string) =>
       meaningGroups(state, metamodel, "O-APP-1", filter).flatMap((g) => g.rows.map((r) => name(r.other)));
-    expect(rows("payments")).toEqual(["Payments Hub"]);
+    expect(rows("payments")).toEqual(["Payments API", "Payments Hub"]);
     expect(rows("SERVES")).toEqual(["Handle Claim"]);
     expect(rows("upstream")).toEqual(["Legacy CRM"]);
     expect(rows("zzz")).toEqual([]);

@@ -35,7 +35,7 @@ describeDb("metamodel administration", () => {
     expect(res.body).toMatchObject({ preview: true, version: "1.4.1" });
     const refused = (res.body as { newlyRefused: { relationshipType: string; count: number }[] }).newlyRefused;
     expect(refused.every((c) => c.relationshipType === "flowsTo")).toBe(true);
-    expect(refused.reduce((n, c) => n + c.count, 0)).toBe(3);
+    expect(refused.reduce((n, c) => n + c.count, 0)).toBe(6); // three flows and three messages
     expect((await snapshot()).metamodel.package.version).toBe(version);
   });
 
@@ -73,7 +73,7 @@ describeDb("metamodel administration", () => {
     expect(after.metamodel.package.version).toBe("1.4.1");
     expect(after.metamodel.package.relationshipRules!.some((r) => r.relationshipType === "flowsTo")).toBe(false);
     // Existing flows stay; a new one is refused by the published rules.
-    expect(after.rows.relationships.filter((r) => r.type === "flowsTo")).toHaveLength(3);
+    expect(after.rows.relationships.filter((r) => r.type === "flowsTo")).toHaveLength(6);
     const flow = await api.post(`/repositories/${REPO}/changes`, {
       id: "C-NEW-FLOW",
       label: "New flow",

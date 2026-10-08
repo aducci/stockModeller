@@ -26,7 +26,7 @@ test("draws an interaction as a sequence: request, response, a step moved, kept 
   await page.getByRole("menubar").getByRole("menuitem", { name: "File" }).click();
   await menuItem(page, "New object").click();
   await explorer(page).getByLabel("Object type").selectOption({ label: "Interface" });
-  await explorer(page).getByLabel("New object name").fill("Claims API");
+  await explorer(page).getByLabel("New object name").fill("Intake API");
   await explorer(page).getByLabel("New object name").press("Enter");
   await saved(page);
 
@@ -38,7 +38,7 @@ test("draws an interaction as a sequence: request, response, a step moved, kept 
   await page.getByRole("dialog", { name: "New diagram" }).getByLabel("Diagram name").press("Enter");
 
   await page.getByLabel("Add lifeline").selectOption({ label: "Claims Manager" });
-  await page.getByLabel("Add lifeline").selectOption({ label: "Claims API" });
+  await page.getByLabel("Add lifeline").selectOption({ label: "Intake API" });
   const sequence = page.getByRole("img", { name: "Register a claim" });
   await expect(sequence.locator("[data-lifeline]")).toHaveCount(2);
 
@@ -46,7 +46,7 @@ test("draws an interaction as a sequence: request, response, a step moved, kept 
   await page.getByRole("button", { name: "Add message" }).click();
   const form = page.getByRole("dialog", { name: "New message" });
   await form.getByLabel("Message name").fill("POST /claims");
-  await form.getByRole("button", { name: "New interaction: Claims Manager calls Claims API" }).click();
+  await form.getByRole("button", { name: "New interaction: Claims Manager calls Intake API" }).click();
   await expect(sequence.getByRole("button", { name: "Message 1. POST /claims" })).toBeVisible();
 
   // The response comes back under it, dashed.
@@ -74,8 +74,8 @@ test("draws an interaction as a sequence: request, response, a step moved, kept 
   await expect(page.getByRole("img", { name: "Register a claim" }).locator(".seq-activation")).toHaveCount(1);
 
   // Deleting the interface deletes the interaction and its messages; the lifeline goes with it.
-  await explorer(page).getByLabel("Filter the explorer").fill("Claims API");
-  await row(page, "Claims API").click({ button: "right" });
+  await explorer(page).getByLabel("Filter the explorer").fill("Intake API");
+  await row(page, "Intake API").click({ button: "right" });
   await menuItem(page, /^Delete object/).click();
   await page.getByRole("dialog").getByRole("button", { name: "Delete object" }).click();
   await expect(steps(page)).toHaveCount(0);

@@ -34,8 +34,8 @@ describe("explorer menu helpers", () => {
   });
 
   it("lets only an empty folder be deleted, and says why otherwise", () => {
-    expect(folderContents(state, "F01").sort()).toEqual(["Capabilities", "Processes"]);
-    expect(whyFolderNotDeletable(state, "F01")).toBe("Not empty: holds 2 items");
+    expect(folderContents(state, "F01").sort()).toEqual(["Capabilities", "Claims department", "Processes"]);
+    expect(whyFolderNotDeletable(state, "F01")).toBe("Not empty: holds 3 items");
     expect(whyFolderNotDeletable(state, "F07")).toBeNull();
   });
 
