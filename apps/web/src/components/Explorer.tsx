@@ -22,7 +22,7 @@ import { byName } from "../text";
 import { explorerGroups, payloadText, type RelationshipGroup } from "../semantics";
 import { folderChain, targetFolder } from "../explorer";
 import { notationFor } from "../notation";
-import { KIND_GLYPH, viewKind } from "../views";
+import { viewKind } from "../views";
 import { NewDiagramDialog } from "./NewDiagramDialog";
 import {
   childrenOf,
@@ -44,8 +44,19 @@ import {
 import { DRAG_OBJECT } from "./DiagramEditor";
 import { FindOrCreate } from "./FindOrCreate";
 import { Glyph } from "./Glyph";
+import { FolderIcon, ViewIcon } from "./ExplorerIcon";
 import { ContextMenu, type MenuEntry } from "./Menu";
-import { backgroundMenu, deleteItem, itemMenu, marksMenu, memberMenu, openItem, renameItem, runPlan } from "./commands";
+import {
+  backgroundMenu,
+  deleteItem,
+  itemMenu,
+  marksMenu,
+  memberMenu,
+  moveItem,
+  openItem,
+  renameItem,
+  runPlan,
+} from "./commands";
 
 /** Marks a drag that started in the explorer (folders and diagrams carry nothing else). */
 const DRAG_EXPLORER = "application/x-connectome-explorer";
@@ -53,6 +64,10 @@ const DRAG_EXPLORER = "application/x-connectome-explorer";
 let dragging: Drag | null = null;
 /** Hovering this long over a closed folder or container while dragging opens it. */
 const OPEN_AFTER_MS = 600;
+/** Each level of the tree is indented this much; the disclosure triangle takes TWISTY of a row's width. */
+const INDENT = 12;
+const TWISTY = 12;
+const indent = (depth: number) => 4 + depth * INDENT;
 
 interface OpenMenu {
   x: number;
@@ -199,7 +214,7 @@ function Children({ parent, depth }: { parent: Parent; depth: number }) {
             <Row
               item={{ kind: "diagram", id: c.id }}
               depth={depth}
-              icon={KIND_GLYPH[viewKind(state, metamodel, c.id)]}
+              icon={<ViewIcon kind={viewKind(state, metamodel, c.id)} />}
               label={c.name}
             />
           </li>
@@ -237,7 +252,8 @@ function FolderNode({ id, depth }: { id: Id; depth: number }) {
       <Row
         item={{ kind: "folder", id }}
         depth={depth}
-        icon={empty ? "📁" : open ? "▾ 📁" : "▸ 📁"}
+        icon={<FolderIcon />}
+        expanded={empty ? undefined : open}
         label={folder.name}
         onToggle={() => setOpen(!open)}
         onExpand={() => setOpen(true)}
@@ -264,20 +280,13 @@ function ObjectNode({ id, depth }: { id: Id; depth: number }) {
   const object = state.objects.get(id);
   if (!object) return null;
   const hasChildren = contents.length + members.length + meaning.length > 0;
-  const shape = <ObjectGlyph type={object.type} group={group} />;
-  const icon = !hasChildren ? (
-    shape
-  ) : (
-    <>
-      {open ? "▾" : "▸"} {shape}
-    </>
-  );
   return (
     <li role="treeitem" aria-expanded={hasChildren ? open : undefined}>
       <Row
         item={{ kind: "object", id }}
         depth={depth}
-        icon={icon}
+        icon={<ObjectGlyph type={object.type} group={group} />}
+        expanded={hasChildren ? open : undefined}
         label={object.name}
         onToggle={() => setOpen(!open)}
         onExpand={() => setOpen(true)}
@@ -292,7 +301,8 @@ function ObjectNode({ id, depth }: { id: Id; depth: number }) {
                 depth={depth + 1}
                 icon={
                   <>
-                    ↗ <ObjectGlyph type={member.type} />
+                    <span className="ref-mark">↗</span>
+                    <ObjectGlyph type={member.type} />
                   </>
                 }
                 label={member.name}
@@ -319,7 +329,7 @@ function MeaningGroup({ group, depth }: { group: RelationshipGroup; depth: numbe
   const [open, setOpen] = useState(false);
   return (
     <li role="treeitem" aria-expanded={open} className="meaning" data-kind={group.kind}>
-      <button className="group-row" style={{ paddingLeft: 8 + depth * 14 }} onClick={() => setOpen(!open)}>
+      <button className="group-row" style={{ paddingLeft: indent(depth) }} onClick={() => setOpen(!open)}>
         {open ? "▾" : "▸"} ⋯ {group.label} ({group.rows.length})
       </button>
       {open && (
@@ -328,7 +338,7 @@ function MeaningGroup({ group, depth }: { group: RelationshipGroup; depth: numbe
             <li key={relationship.id} role="treeitem">
               <button
                 className="ref-row"
-                style={{ paddingLeft: 8 + (depth + 1) * 14 }}
+                style={{ paddingLeft: indent(depth + 1) + TWISTY }}
                 onClick={() => select({ kind: "object", id: other })}
               >
                 ↗ {state.objects.get(other)?.name ?? other}
@@ -374,9 +384,9 @@ function FilterResults({ query }: { query: string }) {
               r.kind === "object" ? (
                 <ObjectGlyph type={r.type} />
               ) : r.kind === "folder" ? (
-                "📁"
+                <FolderIcon />
               ) : (
-                KIND_GLYPH[viewKind(state, metamodel, r.id)]
+                <ViewIcon kind={viewKind(state, metamodel, r.id)} />
               )
             }
             label={r.name}
@@ -391,6 +401,8 @@ function Row(props: {
   item: Selection;
   depth: number;
   icon: ReactNode;
+  /** Open or closed when the row has children; undefined for a leaf. */
+  expanded?: boolean;
   label: string;
   onToggle?: () => void;
   /** Opens a closed folder or container (hovering over it while dragging). */
@@ -398,7 +410,7 @@ function Row(props: {
   /** A group member's reference row: the `groups` relationship it shows. */
   memberOf?: Id;
 }) {
-  const { item, depth, icon, label, onToggle, onExpand, memberOf } = props;
+  const { item, depth, icon, expanded, label, onToggle, onExpand, memberOf } = props;
   const { state, metamodel } = useModel();
   const { openMenu, setHint } = useContext(Context);
   const selected = useWorkbench((s) => s.selection?.id === item.id && !memberOf);
@@ -434,6 +446,15 @@ function Row(props: {
     });
   };
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if ((e.ctrlKey || e.metaKey) && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+      // Ctrl/⌘+↑/↓ moves the row among its siblings; the row keeps the focus wherever it lands.
+      e.preventDefault();
+      if (memberOf || !moveItem(state, metamodel, item, e.key === "ArrowUp" ? -1 : 1)) return;
+      requestAnimationFrame(() =>
+        document.querySelector<HTMLElement>(`.explorer .row[data-id="${item.id}"]:not(.member)`)?.focus(),
+      );
+      return;
+    }
     if (e.key === "Enter") openIt();
     else if (e.key === "F2" && !memberOf) renameItem(item);
     else if (e.key === "Delete") {
@@ -552,10 +573,11 @@ function Row(props: {
       className={`row${selected ? " selected" : ""}${marked ? " marked" : ""}${memberOf ? " member" : ""}${
         drop ? ` drop-${drop}` : ""
       }`}
-      style={{ paddingLeft: 8 + depth * 14 }}
+      style={{ paddingLeft: indent(depth) }}
       tabIndex={0}
       aria-selected={selected}
       data-kind={item.kind}
+      data-id={item.id}
       title={memberOf ? `${label}: stored in its own folder` : undefined}
       draggable
       onDragStart={onDragStart}
@@ -588,15 +610,18 @@ function Row(props: {
       }}
     >
       <span
-        className="icon"
+        className="twisty"
         aria-hidden
         onClick={(e) => {
-          // Objects open on double-click, so their contents toggle from the icon.
-          if (item.kind !== "object" || !onToggle) return;
+          // Objects open on double-click, so their contents toggle from the triangle.
+          if (expanded === undefined || !onToggle) return;
           e.stopPropagation();
           onToggle();
         }}
       >
+        {expanded === undefined ? "" : expanded ? "▾" : "▸"}
+      </span>
+      <span className="icon" aria-hidden>
         {icon}
       </span>
       <span className="label">{label}</span>
@@ -639,7 +664,8 @@ function RenameBox({ item, depth, icon, name }: { item: Selection; depth: number
     done();
   };
   return (
-    <div className="row renaming" style={{ paddingLeft: 8 + depth * 14 }} data-kind={item.kind}>
+    <div className="row renaming" style={{ paddingLeft: indent(depth) }} data-kind={item.kind}>
+      <span className="twisty" aria-hidden />
       <span className="icon" aria-hidden>
         {icon}
       </span>

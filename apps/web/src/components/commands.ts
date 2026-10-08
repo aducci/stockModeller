@@ -3,10 +3,11 @@
 import type { Metamodel, ModelState, ObjectRow } from "@connectome/engine";
 import type { Edit, Id } from "@connectome/model";
 import { useAuth } from "../state/auth";
-import { DUPLICATES_TAB, itemSelected, useWorkbench, type Selection } from "../state/workbench";
+import { DUPLICATES_TAB, METAMODEL_TAB, itemSelected, useWorkbench, type Selection } from "../state/workbench";
+import { exportMetamodel, importAsDraft, metamodelFileName, readMetamodel } from "../type-admin";
 import { navigate } from "../route";
 import { itemName, targetFolder, whyFolderNotDeletable } from "../explorer";
-import { addToGroupPlan, isGroup, removeFromGroupPlan, type Plan } from "../dragdrop";
+import { addToGroupPlan, childrenOf, dropPlan, isGroup, parentOf, removeFromGroupPlan, type Plan } from "../dragdrop";
 import { byName } from "../text";
 import { newDocumentPlan, templatesFor } from "../document";
 import { interactionPartners } from "../sequence";
@@ -17,16 +18,22 @@ const store = () => useWorkbench.getState();
 const NO_FOLDER = "Select a folder, or an item in one, first";
 
 /** New items go into the selected folder or the selected item's folder; a new folder goes at the top level when
- * nothing is selected. */
-function newItems(folderId: string | null): MenuEntry[] {
+ * nothing is selected. Under a "New" submenu the items drop the word (`short`). */
+function newItems(folderId: string | null, short = false): MenuEntry[] {
   const create = (what: "folder" | "object" | "diagram" | "group") => () =>
     store().setExplorerTask({ kind: "create", what, folderId });
+  const label = (what: string) => (short ? what : `New ${what.toLowerCase()}`);
   return [
-    { label: "New folder", run: create("folder") },
-    { label: "New object", disabled: folderId ? null : NO_FOLDER, run: create("object") },
-    { label: "New diagram", run: create("diagram") },
-    { label: "New group", disabled: folderId ? null : NO_FOLDER, run: create("group") },
+    { label: label("Object"), disabled: folderId ? null : NO_FOLDER, run: create("object") },
+    { label: label("Diagram"), run: create("diagram") },
+    { label: label("Folder"), run: create("folder") },
+    { label: label("Group"), disabled: folderId ? null : NO_FOLDER, run: create("group") },
   ];
+}
+
+/** Opens a folder's object viewer: everything stored in it and its subfolders, as an editable list. */
+export function openObjectViewer(folderId: Id) {
+  store().openTab({ kind: "objects", id: `objects:${folderId}`, folderId });
 }
 
 /** Opens an object page or a diagram tab. */
@@ -57,6 +64,18 @@ export function deleteItem(state: ModelState, item: Selection) {
     closeTab(diagram.id);
     select(null);
   }
+}
+
+/** Moves an item one place up (-1) or down (1) among its siblings, as dragging it there would. */
+export function moveItem(state: ModelState, metamodel: Metamodel, item: Selection, by: -1 | 1): boolean {
+  const parent = parentOf(state, metamodel, item);
+  if (!parent) return false;
+  const siblings = childrenOf(state, metamodel, parent);
+  const neighbour = siblings[siblings.findIndex((s) => s.id === item.id) + by];
+  if (!neighbour) return false;
+  const plan = dropPlan(state, metamodel, { items: [item] }, neighbour, by < 0 ? "before" : "after");
+  runPlan(plan);
+  return !("error" in plan);
 }
 
 /** Runs a plan as one change, or says why it cannot run. */
@@ -123,15 +142,19 @@ function viewItems(state: ModelState, metamodel: Metamodel, object: ObjectRow): 
 export function itemMenu(state: ModelState, metamodel: Metamodel, item: Selection): MenuEntry[] {
   const folderId = targetFolder(state, item);
   const open: MenuEntry[] =
-    item.kind === "folder" ? [] : [{ label: "Open", shortcut: "Enter", run: () => openItem(item) }, "separator"];
+    item.kind === "folder"
+      ? [{ label: "Object viewer", run: () => openObjectViewer(item.id) }, "separator"]
+      : [{ label: "Open", shortcut: "Enter", run: () => openItem(item) }, "separator"];
   const group = item.kind === "object" && isGroup(state, metamodel, item.id);
   const deleteLabel = { folder: "Delete folder", object: "Delete object…", diagram: "Delete diagram" }[item.kind];
   const object = item.kind === "object" ? state.objects.get(item.id) : undefined;
   return [
     ...open,
-    { label: "New", submenu: [...newItems(folderId), ...(object ? viewItems(state, metamodel, object) : [])] },
+    { label: "New", submenu: [...newItems(folderId, true), ...(object ? viewItems(state, metamodel, object) : [])] },
     "separator",
     { label: "Rename", shortcut: "F2", run: () => renameItem(item) },
+    { label: "Move up", shortcut: "Ctrl+↑", run: () => moveItem(state, metamodel, item, -1) },
+    { label: "Move down", shortcut: "Ctrl+↓", run: () => moveItem(state, metamodel, item, 1) },
     ...(item.kind === "object" ? [addToGroupMenu(state, metamodel, [item.id])] : []),
     ...(group && object
       ? [
@@ -225,10 +248,12 @@ export function fileMenu(state: ModelState): MenuEntry[] {
   ];
 }
 
-/** The Metamodel menu (design/02-model/notation-and-metamodel-admin.md §10): each item opens the metamodel tab. */
+/** The Metamodel menu (design/02-model/notation-and-metamodel-admin.md §10): the views, the draft (review and publish,
+ * discard) and the metamodel as a file (export, import as a draft). */
 export function metamodelMenu(): MenuEntry[] {
   const open = (view: Parameters<ReturnType<typeof store>["openMetamodel"]>[0]) => () => store().openMetamodel(view);
   const pending = store().metamodelDraft;
+  const none = "There are no unpublished changes";
   return [
     { label: "Types", run: open("types") },
     { label: "Diagram types", run: open("diagramTypes") },
@@ -238,11 +263,64 @@ export function metamodelMenu(): MenuEntry[] {
     { label: "Try a connection", run: open("try") },
     "separator",
     {
+      label: "Review and publish…",
+      disabled: pending ? null : none,
+      run: () => {
+        if (!store().metamodelDraft) return;
+        store().openTab({ kind: "metamodel", id: METAMODEL_TAB });
+        store().setMetamodelReview(true);
+      },
+    },
+    {
       label: "Discard unpublished changes",
-      disabled: pending ? null : "There are no unpublished changes",
+      disabled: pending ? null : none,
       run: () => store().setMetamodelDraft(null),
     },
+    "separator",
+    { label: "Export metamodel", run: exportMetamodelFile },
+    { label: "Import metamodel…", run: importMetamodelFile },
   ];
+}
+
+/** Saves the metamodel as a file: the draft when there is one, else the published version. */
+function exportMetamodelFile() {
+  const session = store().session;
+  if (!session) return;
+  const published = session.store.metamodelPackage;
+  const draft = store().metamodelDraft ?? { package: published.package, diagramTypes: published.diagramTypes };
+  const blob = new Blob([exportMetamodel(draft)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = metamodelFileName(draft.package.name, published.package.version);
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/** Loads a metamodel file as unpublished changes, to review and publish like any other. */
+function importMetamodelFile() {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".json,application/json";
+  input.hidden = true;
+  input.setAttribute("aria-label", "Metamodel file");
+  input.addEventListener("change", async () => {
+    const file = input.files?.[0];
+    input.remove();
+    const session = store().session;
+    if (!file || !session) return;
+    const version = session.store.metamodelPackage.package.version;
+    try {
+      const imported = importAsDraft(readMetamodel(await file.text()), version);
+      store().setMetamodelDraft({ baseVersion: store().metamodelDraft?.baseVersion ?? version, ...imported });
+      store().openMetamodel("types");
+      store().notify("Metamodel imported as unpublished changes: review and publish it to use it");
+    } catch (e) {
+      store().notify(`Cannot import ${file.name}: ${e instanceof Error ? e.message : String(e)}`, "error");
+    }
+  });
+  document.body.append(input);
+  input.click();
 }
 
 /** The Review menu: reports over the whole repository. */

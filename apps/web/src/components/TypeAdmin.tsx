@@ -1,15 +1,11 @@
 // Making types from scratch in the metamodel tab: a new object, relationship or diagram type, the general settings
 // of object and relationship types (name, parent, meaning), removing unused ones, and the metamodel as a file.
-import { useRef, useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import type { Metamodel } from "@connectome/engine";
 import { SEMANTIC_CATEGORIES, SEMANTIC_KINDS, SEMANTIC_LEVELS, type TypeKey } from "@connectome/model";
 import type { Draft } from "../property-admin";
-import { typeTree } from "../metamodel-admin";
+import { setRule, typeLabel, typeTree, type Rule } from "../metamodel-admin";
 import {
-  exportMetamodel,
-  importAsDraft,
-  metamodelFileName,
-  readMetamodel,
   removeObjectType,
   removeRelationshipType,
   updateObjectType,
@@ -60,6 +56,43 @@ export function NewTypeButton(props: {
 }
 
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/** A "?" beside a setting: hovering shows the explanation, clicking keeps it open under the setting. */
+export function HelpTip({ about, children }: { about: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        className="help-tip"
+        aria-label={`About ${about}`}
+        aria-expanded={open}
+        title={typeof children === "string" ? children : undefined}
+        onClick={(e) => {
+          e.preventDefault();
+          setOpen(!open);
+        }}
+      >
+        ?
+      </button>
+      {open && (
+        <span className="help-text" role="note">
+          {children}
+        </span>
+      )}
+    </>
+  );
+}
+
+const LEVEL_HELP =
+  "How concrete the type's objects are. Conceptual: what, in business terms (Payment service). Logical: how, " +
+  "independent of technology (Payment API). Physical: the concrete technical form (GET /payments/{id}). " +
+  "Implementation: the deployed, running thing (payments-service in production). New objects start at this level; " +
+  "names may repeat across levels, and the trace view orders by level. Nothing is refused because of a level.";
+const ABSTRACT_HELP =
+  "An abstract type only groups its subtypes: nobody can create an object of it, but rules, properties and " +
+  "diagram types set on it apply to every subtype. Use it for a family such as Application, with Business " +
+  "application and Integration platform below it.";
 
 /** Name, parent, meaning and level of an object type; removing it while nothing uses it. */
 export function ObjectTypeGeneral(props: {
@@ -125,7 +158,9 @@ export function ObjectTypeGeneral(props: {
         </select>
       </label>
       <label className="field">
-        <span>Level</span>
+        <span>
+          Level <HelpTip about="levels">{LEVEL_HELP}</HelpTip>
+        </span>
         <select
           aria-label="Level"
           value={definition.level ?? ""}
@@ -148,6 +183,7 @@ export function ObjectTypeGeneral(props: {
           onChange={(e) => set({ abstract: e.target.checked || undefined })}
         />
         Abstract: only its subtypes can be created
+        <HelpTip about="abstract types">{ABSTRACT_HELP}</HelpTip>
       </label>
       <div className="mm-general-actions">
         <span className="muted mono small">{type}</span>
@@ -229,7 +265,8 @@ export function RelationshipTypeGeneral(props: {
         </select>
       </label>
       <p className="muted small">
-        Nothing can be connected with it until a rule allows it: tick it in the Connection matrix.
+        Nothing can be connected with it until a rule allows it: add one under Rules, or tick it in the Connection
+        matrix.
       </p>
       <div className="mm-general-actions">
         <span className="muted mono small">{type}</span>
@@ -250,58 +287,82 @@ export function RelationshipTypeGeneral(props: {
   );
 }
 
-/** Export the published metamodel (or the draft, when there is one) to a file; import one as the draft. */
-export function MetamodelFileButtons(props: {
+/**
+ * The rules naming one relationship type (notation-and-metamodel-admin.md §10.6): from which type to which it may
+ * connect, whether a broken rule blocks or only warns, and a row to add another. The connection matrix and the rule
+ * sentences edit the same rules.
+ */
+export function RelationshipTypeRules(props: {
+  type: TypeKey;
   draft: Draft;
-  hasDraft: boolean;
-  publishedVersion: string;
-  onImport(draft: Draft): void;
-  onError(message: string): void;
+  metamodel: Metamodel;
+  onChange(draft: Draft): void;
 }) {
-  const input = useRef<HTMLInputElement>(null);
-  const download = () => {
-    const blob = new Blob([exportMetamodel(props.draft)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = metamodelFileName(props.draft.package.name, props.publishedVersion);
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-  const load = async (file: File) => {
-    try {
-      props.onImport(importAsDraft(readMetamodel(await file.text()), props.publishedVersion));
-    } catch (e) {
-      props.onError(`Cannot import ${file.name}: ${e instanceof Error ? e.message : String(e)}`);
-    }
-  };
+  const { type, draft, metamodel, onChange } = props;
+  const rules = draft.package.relationshipRules ?? [];
+  const own = rules.filter((r) => r.relationshipType === type);
+  const types = typeTree(metamodel);
+  const [source, setSource] = useState<TypeKey>("*");
+  const [target, setTarget] = useState<TypeKey>("*");
+  const update = (next: Rule[]) => onChange({ ...draft, package: { ...draft.package, relationshipRules: next } });
+  const name = (key: TypeKey) => typeLabel(metamodel, key);
+  const exists = own.some((r) => r.sourceType === source && r.targetType === target);
+  const typeSelect = (label: string, value: TypeKey, set: (key: TypeKey) => void) => (
+    <select aria-label={label} value={value} onChange={(e) => set(e.target.value)}>
+      <option value="*">Any type</option>
+      {types.map(({ type: t, depth }) => (
+        <option key={t.definition.key} value={t.definition.key}>
+          {"\u00a0".repeat(depth * 2)}
+          {t.definition.name}
+        </option>
+      ))}
+    </select>
+  );
   return (
-    <span className="mm-file">
-      <button
-        onClick={download}
-        title={
-          props.hasDraft
-            ? "Save the metamodel with your unpublished changes as a file"
-            : "Save the metamodel as a file, to import into another repository"
-        }
-      >
-        Export
-      </button>
-      <button onClick={() => input.current?.click()} title="Load a metamodel file as unpublished changes to review">
-        Import…
-      </button>
-      <input
-        ref={input}
-        type="file"
-        accept=".json,application/json"
-        hidden
-        aria-label="Metamodel file"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          e.target.value = "";
-          if (file) void load(file);
-        }}
-      />
-    </span>
+    <section className="mm-general mm-type-rules" aria-label="Rules">
+      <h4>Rules</h4>
+      {own.length === 0 && <p className="muted small">No rules yet: nothing can be connected with this type.</p>}
+      <ul className="plain">
+        {own.map((r) => (
+          <li key={`${r.sourceType}->${r.targetType}`}>
+            <span>
+              {name(r.sourceType)} → {name(r.targetType)}
+            </span>
+            <button
+              className={`chip enforcement ${r.enforcement === "warn" ? "warn" : "block"}`}
+              title={
+                r.enforcement === "warn"
+                  ? "Allowed with a warning. Click to block"
+                  : "Refused when broken. Click to only warn"
+              }
+              onClick={() =>
+                update(setRule(rules, type, r.sourceType, r.targetType, r.enforcement === "warn" ? "block" : "warn"))
+              }
+            >
+              {r.enforcement === "warn" ? "warns" : "blocks"}
+            </button>
+            <button
+              className="link"
+              aria-label={`Remove the rule from ${name(r.sourceType)} to ${name(r.targetType)}`}
+              onClick={() => update(setRule(rules, type, r.sourceType, r.targetType, null))}
+            >
+              Remove
+            </button>
+          </li>
+        ))}
+      </ul>
+      <div className="mm-rule-add">
+        {typeSelect("Rule from", source, setSource)}
+        <span>→</span>
+        {typeSelect("Rule to", target, setTarget)}
+        <button
+          disabled={exists}
+          title={exists ? "This rule exists already" : undefined}
+          onClick={() => update(setRule(rules, type, source, target, "block"))}
+        >
+          Add rule
+        </button>
+      </div>
+    </section>
   );
 }
