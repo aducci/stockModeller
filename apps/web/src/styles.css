@@ -2967,3 +2967,66 @@ button.toggle .badge {
 .dup-list li > button.small {
   margin-top: 4px;
 }
+
+/* Repositories: new from a metamodel, delete (storage §7, "Starting over") */
+.repo-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.new-repository {
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.new-repository .choice {
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+.new-repository .choice label {
+  display: block;
+  padding: 2px 0;
+}
+.new-repository .actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Types from scratch in the metamodel tab */
+.mm-section-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mm-section-head h3 {
+  margin-right: auto;
+}
+.mm-new-type {
+  display: flex;
+  gap: 4px;
+}
+.mm-file {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+.mm-general {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.mm-general .check {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.mm-general-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

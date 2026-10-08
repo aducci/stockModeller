@@ -17,12 +17,28 @@ paths:
       responses:
         '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Repository' } } } } }
     post:
-      summary: Create a repository with the Essentials package and a baseline scenario
+      summary: Create a repository with a baseline scenario and a metamodel, the Essentials package unless one is sent (an exported metamodel, or an empty one to start from scratch). 422 when the metamodel fails its schema or does not compile
       requestBody:
         required: true
-        content: { application/json: { schema: { type: object, required: [name], properties: { id: { type: string }, name: { type: string }, description: { type: string } } } } }
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                id: { type: string }
+                name: { type: string }
+                description: { type: string }
+                metamodel:
+                  type: object
+                  required: [package, diagramTypes]
+                  description: The metamodel to start from, in the shape of the snapshot's metamodel and an exported metamodel file
+                  properties:
+                    package: { type: object, description: 'A package (05-structures/metamodel.schema.json); version 1.0.0 when it has none' }
+                    diagramTypes: { type: array, items: { type: object, description: 05-structures/diagram-type.schema.json } }
       responses:
         '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Repository' } } } }
+        '422': { $ref: '#/components/responses/Problem' }
 
   /repositories/{repo}:
     parameters: [ { $ref: '#/components/parameters/repo' } ]
@@ -37,6 +53,11 @@ paths:
                 allOf:
                   - { $ref: '#/components/schemas/Repository' }
                   - { type: object, properties: { scenarios: { type: array, items: { $ref: '#/components/schemas/Scenario' } } } }
+        '404': { $ref: '#/components/responses/Problem' }
+    delete:
+      summary: Delete a repository with its metamodel, scenarios, model, diagrams and change log. It cannot be undone
+      responses:
+        '204': { description: Deleted }
         '404': { $ref: '#/components/responses/Problem' }
 
   /repositories/{repo}/scenarios:

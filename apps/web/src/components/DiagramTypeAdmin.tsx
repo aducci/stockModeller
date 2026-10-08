@@ -29,6 +29,8 @@ import {
   updateDiagramType,
 } from "../diagram-type-admin";
 import { TypePropertiesPanel } from "./PropertyAdmin";
+import { newDiagramType, rootObjectTypes } from "../type-admin";
+import { NewTypeButton } from "./TypeAdmin";
 
 type Tab = "general" | "notation" | "matrix" | "sequence" | "template";
 const KIND_TAB: Record<ViewKind, { tab: Tab; label: string }> = {
@@ -53,6 +55,7 @@ export function DiagramTypesView({ draft, published, metamodel, onChange }: Prop
   const [picked, setPicked] = useState<TypeKey | null>(draft.diagramTypes[0]?.key ?? null);
   const [tab, setTab] = useState<Tab>("general");
   const type = draft.diagramTypes.find((t) => t.key === picked) ?? draft.diagramTypes[0];
+  const roots = rootObjectTypes(draft);
   const status = (key: TypeKey) =>
     changes.added.some((t) => t.key === key) ? "new" : changes.changed.some((t) => t.key === key) ? "changed" : null;
 
@@ -69,7 +72,22 @@ export function DiagramTypesView({ draft, published, metamodel, onChange }: Prop
   return (
     <div className="mm-diagram-types">
       <nav className="dt-list" aria-label="Diagram types">
-        <p className="muted small">New types start as a copy of one that works: select a type, then Duplicate.</p>
+        <NewTypeButton
+          label="New diagram type"
+          placeholder="Data flow map"
+          disabled={
+            roots.length === 0 ? "Create an object type first: a diagram type says which ones it shows" : undefined
+          }
+          onCreate={(name) => {
+            const made = newDiagramType(draft, name, roots);
+            onChange(made.draft);
+            pick(made.key);
+          }}
+        />
+        <p className="muted small">
+          A new type is a blank diagram showing every object type; choose what it shows below. Duplicate copies a type
+          that works, its template and matrix included.
+        </p>
         {KINDS.map((k) => {
           const ofKind = draft.diagramTypes.filter((t) => kindOf(t) === k.kind);
           if (ofKind.length === 0) return null;

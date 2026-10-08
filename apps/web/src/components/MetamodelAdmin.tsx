@@ -43,6 +43,14 @@ import { PropertiesView, TypePropertiesPanel } from "./PropertyAdmin";
 import { DiagramTypesView } from "./DiagramTypeAdmin";
 import { diagramTypeChanges, offTypeOccurrences, type DiagramTypeChanges } from "../diagram-type-admin";
 import { existingRepeats, identityChanges, type IdentityChange } from "../identity-admin";
+import {
+  countTypeChanges,
+  newObjectType,
+  newRelationshipType,
+  typeChanges as objectTypeChanges,
+  type TypeChanges,
+} from "../type-admin";
+import { MetamodelFileButtons, NewTypeButton, ObjectTypeGeneral, RelationshipTypeGeneral } from "./TypeAdmin";
 
 const VIEWS: { view: MetamodelView; label: string }[] = [
   { view: "types", label: "Types" },
@@ -83,12 +91,15 @@ export function MetamodelAdmin() {
   const combinations = useMemo(() => relationshipCombinations(state), [state]);
   const changes = useMemo(() => draftChanges(publishedDraft, draft), [publishedDraft, draft]);
   const typeChanges = useMemo(() => diagramTypeChanges(publishedDraft, draft), [publishedDraft, draft]);
+  const types = useMemo(() => objectTypeChanges(publishedDraft, draft), [publishedDraft, draft]);
+  const notify = useWorkbench((s) => s.notify);
   const identity = useMemo(
     () => identityChanges(store.metamodel, compiled.metamodel ?? store.metamodel),
     [store.metamodel, compiled.metamodel],
   );
   const pending =
     countDraftChanges(changes) +
+    countTypeChanges(types) +
     identity.length +
     typeChanges.added.length +
     typeChanges.removed.length +
@@ -107,6 +118,16 @@ export function MetamodelAdmin() {
             {version}
           </span>
         </h2>
+        <MetamodelFileButtons
+          draft={draft}
+          hasDraft={!!saved}
+          publishedVersion={version}
+          onImport={(imported) => {
+            update(imported);
+            notify("Metamodel imported as unpublished changes: review and publish it to use it");
+          }}
+          onError={notify}
+        />
         <div className="mm-views" role="tablist" aria-label="Metamodel views">
           {VIEWS.map((v) => (
             <button
@@ -175,6 +196,7 @@ export function MetamodelAdmin() {
           changes={changes}
           identity={identity}
           typeChanges={typeChanges}
+          types={types}
           onClose={() => setReviewing(false)}
         />
       )}
@@ -194,6 +216,7 @@ function TypesView(props: {
   const { metamodel, combinations, rules, draft, onChange } = props;
   const { state } = useModel();
   const [picked, setPicked] = useState<{ kind: CarrierKind; type: TypeKey } | null>(null);
+  const openMetamodel = useWorkbench((s) => s.openMetamodel);
   const objectsByType = new Map<string, number>();
   for (const o of state.objects.live()) objectsByType.set(o.type, (objectsByType.get(o.type) ?? 0) + 1);
   const relsByType = new Map<string, number>();
@@ -219,12 +242,43 @@ function TypesView(props: {
     },
   });
 
+  const general =
+    picked?.kind === "object" ? (
+      <ObjectTypeGeneral
+        type={picked.type}
+        draft={draft}
+        metamodel={metamodel}
+        objects={objectsByType.get(picked.type) ?? 0}
+        onChange={onChange}
+        onRemoved={() => setPicked(null)}
+      />
+    ) : picked?.kind === "relationship" ? (
+      <RelationshipTypeGeneral
+        type={picked.type}
+        draft={draft}
+        relationships={relsByType.get(picked.type) ?? 0}
+        onChange={onChange}
+        onRemoved={() => setPicked(null)}
+      />
+    ) : null;
+
   return (
     <div className={`mm-types${picked ? " with-panel" : ""}`}>
       <div className="mm-types-tables">
-        <p className="muted small">Select a type to see and change its properties.</p>
+        <p className="muted small">Select a type to see and change it. New types are published with the rest.</p>
         <section>
-          <h3>Object types</h3>
+          <div className="mm-section-head">
+            <h3>Object types</h3>
+            <NewTypeButton
+              label="New object type"
+              placeholder="Business service"
+              onCreate={(name) => {
+                const made = newObjectType(draft, name);
+                onChange(made.draft);
+                setPicked({ kind: "object", type: made.key });
+              }}
+            />
+          </div>
           <table className="mm-table selectable" aria-label="Object types">
             <thead>
               <tr>
@@ -260,7 +314,18 @@ function TypesView(props: {
           </table>
         </section>
         <section>
-          <h3>Relationship types</h3>
+          <div className="mm-section-head">
+            <h3>Relationship types</h3>
+            <NewTypeButton
+              label="New relationship type"
+              placeholder="Supports"
+              onCreate={(name) => {
+                const made = newRelationshipType(draft, name);
+                onChange(made.draft);
+                setPicked({ kind: "relationship", type: made.key });
+              }}
+            />
+          </div>
           <table className="mm-table selectable" aria-label="Relationship types">
             <thead>
               <tr>
@@ -293,7 +358,10 @@ function TypesView(props: {
           </table>
         </section>
         <section>
-          <h3>Diagram types</h3>
+          <div className="mm-section-head">
+            <h3>Diagram types</h3>
+            <button onClick={() => openMetamodel("diagramTypes")}>Edit diagram types…</button>
+          </div>
           <table className="mm-table selectable" aria-label="Diagram types">
             <thead>
               <tr>
@@ -324,6 +392,7 @@ function TypesView(props: {
           metamodel={metamodel}
           onChange={onChange}
           onClose={() => setPicked(null)}
+          general={general}
         />
       )}
     </div>
@@ -767,9 +836,10 @@ function PublishDialog(props: {
   changes: DraftChanges;
   identity: IdentityChange[];
   typeChanges: DiagramTypeChanges;
+  types: TypeChanges;
   onClose(): void;
 }) {
-  const { draft, draftMetamodel, changes, identity, typeChanges, onClose } = props;
+  const { draft, draftMetamodel, changes, identity, typeChanges, types, onClose } = props;
   const { store, state, metamodel } = useModel();
   const session = useWorkbench((s) => s.session)!;
   const saved = useWorkbench((s) => s.metamodelDraft);
@@ -848,6 +918,36 @@ function PublishDialog(props: {
           Everyone working in {store.repository.name} gets the new metamodel at once, in every scenario. Nothing in the
           model is changed or deleted.
         </p>
+        {section(
+          "Object types added",
+          types.object.added.map((t) => <li key={t.key}>{t.name}</li>),
+          "added",
+        )}
+        {section(
+          "Object types changed",
+          types.object.changed.map((t) => <li key={t.key}>{t.name}</li>),
+          "changed",
+        )}
+        {section(
+          "Object types removed",
+          types.object.removed.map((t) => <li key={t.key}>{t.name}</li>),
+          "removed",
+        )}
+        {section(
+          "Relationship types added",
+          types.relationship.added.map((t) => <li key={t.key}>{t.name}</li>),
+          "added",
+        )}
+        {section(
+          "Relationship types changed",
+          types.relationship.changed.map((t) => <li key={t.key}>{t.name}</li>),
+          "changed",
+        )}
+        {section(
+          "Relationship types removed",
+          types.relationship.removed.map((t) => <li key={t.key}>{t.name}</li>),
+          "removed",
+        )}
         {section(
           "Duplicates settings changed",
           identity.map((c) => {

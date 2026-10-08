@@ -30,6 +30,18 @@ export interface NewRepository {
   settings?: { currency: string };
 }
 
+/**
+ * Deletes a repository and everything in it: its metamodel, scenarios, model, diagrams and change log (storage §7,
+ * "Starting over"). Tables without a foreign key to the repository (the change log, occurrences, annotations) are
+ * cleared first; the rest go with the repository row. Returns false when there was no such repository.
+ */
+export async function deleteRepository(tx: Tx, repositoryId: string): Promise<boolean> {
+  const tables = ["change_log", "object_occurrence", "relationship_occurrence", "annotation"] as const;
+  for (const table of tables) await tx.deleteFrom(table).where("repository_id", "=", repositoryId).execute();
+  const deleted = await tx.deleteFrom("repository").where("id", "=", repositoryId).executeTakeFirst();
+  return deleted.numDeletedRows > 0n;
+}
+
 /** Creates a repository with its baseline scenario and installs its metamodel. */
 export async function createRepository(tx: Tx, repo: NewRepository): Promise<void> {
   Metamodel.compile(repo.metamodel, repo.diagramTypes); // refuse a broken metamodel before writing anything
