@@ -15,6 +15,8 @@ interface ExampleRepository {
     name: string;
     diagramType: string;
     folderId: Id;
+    /** A view's definition (views-and-design-artifacts.md): a document's subject and sections, a matrix's axes. */
+    definition?: Record<string, unknown>;
     objectOccurrences: Record<string, unknown>[];
     relationshipOccurrences: Record<string, unknown>[];
     annotations: Record<string, unknown>[];
@@ -33,7 +35,7 @@ export const insuranceGroup = {
   baselineScenarioId: baselineScenario.id,
   targetScenario,
 
-  /** The baseline as one change: folders, objects, relationships and the diagram with its occurrences. */
+  /** The baseline as one change: folders, objects, relationships and the views with their occurrences. */
   baselineChange(changeId: Id = "C-EXAMPLE"): Change {
     const edits: unknown[] = [
       ...example.folders.map((f) => ({ edit: "createFolder", ...f })),
@@ -41,7 +43,8 @@ export const insuranceGroup = {
       ...example.relationships.map((r) => ({ edit: "createRelationship", ...r })),
     ];
     for (const d of example.diagrams) {
-      edits.push({ edit: "createDiagram", id: d.id, name: d.name, diagramType: d.diagramType, folderId: d.folderId });
+      const { id, name, diagramType, folderId, definition } = d;
+      edits.push({ edit: "createDiagram", id, name, diagramType, folderId, ...(definition ? { definition } : {}) });
       for (const occurrence of d.objectOccurrences)
         edits.push({ edit: "addObjectOccurrence", diagramId: d.id, occurrence });
       for (const occurrence of d.relationshipOccurrences) {

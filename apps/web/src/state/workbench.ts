@@ -22,7 +22,7 @@ export interface Tab {
 
 /** The metamodel tab's id: there is one, whatever view it shows. */
 export const METAMODEL_TAB = "metamodel";
-export type MetamodelView = "types" | "properties" | "matrix" | "sentences" | "try";
+export type MetamodelView = "types" | "diagramTypes" | "properties" | "matrix" | "sentences" | "try";
 
 /** The metamodel being edited (package and diagram types), and the version it was edited from. */
 export interface MetamodelDraft {

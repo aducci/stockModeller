@@ -83,6 +83,13 @@ export function metamodelImpact(state: ModelState, before: Metamodel, after: Met
   removedInUse("objects", "Object type", (k) => after.objectType(k) !== undefined);
   removedInUse("relationships", "Relationship type", (k) => after.relationshipType(k) !== undefined);
   removedInUse("diagrams", "Diagram type", (k) => after.diagramType(k) !== undefined);
+  // A diagram's content depends on its kind (occurrences, a definition), so a type in use keeps its kind (B48).
+  for (const [type, count] of typesInUse("diagrams")) {
+    const was = before.diagramType(type)?.definition.kind ?? "canvas";
+    const now = after.diagramType(type)?.definition.kind ?? "canvas";
+    if (after.diagramType(type) && was !== now)
+      problems.push(`Diagram type "${type}" changes from ${was} to ${now} but ${count} diagrams still use it`);
+  }
 
   const valuesOf = new Map<PropertyKey, PropertyValue[]>();
   for (const h of holders(state))

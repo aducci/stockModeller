@@ -141,7 +141,7 @@ describeDb("API", () => {
 
   it("reads folders, objects with a query and paging, relationships and occurrences", async () => {
     const folders = await api.get(`/repositories/${REPO}/folders`);
-    expect(folders.body).toHaveLength(7);
+    expect(folders.body).toHaveLength(9);
     for (const f of folders.body as unknown[]) expectContract(f, schema("Folder"));
 
     const apps = await api.get(`/repositories/${REPO}/objects?q=${encodeURIComponent("type:applicationBase")}&limit=2`);
@@ -164,13 +164,18 @@ describeDb("API", () => {
     expect(unsupported.status).toBe(422);
 
     const rels = await api.get(`/repositories/${REPO}/relationships?source=O-APP-1&type=flowsTo`);
-    expect((rels.body as { id: string }[]).map((r) => r.id)).toEqual(["R-08"]);
+    expect((rels.body as { id: string }[]).map((r) => r.id)).toEqual(["R-08", "R-17"]); // a flow and a request message
     expectContract((rels.body as unknown[])[0], schema("Relationship"));
 
     const occurrences = await api.get(`/repositories/${REPO}/objects/O-APP-1/occurrences`);
-    expect(occurrences.body).toEqual([
+    const byId = (a: { occurrenceId: string }, b: { occurrenceId: string }) =>
+      a.occurrenceId.localeCompare(b.occurrenceId);
+    expect((occurrences.body as { occurrenceId: string }[]).sort(byId)).toEqual([
+      { diagramId: "D-03", diagramName: "Claims Manager context", occurrenceId: "OO-31" },
       { diagramId: "D-01", diagramName: "Claims landscape", occurrenceId: "OO-4" },
+      { diagramId: "D-05", diagramName: "Pay a claim", occurrenceId: "OO-51" },
       { diagramId: "D-01", diagramName: "Claims landscape", occurrenceId: "OO-6" },
+      { diagramId: "D-06", diagramName: "Payments API context", occurrenceId: "OO-62" },
     ]);
   });
 
@@ -181,6 +186,7 @@ describeDb("API", () => {
     expect((upstream.body as { steps: { name: string; depth: number }[] }).steps).toMatchObject([
       { name: "Claims Manager", depth: 1, relationshipId: "R-08" },
       { name: "Legacy CRM", depth: 2, relationshipId: "R-09" },
+      { name: "Payments API", depth: 2, relationshipId: "R-18" }, // the response of its call is a flow too
     ]);
     const down = await api.get(`/repositories/${REPO}/objects/O-CAP-2/trace?kind=levels&depth=1`);
     expect((down.body as { steps: { objectId: string; level: string }[] }).steps).toEqual([

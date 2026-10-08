@@ -196,7 +196,7 @@ describe("rule 4: every object is in exactly one folder", () => {
     const state = exampleState();
     expect(rejection(state, [{ edit: "deleteFolder", id: "F01", contents: "refuseIfNotEmpty" }])).toMatchObject({
       code: "invalid",
-      message: '"Business" is not empty: 2 folders',
+      message: '"Business" is not empty: 2 folders, 1 object',
     });
     applyOk(state, [{ edit: "deleteFolder", id: "F01", contents: "deleteContents" }]);
     expect(state.objects.get("O-CAP-1")).toBeUndefined();
@@ -258,7 +258,7 @@ describe("rule 6: occurrences point to existing items and hold only layout", () 
   it("allows many occurrences of one object, also on one diagram", () => {
     const state = exampleState();
     applyOk(state, [{ edit: "addObjectOccurrence", diagramId: "D-01", occurrence: occurrence("OO-7", "O-APP-1") }]);
-    expect(state.objectOccurrences.find("byObject", "O-APP-1")).toHaveLength(3);
+    expect(state.objectOccurrences.find("byObject", "O-APP-1").filter((o) => o.diagramId === "D-01")).toHaveLength(3);
   });
 
   it("needs a nesting relationship behind a nested occurrence", () => {
@@ -302,21 +302,19 @@ describe("rule 7: deleting an object deletes its relationships and occurrences",
     const state = exampleState();
     const result = applyOk(state, [{ edit: "deleteObject", id: "O-APP-1", baseVersion: v(state, "O-APP-1") }]);
     expect(state.objects.get("O-APP-1")).toBeUndefined();
-    for (const r of ["R-05", "R-07", "R-08", "R-09", "R-10"]) expect(state.relationships.get(r)).toBeUndefined();
+    // Its own relationships, and the messages of its interaction with Payments API.
+    const relationships = ["R-05", "R-07", "R-08", "R-09", "R-10", "R-13", "R-14", "R-16", "R-17", "R-18", "R-21"];
+    for (const r of relationships) expect(state.relationships.get(r)).toBeUndefined();
     expect(state.objectOccurrences.find("byObject", "O-APP-1")).toEqual([]);
     expect(state.relationshipOccurrences.get("RO-3")).toBeUndefined();
-    expect(result.log[0]!.inverse.map((e) => e.edit)).toEqual([
-      "createObject",
-      "createRelationship",
-      "createRelationship",
-      "createRelationship",
-      "createRelationship",
-      "createRelationship",
-      "addObjectOccurrence",
-      "addRelationshipOccurrence",
-      "addObjectOccurrence",
-      "addRelationshipOccurrence",
-    ]);
+    // The object first, then its relationships, then their occurrences, so the inverse can apply in order.
+    const inverse = result.log[0]!.inverse.map((e) => e.edit);
+    expect(inverse[0]).toBe("createObject");
+    expect(inverse.slice(1, 1 + relationships.length)).toEqual(relationships.map(() => "createRelationship"));
+    expect(new Set(inverse.slice(1 + relationships.length))).toEqual(
+      new Set(["addObjectOccurrence", "addRelationshipOccurrence"]),
+    );
+    expect(inverse).toHaveLength(1 + relationships.length + 5 + 9);
   });
 
   it("brings back a restored object with a higher version", () => {

@@ -18,6 +18,6 @@ The machine-checkable version of [02-model](../02-model/overview.md). Everything
 | [diagram-type.schema.json](diagram-type.schema.json) | Schema for diagram types |
 | [example-diagram-type.json](example-diagram-type.json) | "Application landscape", including a generation rule |
 | [example-notation.json](example-notation.json) | *Not validated yet:* the `notation` section of a package: 27 glyphs, value-list glyphs and property scales, category and kind defaults, seven renditions of Application (anchors, ports, growth, label zones, compartments, decorations), style rules, markers, lenses, stencils, a pattern and a zone ([notation](../02-model/notation-and-metamodel-admin.md)) |
-| [example-repository.json](example-repository.json) | A small repository: folders, objects, relationships, a Target 2027 scenario, one diagram (Claims Manager occurs twice on it), one catalogue |
+| [example-repository.json](example-repository.json) | A small repository: folders, objects, relationships, a Target 2027 scenario, a view of every kind (the Claims landscape, where Claims Manager occurs twice; a matrix; Claims Manager's context, high-level design and *Pay a claim* sequence; the Payments API integration specification), one catalogue |
 
 **Naming in code:** an object is `ModelObject`, because `Object` is reserved in TypeScript.

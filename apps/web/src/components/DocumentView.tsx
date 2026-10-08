@@ -1,6 +1,6 @@
 // A document view (design/02-model/views-and-design-artifacts.md §7–§8): a design artifact about one subject, built
 // from its type's template. Each section is a component; what an author does in it is an ordinary model edit.
-import { useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import type { DiagramRow, Metamodel, ModelState, ObjectRow } from "@connectome/engine";
 import {
   LAYOUT_KEY,
@@ -433,6 +433,15 @@ function ProseSection({ document, section, model, subject }: SectionProps<ProseM
   const [active, setActive] = useState(0);
   const [createType, setCreateType] = useState("");
   const area = useRef<HTMLTextAreaElement>(null);
+  // Where the caret goes once an inserted mention is rendered: set in the same commit, so a key typed right after
+  // choosing the mention cannot land before the caret moves.
+  const caretAfter = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    if (caretAfter.current === null || !area.current) return;
+    area.current.focus();
+    area.current.setSelectionRange(caretAfter.current, caretAfter.current);
+    caretAfter.current = null;
+  });
   const nameOf = (oid: Id) => state.objects.get(oid)?.name ?? "deleted";
   const creatable =
     section.component === "prose" && section.config?.mentions?.create
@@ -472,11 +481,7 @@ function ProseSection({ document, section, model, subject }: SectionProps<ProseM
     const next = text.slice(0, query.at) + token + text.slice(end);
     setText(next);
     setQuery(null);
-    const caret = query.at + token.length;
-    setTimeout(() => {
-      area.current?.focus();
-      area.current?.setSelectionRange(caret, caret);
-    });
+    caretAfter.current = query.at + token.length;
   };
   const create = () => {
     const typeKey = createType || creatable[0]?.definition.key;

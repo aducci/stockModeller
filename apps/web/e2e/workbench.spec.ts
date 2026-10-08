@@ -46,13 +46,21 @@ test("an edit shows at once, is saved, and survives a reload", async ({ page }) 
   await page.reload();
   await expect(page.getByTestId("save-state")).toHaveText("All changes saved");
   await expect(explorer(page).locator(".row", { hasText: "Claims Hub" })).toBeVisible();
-  await expect(explorer(page).locator(".row", { hasText: "Claims Manager" })).toHaveCount(0);
+  // Only the object is renamed: its views keep their own names ("Claims Manager context").
+  await expect(
+    explorer(page)
+      .locator(".row")
+      .filter({ has: page.getByText("Claims Manager", { exact: true }) }),
+  ).toHaveCount(0);
 });
 
 test("two people see each other's edits and presence", async ({ browser }) => {
   const dana = await newPage(browser, "dana@example.com");
   const lee = await newPage(browser, "lee@example.com");
-  await expect(dana.locator(".presence .avatar")).toHaveCount(2);
+  // Each sees the other. Not an exact count: the previous test's session can linger until its socket times out.
+  await expect(dana.locator('.presence .avatar[title="lee@example.com"]')).toHaveCount(1);
+  await expect(dana.locator('.presence .avatar[title="dana@example.com"]')).toHaveCount(1);
+  await expect(lee.locator('.presence .avatar[title="dana@example.com"]')).toHaveCount(1);
 
   await rename(dana, "Legacy CRM", "Old CRM");
   await expect(explorer(lee).locator(".row", { hasText: "Old CRM" })).toBeVisible();

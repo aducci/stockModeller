@@ -26,9 +26,12 @@ test("creates a matrix, adds and removes a relationship from a cell, and keeps t
   await explorer(page).locator(".row", { hasText: "Diagrams" }).first().click();
   await page.getByRole("menubar").getByRole("menuitem", { name: "File" }).click();
   await page.getByRole("menuitem", { name: "New diagram", exact: true }).click();
-  await explorer(page).getByLabel("Diagram type").selectOption({ label: "Capability × application matrix" });
-  await explorer(page).getByLabel("New diagram name").fill("Capability coverage");
-  await explorer(page).getByLabel("New diagram name").press("Enter");
+  await page
+    .getByRole("dialog", { name: "New diagram" })
+    .getByRole("radio", { name: "Capability × application matrix" })
+    .check();
+  await page.getByRole("dialog", { name: "New diagram" }).getByLabel("Diagram name").fill("Capability coverage");
+  await page.getByRole("dialog", { name: "New diagram" }).getByLabel("Diagram name").press("Enter");
   const grid = page.getByRole("table", { name: "Capability coverage" });
   await expect(grid).toBeVisible();
 

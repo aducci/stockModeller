@@ -4,10 +4,17 @@
     "id": "R0000000000000000000000001",
     "name": "Insurance Group EA",
     "metamodel": "Essentials@1.0.0",
-    "settings": { "currency": "EUR" }
+    "settings": {
+      "currency": "EUR"
+    }
   },
   "scenarios": [
-    { "id": "S0000000000000000000000001", "parentId": null, "name": "Baseline", "state": "baseline" },
+    {
+      "id": "S0000000000000000000000001",
+      "parentId": null,
+      "name": "Baseline",
+      "state": "baseline"
+    },
     {
       "id": "S0000000000000000000000002",
       "parentId": "S0000000000000000000000001",
@@ -16,13 +23,51 @@
     }
   ],
   "folders": [
-    { "id": "F01", "parentId": null, "name": "Business" },
-    { "id": "F02", "parentId": "F01", "name": "Capabilities" },
-    { "id": "F03", "parentId": "F01", "name": "Processes" },
-    { "id": "F04", "parentId": null, "name": "Applications" },
-    { "id": "F05", "parentId": null, "name": "Technology" },
-    { "id": "F06", "parentId": null, "name": "Diagrams" },
-    { "id": "F07", "parentId": null, "name": "Catalogues" }
+    {
+      "id": "F01",
+      "parentId": null,
+      "name": "Business"
+    },
+    {
+      "id": "F02",
+      "parentId": "F01",
+      "name": "Capabilities"
+    },
+    {
+      "id": "F03",
+      "parentId": "F01",
+      "name": "Processes"
+    },
+    {
+      "id": "F04",
+      "parentId": null,
+      "name": "Applications"
+    },
+    {
+      "id": "F05",
+      "parentId": null,
+      "name": "Technology"
+    },
+    {
+      "id": "F06",
+      "parentId": null,
+      "name": "Diagrams"
+    },
+    {
+      "id": "F07",
+      "parentId": null,
+      "name": "Catalogues"
+    },
+    {
+      "id": "F08",
+      "parentId": null,
+      "name": "Information"
+    },
+    {
+      "id": "F09",
+      "parentId": "F06",
+      "name": "Designs"
+    }
   ],
   "objects": [
     {
@@ -30,19 +75,47 @@
       "type": "capability",
       "name": "Claims Management",
       "folderId": "F02",
-      "properties": { "assessment.criticality": "high" }
+      "properties": {
+        "assessment.criticality": "high"
+      }
     },
-    { "id": "O-CAP-2", "type": "capability", "name": "Claim Intake", "folderId": "F02", "properties": {} },
-    { "id": "O-CAP-3", "type": "capability", "name": "Claim Settlement", "folderId": "F02", "properties": {} },
+    {
+      "id": "O-CAP-2",
+      "type": "capability",
+      "name": "Claim Intake",
+      "folderId": "F02",
+      "properties": {}
+    },
+    {
+      "id": "O-CAP-3",
+      "type": "capability",
+      "name": "Claim Settlement",
+      "folderId": "F02",
+      "properties": {}
+    },
     {
       "id": "O-PRC-1",
       "type": "process",
       "name": "Handle Claim",
       "folderId": "F03",
-      "properties": { "lifecycle.status": "active" }
+      "properties": {
+        "lifecycle.status": "active"
+      }
     },
-    { "id": "O-STP-1", "type": "processStep", "name": "Assess Claim", "folderId": "F03", "properties": {} },
-    { "id": "O-STP-2", "type": "processStep", "name": "Pay Claim", "folderId": "F03", "properties": {} },
+    {
+      "id": "O-STP-1",
+      "type": "processStep",
+      "name": "Assess Claim",
+      "folderId": "F03",
+      "properties": {}
+    },
+    {
+      "id": "O-STP-2",
+      "type": "processStep",
+      "name": "Pay Claim",
+      "folderId": "F03",
+      "properties": {}
+    },
     {
       "id": "O-APP-1",
       "type": "application",
@@ -56,10 +129,15 @@
         "assessment.businessFit": "4",
         "assessment.technicalFit": "2",
         "assessment.criticality": "high",
-        "cost.runCost": { "amount": 120000, "currency": "EUR" },
+        "cost.runCost": {
+          "amount": 120000,
+          "currency": "EUR"
+        },
         "technical.users": 350
       },
-      "externalIds": { "servicenow": "cmdb_ci_appl_7781" }
+      "externalIds": {
+        "servicenow": "cmdb_ci_appl_7781"
+      }
     },
     {
       "id": "O-APP-2",
@@ -70,7 +148,10 @@
       "properties": {
         "lifecycle.status": "active",
         "assessment.technicalFit": "1",
-        "cost.runCost": { "amount": 210000, "currency": "EUR" }
+        "cost.runCost": {
+          "amount": 210000,
+          "currency": "EUR"
+        }
       }
     },
     {
@@ -89,34 +170,229 @@
       "type": "server",
       "name": "SRV-APP-01",
       "folderId": "F05",
-      "properties": { "lifecycle.status": "active" }
+      "properties": {
+        "lifecycle.status": "active"
+      }
+    },
+    {
+      "id": "O-ORG-1",
+      "type": "organisationUnit",
+      "name": "Claims department",
+      "folderId": "F01",
+      "properties": {}
+    },
+    {
+      "id": "O-INT-1",
+      "type": "interface",
+      "name": "Claims API",
+      "folderId": "F04",
+      "properties": {}
+    },
+    {
+      "id": "O-INT-2",
+      "type": "interface",
+      "name": "Payments API",
+      "folderId": "F04",
+      "properties": {}
+    },
+    {
+      "id": "O-DAT-1",
+      "type": "dataObject",
+      "name": "Claim",
+      "folderId": "F08",
+      "properties": {}
+    },
+    {
+      "id": "O-DAT-2",
+      "type": "dataObject",
+      "name": "Payment",
+      "folderId": "F08",
+      "properties": {}
     }
   ],
   "relationships": [
-    { "id": "R-01", "type": "contains", "sourceId": "O-CAP-1", "targetId": "O-CAP-2", "properties": {} },
-    { "id": "R-02", "type": "contains", "sourceId": "O-CAP-1", "targetId": "O-CAP-3", "properties": {} },
-    { "id": "R-03", "type": "contains", "sourceId": "O-PRC-1", "targetId": "O-STP-1", "properties": {} },
-    { "id": "R-04", "type": "contains", "sourceId": "O-PRC-1", "targetId": "O-STP-2", "properties": {} },
-    { "id": "R-05", "type": "realizes", "sourceId": "O-APP-1", "targetId": "O-CAP-2", "properties": {} },
-    { "id": "R-06", "type": "realizes", "sourceId": "O-APP-3", "targetId": "O-CAP-3", "properties": {} },
-    { "id": "R-07", "type": "serves", "sourceId": "O-APP-1", "targetId": "O-PRC-1", "properties": {} },
+    {
+      "id": "R-01",
+      "type": "contains",
+      "sourceId": "O-CAP-1",
+      "targetId": "O-CAP-2",
+      "properties": {}
+    },
+    {
+      "id": "R-02",
+      "type": "contains",
+      "sourceId": "O-CAP-1",
+      "targetId": "O-CAP-3",
+      "properties": {}
+    },
+    {
+      "id": "R-03",
+      "type": "contains",
+      "sourceId": "O-PRC-1",
+      "targetId": "O-STP-1",
+      "properties": {}
+    },
+    {
+      "id": "R-04",
+      "type": "contains",
+      "sourceId": "O-PRC-1",
+      "targetId": "O-STP-2",
+      "properties": {}
+    },
+    {
+      "id": "R-05",
+      "type": "realizes",
+      "sourceId": "O-APP-1",
+      "targetId": "O-CAP-2",
+      "properties": {}
+    },
+    {
+      "id": "R-06",
+      "type": "realizes",
+      "sourceId": "O-APP-3",
+      "targetId": "O-CAP-3",
+      "properties": {}
+    },
+    {
+      "id": "R-07",
+      "type": "serves",
+      "sourceId": "O-APP-1",
+      "targetId": "O-PRC-1",
+      "properties": {}
+    },
     {
       "id": "R-08",
       "type": "flowsTo",
       "sourceId": "O-APP-1",
       "targetId": "O-APP-3",
-      "properties": { "flow.frequency": 300, "flow.protocol": "REST" }
+      "properties": {
+        "flow.frequency": 300,
+        "flow.protocol": "REST"
+      }
     },
-    { "id": "R-09", "type": "flowsTo", "sourceId": "O-APP-2", "targetId": "O-APP-1", "properties": {} },
-    { "id": "R-10", "type": "hostedOn", "sourceId": "O-APP-1", "targetId": "O-SRV-1", "properties": {} },
-    { "id": "R-11", "type": "flowsTo", "sourceId": "O-STP-1", "targetId": "O-STP-2", "properties": {} }
+    {
+      "id": "R-09",
+      "type": "flowsTo",
+      "sourceId": "O-APP-2",
+      "targetId": "O-APP-1",
+      "properties": {
+        "flow.protocol": "SFTP"
+      }
+    },
+    {
+      "id": "R-10",
+      "type": "hostedOn",
+      "sourceId": "O-APP-1",
+      "targetId": "O-SRV-1",
+      "properties": {}
+    },
+    {
+      "id": "R-11",
+      "type": "flowsTo",
+      "sourceId": "O-STP-1",
+      "targetId": "O-STP-2",
+      "properties": {}
+    },
+    {
+      "id": "R-13",
+      "type": "owns",
+      "sourceId": "O-ORG-1",
+      "targetId": "O-APP-1",
+      "properties": {}
+    },
+    {
+      "id": "R-14",
+      "type": "realizes",
+      "sourceId": "O-APP-1",
+      "targetId": "O-INT-1",
+      "properties": {}
+    },
+    {
+      "id": "R-15",
+      "type": "realizes",
+      "sourceId": "O-APP-3",
+      "targetId": "O-INT-2",
+      "properties": {}
+    },
+    {
+      "id": "R-16",
+      "type": "calls",
+      "sourceId": "O-APP-1",
+      "targetId": "O-INT-2",
+      "properties": {
+        "interaction.pattern": "synchronous",
+        "interaction.protocol": "REST",
+        "interaction.operation": "POST /payments"
+      }
+    },
+    {
+      "id": "R-17",
+      "type": "flowsTo",
+      "sourceId": "O-APP-1",
+      "targetId": "O-INT-2",
+      "name": "POST /payments",
+      "properties": {},
+      "payload": ["O-DAT-2"],
+      "parentId": "R-16"
+    },
+    {
+      "id": "R-18",
+      "type": "flowsTo",
+      "sourceId": "O-INT-2",
+      "targetId": "O-APP-1",
+      "name": "201 Created",
+      "properties": {},
+      "payload": ["O-DAT-2"],
+      "parentId": "R-16"
+    },
+    {
+      "id": "R-19",
+      "type": "calls",
+      "sourceId": "O-APP-2",
+      "targetId": "O-INT-1",
+      "properties": {
+        "interaction.pattern": "asynchronous",
+        "interaction.protocol": "AMQP"
+      }
+    },
+    {
+      "id": "R-20",
+      "type": "flowsTo",
+      "sourceId": "O-APP-2",
+      "targetId": "O-INT-1",
+      "name": "Claim submitted",
+      "properties": {},
+      "payload": ["O-DAT-1"],
+      "parentId": "R-19"
+    },
+    {
+      "id": "R-21",
+      "type": "accesses",
+      "sourceId": "O-APP-1",
+      "targetId": "O-DAT-1",
+      "properties": {
+        "access.mode": "readWrite"
+      }
+    },
+    {
+      "id": "R-22",
+      "type": "accesses",
+      "sourceId": "O-APP-3",
+      "targetId": "O-DAT-2",
+      "properties": {
+        "access.mode": "write"
+      }
+    }
   ],
   "scenarioChanges": {
     "S0000000000000000000000002": [
       {
         "edit": "setProperties",
         "id": "O-APP-2",
-        "set": { "lifecycle.status": "retired", "lifecycle.retiredFrom": "2027-03-31" }
+        "set": {
+          "lifecycle.status": "retired",
+          "lifecycle.retiredFrom": "2027-03-31"
+        }
       },
       {
         "edit": "createObject",
@@ -130,8 +406,17 @@
           "assessment.technicalFit": "5"
         }
       },
-      { "edit": "deleteRelationship", "id": "R-09" },
-      { "edit": "createRelationship", "id": "R-12", "type": "flowsTo", "sourceId": "O-APP-4", "targetId": "O-APP-1" }
+      {
+        "edit": "deleteRelationship",
+        "id": "R-09"
+      },
+      {
+        "edit": "createRelationship",
+        "id": "R-12",
+        "type": "flowsTo",
+        "sourceId": "O-APP-4",
+        "targetId": "O-APP-1"
+      }
     ]
   },
   "diagrams": [
@@ -223,7 +508,9 @@
           "sourceOccurrenceId": "OO-4",
           "targetOccurrenceId": "OO-5",
           "shownAs": "line",
-          "route": { "mode": "auto" }
+          "route": {
+            "mode": "auto"
+          }
         },
         {
           "id": "RO-4",
@@ -231,7 +518,9 @@
           "sourceOccurrenceId": "OO-6",
           "targetOccurrenceId": "OO-5",
           "shownAs": "line",
-          "route": { "mode": "auto" }
+          "route": {
+            "mode": "auto"
+          }
         }
       ],
       "annotations": [
@@ -241,9 +530,320 @@
           "y": 260,
           "w": 300,
           "h": 40,
-          "content": { "shape": "note", "text": "Settlement moves to Payments Hub in Q3." }
+          "content": {
+            "shape": "note",
+            "text": "Settlement moves to Payments Hub in Q3."
+          }
         }
       ]
+    },
+    {
+      "id": "D-02",
+      "name": "Capability × application matrix",
+      "diagramType": "capabilityMatrix",
+      "folderId": "F06",
+      "objectOccurrences": [],
+      "relationshipOccurrences": [],
+      "annotations": []
+    },
+    {
+      "id": "D-03",
+      "name": "Claims Manager context",
+      "diagramType": "context",
+      "folderId": "F09",
+      "objectOccurrences": [
+        {
+          "id": "OO-31",
+          "objectId": "O-APP-1",
+          "parentOccurrenceId": null,
+          "x": 410,
+          "y": 294,
+          "w": 140,
+          "h": 52,
+          "z": 1
+        },
+        {
+          "id": "OO-32",
+          "objectId": "O-INT-2",
+          "parentOccurrenceId": null,
+          "x": 740,
+          "y": 300,
+          "w": 110,
+          "h": 40,
+          "z": 1
+        },
+        {
+          "id": "OO-33",
+          "objectId": "O-APP-3",
+          "parentOccurrenceId": null,
+          "x": 720,
+          "y": 110,
+          "w": 140,
+          "h": 52,
+          "z": 1
+        },
+        {
+          "id": "OO-34",
+          "objectId": "O-APP-2",
+          "parentOccurrenceId": null,
+          "x": 90,
+          "y": 294,
+          "w": 140,
+          "h": 52,
+          "z": 1
+        },
+        {
+          "id": "OO-35",
+          "objectId": "O-DAT-1",
+          "parentOccurrenceId": null,
+          "x": 415,
+          "y": 500,
+          "w": 130,
+          "h": 48,
+          "z": 1
+        }
+      ],
+      "relationshipOccurrences": [
+        {
+          "id": "RO-31",
+          "relationshipId": "R-16",
+          "sourceOccurrenceId": "OO-31",
+          "targetOccurrenceId": "OO-32",
+          "shownAs": "line",
+          "route": {
+            "mode": "auto"
+          }
+        },
+        {
+          "id": "RO-32",
+          "relationshipId": "R-08",
+          "sourceOccurrenceId": "OO-31",
+          "targetOccurrenceId": "OO-33",
+          "shownAs": "line",
+          "route": {
+            "mode": "auto"
+          }
+        },
+        {
+          "id": "RO-33",
+          "relationshipId": "R-09",
+          "sourceOccurrenceId": "OO-34",
+          "targetOccurrenceId": "OO-31",
+          "shownAs": "line",
+          "route": {
+            "mode": "auto"
+          }
+        },
+        {
+          "id": "RO-34",
+          "relationshipId": "R-21",
+          "sourceOccurrenceId": "OO-31",
+          "targetOccurrenceId": "OO-35",
+          "shownAs": "line",
+          "route": {
+            "mode": "auto"
+          }
+        }
+      ],
+      "annotations": []
+    },
+    {
+      "id": "D-04",
+      "name": "Claims Manager high-level design",
+      "diagramType": "hld",
+      "folderId": "F09",
+      "definition": {
+        "subject": "O-APP-1",
+        "summary": {
+          "paragraphs": [
+            [
+              "Claims Manager registers and assesses claims for the ",
+              {
+                "mention": "O-ORG-1"
+              },
+              ". It pays settled claims through ",
+              {
+                "mention": "O-INT-2"
+              },
+              ", which ",
+              {
+                "mention": "O-APP-3"
+              },
+              " provides, and takes new claims from ",
+              {
+                "mention": "O-APP-2"
+              },
+              " until that is retired."
+            ]
+          ]
+        },
+        "context": {
+          "diagramId": "D-03"
+        },
+        "integrations": {
+          "sequences": {
+            "R-16": "D-05"
+          }
+        },
+        "risks": {
+          "paragraphs": [
+            [
+              "The nightly SFTP feed from ",
+              {
+                "mention": "O-APP-2"
+              },
+              " has no retry; a missed file delays new claims by a day."
+            ],
+            ["Open: whether payment confirmations should move to events once Payments Hub supports them."]
+          ]
+        }
+      },
+      "objectOccurrences": [],
+      "relationshipOccurrences": [],
+      "annotations": []
+    },
+    {
+      "id": "D-05",
+      "name": "Pay a claim",
+      "diagramType": "sequence",
+      "folderId": "F09",
+      "objectOccurrences": [
+        {
+          "id": "OO-51",
+          "objectId": "O-APP-1",
+          "parentOccurrenceId": null,
+          "x": 110,
+          "y": 40,
+          "w": 140,
+          "h": 52,
+          "z": 1
+        },
+        {
+          "id": "OO-52",
+          "objectId": "O-INT-2",
+          "parentOccurrenceId": null,
+          "x": 330,
+          "y": 40,
+          "w": 130,
+          "h": 48,
+          "z": 1
+        }
+      ],
+      "relationshipOccurrences": [
+        {
+          "id": "RO-51",
+          "relationshipId": "R-17",
+          "sourceOccurrenceId": "OO-51",
+          "targetOccurrenceId": "OO-52",
+          "shownAs": "line",
+          "route": {
+            "mode": "auto"
+          },
+          "step": "V"
+        },
+        {
+          "id": "RO-52",
+          "relationshipId": "R-18",
+          "sourceOccurrenceId": "OO-52",
+          "targetOccurrenceId": "OO-51",
+          "shownAs": "line",
+          "route": {
+            "mode": "auto"
+          },
+          "step": "l"
+        }
+      ],
+      "annotations": []
+    },
+    {
+      "id": "D-06",
+      "name": "Payments API context",
+      "diagramType": "context",
+      "folderId": "F09",
+      "objectOccurrences": [
+        {
+          "id": "OO-61",
+          "objectId": "O-INT-2",
+          "parentOccurrenceId": null,
+          "x": 425,
+          "y": 300,
+          "w": 110,
+          "h": 40,
+          "z": 1
+        },
+        {
+          "id": "OO-62",
+          "objectId": "O-APP-1",
+          "parentOccurrenceId": null,
+          "x": 120,
+          "y": 294,
+          "w": 140,
+          "h": 52,
+          "z": 1
+        }
+      ],
+      "relationshipOccurrences": [
+        {
+          "id": "RO-61",
+          "relationshipId": "R-16",
+          "sourceOccurrenceId": "OO-62",
+          "targetOccurrenceId": "OO-61",
+          "shownAs": "line",
+          "route": {
+            "mode": "auto"
+          }
+        }
+      ],
+      "annotations": []
+    },
+    {
+      "id": "D-07",
+      "name": "Payments API integration specification",
+      "diagramType": "integrationSpec",
+      "folderId": "F09",
+      "definition": {
+        "subject": "O-INT-2",
+        "purpose": {
+          "paragraphs": [
+            [
+              {
+                "mention": "O-INT-2"
+              },
+              " takes payment instructions for settled claims and confirms them. ",
+              {
+                "mention": "O-APP-3"
+              },
+              " provides it; ",
+              {
+                "mention": "O-APP-1"
+              },
+              " is its only caller today."
+            ]
+          ]
+        },
+        "context": {
+          "diagramId": "D-06"
+        },
+        "details": {
+          "rows": {
+            "R-16": {
+              "sequence": {
+                "diagramId": "D-05"
+              },
+              "errors": {
+                "paragraphs": [
+                  [
+                    "A timeout is retried twice with the same idempotency key; after that the payment is queued for the claims team."
+                  ]
+                ]
+              }
+            }
+          }
+        }
+      },
+      "objectOccurrences": [],
+      "relationshipOccurrences": [],
+      "annotations": []
     }
   ],
   "catalogues": [
@@ -253,17 +853,50 @@
       "folderId": "F07",
       "query": "type:applicationBase",
       "columns": [
-        { "kind": "name" },
-        { "kind": "key" },
-        { "kind": "type" },
-        { "kind": "folder" },
-        { "kind": "property", "property": "lifecycle.status", "editable": true },
-        { "kind": "property", "property": "ownership.businessOwner", "editable": true },
-        { "kind": "property", "property": "assessment.technicalFit", "editable": true },
-        { "kind": "related", "path": "-realizes-> type:capability", "label": "Capabilities" },
-        { "kind": "property", "property": "cost.runCost", "editable": true }
+        {
+          "kind": "name"
+        },
+        {
+          "kind": "key"
+        },
+        {
+          "kind": "type"
+        },
+        {
+          "kind": "folder"
+        },
+        {
+          "kind": "property",
+          "property": "lifecycle.status",
+          "editable": true
+        },
+        {
+          "kind": "property",
+          "property": "ownership.businessOwner",
+          "editable": true
+        },
+        {
+          "kind": "property",
+          "property": "assessment.technicalFit",
+          "editable": true
+        },
+        {
+          "kind": "related",
+          "path": "-realizes-> type:capability",
+          "label": "Capabilities"
+        },
+        {
+          "kind": "property",
+          "property": "cost.runCost",
+          "editable": true
+        }
       ],
-      "sort": [{ "column": 0, "direction": "asc" }]
+      "sort": [
+        {
+          "column": 0,
+          "direction": "asc"
+        }
+      ]
     }
   ]
 }

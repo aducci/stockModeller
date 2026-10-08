@@ -61,7 +61,8 @@ run([
   { edit: "createRelationship", id: "X-2", type: "represents", sourceId: "D-JSON", targetId: "D-PLM" },
   { edit: "createRelationship", id: "X-3", type: "represents", sourceId: "D-REC", targetId: "D-PLM" },
   { edit: "setPayload", id: "R-08", baseVersion: 1, payload: ["D-JSON"] },
-  // A logical service, the physical interface that implements it and the application behind that.
+  // A logical service, implemented by the example's Payments API (which Payments Hub provides and Claims Manager
+  // calls, with a request out and a response back).
   {
     edit: "createObject",
     id: "S-PAY",
@@ -70,21 +71,9 @@ run([
     folderId: "F04",
     properties: level("logical"),
   },
-  {
-    edit: "createObject",
-    id: "I-PAY",
-    type: "interface",
-    name: "Payments API",
-    folderId: "F04",
-    properties: level("physical"),
-  },
-  { edit: "createRelationship", id: "X-4", type: "realizes", sourceId: "I-PAY", targetId: "S-PAY" },
-  { edit: "createRelationship", id: "X-5", type: "realizes", sourceId: "O-APP-3", targetId: "I-PAY" },
+  { edit: "setProperties", id: "O-INT-2", baseVersion: 1, set: level("physical") },
+  { edit: "createRelationship", id: "X-4", type: "realizes", sourceId: "O-INT-2", targetId: "S-PAY" },
   { edit: "createRelationship", id: "X-6", type: "serves", sourceId: "S-PAY", targetId: "O-PRC-1" },
-  // Claims Manager calls the API: a request out and a response back.
-  { edit: "createRelationship", id: "X-7", type: "calls", sourceId: "O-APP-1", targetId: "I-PAY" },
-  { edit: "createRelationship", id: "X-8", type: "flowsTo", sourceId: "O-APP-1", targetId: "I-PAY", parentId: "X-7" },
-  { edit: "createRelationship", id: "X-9", type: "flowsTo", sourceId: "I-PAY", targetId: "O-APP-1", parentId: "X-7" },
 ]);
 
 const names = (t: Trace, depth?: number) =>
@@ -112,7 +101,7 @@ describe("traces (semantics.md §9.3)", () => {
   it("what physical interfaces implement this logical service? (down the levels, in columns)", () => {
     const down = trace(state, metamodel, "S-PAY", "levels", "forward");
     expect(traceByLevel(state, metamodel, down).map((c) => [c.level, c.objectIds])).toEqual([
-      ["physical", ["I-PAY"]],
+      ["physical", ["O-INT-2"]],
       ["implementation", ["O-APP-3"]],
     ]);
   });
@@ -129,10 +118,11 @@ describe("traces (semantics.md §9.3)", () => {
     ]);
   });
 
-  it("what this depends on: providers, called interfaces and what feeds it", () => {
+  it("what this depends on: providers, called interfaces, what feeds it and the information it accesses", () => {
     expect(names(trace(state, metamodel, "O-APP-1", "dependency", "forward", { depth: 1 }))).toEqual([
       "Legacy CRM",
       "Payments API",
+      "Claim",
     ]);
   });
 

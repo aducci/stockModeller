@@ -131,6 +131,71 @@ export function placeRelationshipEdits(
   return edits;
 }
 
+/**
+ * Draws several relationships on a diagram against a growing picture: ends placed by an earlier one (or listed in
+ * `placed`, occurrences added in the same change) are reused, new ones go around the anchor.
+ */
+export function placeRelationshipsEdits(
+  state: ModelState,
+  metamodel: Metamodel,
+  diagram: DiagramRow,
+  relationships: readonly { id: Id; sourceId: Id; targetId: Id }[],
+  anchorId: Id | undefined,
+  placed: readonly { id: Id; objectId: Id; x: number; y: number; w: number; h: number }[] = [],
+): Edit[] {
+  const edits: Edit[] = [];
+  const top = [
+    ...state.objectOccurrences.find("byDiagram", diagram.id).filter((o) => !o.parentOccurrenceId),
+    ...placed,
+  ];
+  const at = new Map(top.map((o) => [o.objectId, o.id]));
+  const anchor = top.find((o) => o.objectId === anchorId) ?? top[0];
+  const centre = anchor ? { x: anchor.x + anchor.w / 2, y: anchor.y + anchor.h / 2 } : CENTRE;
+  let count = Math.max(0, top.length - 1);
+  for (const r of relationships) {
+    for (const objectId of [r.sourceId, r.targetId]) {
+      if (at.has(objectId)) continue;
+      const object = state.objects.get(objectId);
+      if (!object) continue;
+      const symbol = symbolFor(metamodel, diagram, object.type);
+      const angle = (count * Math.PI) / 3 + (count >= 6 ? Math.PI / 6 : 0);
+      const radius = count >= 6 ? RADIUS * 1.6 : RADIUS;
+      count++;
+      const id = ulid();
+      at.set(objectId, id);
+      edits.push({
+        edit: "addObjectOccurrence",
+        diagramId: diagram.id,
+        occurrence: occurrenceAt(
+          id,
+          objectId,
+          centre.x + radius * Math.cos(angle) - symbol.width / 2,
+          centre.y + radius * 0.7 * Math.sin(angle) - symbol.height / 2,
+          symbol,
+        ),
+      });
+    }
+    const source = at.get(r.sourceId);
+    const target = at.get(r.targetId);
+    if (source && target)
+      edits.push({
+        edit: "addRelationshipOccurrence",
+        diagramId: diagram.id,
+        occurrence: {
+          id: ulid(),
+          relationshipId: r.id,
+          sourceOccurrenceId: source,
+          targetOccurrenceId: target,
+          shownAs: "line",
+          route: { mode: "auto" },
+          labelPosition: 0.5,
+          style: {},
+        },
+      });
+  }
+  return edits;
+}
+
 function occurrenceAt(id: Id, objectId: Id, x: number, y: number, size: { width: number; height: number }) {
   return {
     id,

@@ -92,11 +92,11 @@ describe("ranks", () => {
 describe("drop plans", () => {
   it("reorders top-level folders, and the order holds for everyone (ranks are stored)", () => {
     const state = exampleState();
-    expect(ids(state, { kind: "root" })).toEqual(["F04", "F01", "F07", "F06", "F05"]);
+    expect(ids(state, { kind: "root" })).toEqual(["F04", "F01", "F07", "F06", "F08", "F05"]);
     run(state, ok(dropPlan(state, metamodel, { items: [folder("F05")] }, folder("F04"), "before")));
-    expect(ids(state, { kind: "root" })).toEqual(["F05", "F04", "F01", "F07", "F06"]);
+    expect(ids(state, { kind: "root" })).toEqual(["F05", "F04", "F01", "F07", "F06", "F08"]);
     run(state, ok(dropPlan(state, metamodel, { items: [folder("F04")] }, folder("F06"), "after")));
-    expect(ids(state, { kind: "root" })).toEqual(["F05", "F01", "F07", "F06", "F04"]);
+    expect(ids(state, { kind: "root" })).toEqual(["F05", "F01", "F07", "F06", "F04", "F08"]);
   });
 
   it("moves a folder, a diagram and an object into a folder, each at the end", () => {
@@ -105,8 +105,10 @@ describe("drop plans", () => {
     run(state, ok(dropPlan(state, metamodel, { items: [folder("F07")] }, folder("F04"), "into")));
     run(state, ok(dropPlan(state, metamodel, { items: [object("O-SRV-1")] }, folder("F04"), "into")));
     expect(ids(state, { kind: "folder", id: "F04" })).toEqual([
+      "O-INT-1",
       "O-APP-1",
       "O-APP-2",
+      "O-INT-2",
       "O-APP-3",
       "D-01",
       "F07",
@@ -117,7 +119,14 @@ describe("drop plans", () => {
   it("interleaves kinds: a diagram can sit between two objects", () => {
     const state = exampleState();
     run(state, ok(dropPlan(state, metamodel, { items: [diagram("D-01")] }, object("O-APP-2"), "before")));
-    expect(ids(state, { kind: "folder", id: "F04" })).toEqual(["O-APP-1", "D-01", "O-APP-2", "O-APP-3"]);
+    expect(ids(state, { kind: "folder", id: "F04" })).toEqual([
+      "O-INT-1",
+      "O-APP-1",
+      "D-01",
+      "O-APP-2",
+      "O-INT-2",
+      "O-APP-3",
+    ]);
   });
 
   it("refuses a folder inside itself, a name clash, a non-folder at the top level and a no-op", () => {

@@ -135,14 +135,14 @@ One menu component serves the top bar's menu bar and the explorer's right-click 
 
 | Menu | Items |
 |---|---|
-| **File** (top bar) | New folder, New object, New diagram · Rename (F2) · Delete · Close tab, Close all tabs · Switch repository…, Sign out. New items go into the selected folder or the selected item's folder |
+| **File** (top bar) | New folder, New object, New diagram · Rename (F2) · Delete · Close tab, Close all tabs · Switch repository…, Sign out. New items go into the selected folder or the selected item's folder. New diagram opens the dialog with the types grouped by kind (B46), where the folder can be changed, so it needs no selection |
 | Explorer: folder | New ▸ (folder, object, diagram, group) · Rename · Delete folder (only when empty) |
-| Explorer: object | Open · New ▸ · Rename · Add to group ▸ (the groups, then New group…) · Delete object… (the dialog listing what goes with it) |
+| Explorer: object | Open · New ▸ (as a folder, then each canvas type that can draw it, *Sequence of its interactions* when it has some, and the documents it can be the subject of) · Rename · Add to group ▸ (the groups, then New group…) · Delete object… (the dialog listing what goes with it) |
 | Explorer: group | As an object, plus Ungroup (deletes the group; its members stay) |
 | Explorer: group member (↗) | Open · Remove from group |
 | Explorer: diagram | Open · New ▸ · Rename · Delete diagram |
 | Explorer: several marked rows | Group *n* items… · Add to group ▸ · Clear marks |
-| Explorer: empty space | New folder at the top level |
+| Explorer: empty space | New folder at the top level · New diagram |
 
 In the explorer, F2 renames the focused row in place, Delete deletes it (on a member row: removes it from the group), Shift+F10 or the context-menu key opens its menu, and Ctrl/⌘-click marks rows to drag or group together (Esc clears the marks). Edit and View menus follow in later slices.
 

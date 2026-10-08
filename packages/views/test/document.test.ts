@@ -108,11 +108,11 @@ describe("documents", () => {
     ]);
     // A flow has no interaction pattern: not applicable, so not required either.
     expect(t.rows[0]!.cells["interaction.pattern"]!.applicable).toBe(false);
-    // Legacy CRM flows to Claims Manager in the model, but is not on the context.
-    expect(t.missing.map((r) => r.id)).toEqual(["R-09"]);
-    expect(t.findings).toEqual(["Integrations: 1 relationship is not on the context"]);
+    // Claims Manager calls Payments API and Legacy CRM flows to it in the model, but neither is on the context.
+    expect(t.missing.map((r) => r.id)).toEqual(["R-16", "R-09"]);
+    expect(t.findings).toEqual(["Integrations: 2 relationships are not on the context"]);
     const ignored = table(
-      projectDocument(state, metamodel, hld, { ...definition, integrations: { ignored: ["R-09"] } }),
+      projectDocument(state, metamodel, hld, { ...definition, integrations: { ignored: ["R-09", "R-16"] } }),
     );
     expect(ignored.missing).toEqual([]);
   });
@@ -228,6 +228,25 @@ describe("what authors change (§8.2)", () => {
     expect(details.findings).toEqual([]);
     const empty = projectDocument(state, metamodel, spec, context).sections.find((s) => s.definition.key === "details");
     expect(empty?.findings).toEqual(["Integration details, Payments Hub: Error handling is empty"]);
+  });
+
+  it("in the example repository, the high-level design and the integration specification are complete", () => {
+    const state = exampleState();
+    const document = (id: string) => {
+      const d = state.diagrams.get(id)!;
+      return projectDocument(state, metamodel, metamodel.diagramType(d.diagramType)!.definition, d.definition ?? {});
+    };
+    const design = document("D-04");
+    expect(design.findings).toEqual([]);
+    expect(table(design).rows.map((r) => [r.counterpart?.name, r.sequence?.name ?? null])).toEqual([
+      ["Legacy CRM", null],
+      ["Payments API", "Pay a claim"],
+      ["Payments Hub", null],
+    ]);
+    const specification = document("D-07");
+    expect(specification.findings).toEqual([]);
+    const details = specification.sections.find((s) => s.definition.key === "details") as RepeaterModel;
+    expect(details.rows[0]!.sections[1]).toMatchObject({ component: "sequenceLink", diagram: { id: "D-05" } });
   });
 
   it("write a row's state through its repeater's key", () => {

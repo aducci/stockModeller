@@ -31,9 +31,8 @@ describe("the design pack's example repository", () => {
 
   it("shows Claims Manager twice on one diagram, both occurrences pointing to the one object", () => {
     const state = exampleState();
-    const occurrences = state.objectOccurrences.find("byObject", "O-APP-1");
+    const occurrences = state.objectOccurrences.find("byObject", "O-APP-1").filter((o) => o.diagramId === "D-01");
     expect(occurrences.map((o) => o.id).sort()).toEqual(["OO-4", "OO-6"]);
-    expect(new Set(occurrences.map((o) => o.diagramId))).toEqual(new Set(["D-01"]));
   });
 
   it("auto-numbers nothing when keys are given, and keeps given keys", () => {
