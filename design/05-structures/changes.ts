@@ -6,6 +6,7 @@ import type {
   PropertyKey,
   PropertyValue,
   Confirmation,
+  NotDuplicate,
   ObjectOccurrence,
   RelationshipOccurrence,
   Annotation,
@@ -37,6 +38,10 @@ export type ModelEdit =
       externalIds?: Record<string, string>;
       /** build: so that restoring a deleted object is exact. */
       confirmations?: Record<PropertyKey, Confirmation>;
+      /** build: so that restoring a deleted object is exact. */
+      aliases?: string[];
+      /** build: so that restoring a deleted object is exact. */
+      notDuplicates?: NotDuplicate[];
     }
   | ({ edit: "setProperties"; set: Record<PropertyKey, PropertyValue> } & OnExisting) // null clears a value
   | ({ edit: "renameObject"; name: string } & OnExisting)
@@ -47,6 +52,10 @@ export type ModelEdit =
   | ({ edit: "confirmProperties"; keys: PropertyKey[] } & OnExisting)
   /** build: puts confirmations back as they were (the inverse of confirmProperties); null removes one. */
   | ({ edit: "setConfirmations"; set: Record<PropertyKey, Confirmation | null> } & OnExisting)
+  /** build: other names the object goes by (duplicates-and-identity.md §6); [] clears them. */
+  | ({ edit: "setAliases"; aliases: string[] } & OnExisting)
+  /** build: the objects it is judged not to be a duplicate of (duplicates-and-identity.md §6); [] clears them. */
+  | ({ edit: "setNotDuplicates"; notDuplicates: NotDuplicate[] } & OnExisting)
   | ({ edit: "moveToFolder"; folderId: Id } & OnExisting)
   | ({ edit: "changeObjectType"; type: TypeKey; propertyMap?: Record<PropertyKey, PropertyKey> } & OnExisting)
   /**

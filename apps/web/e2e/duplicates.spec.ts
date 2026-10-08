@@ -1,5 +1,5 @@
-// Duplicates, slice D-2 (design/02-model/duplicates-and-identity.md §4): a type's name policy is set in the
-// metamodel, and the find-or-create box and the engine follow it. It puts the setting back at the end.
+// Duplicates (design/02-model/duplicates-and-identity.md): slice D-2's name policy, set in the metamodel and followed
+// by the find-or-create box and the engine (it puts the setting back at the end), and slice D-3's possible duplicates.
 import { expect, test, type Page } from "@playwright/test";
 
 test.use({ viewport: { width: 1600, height: 1000 } });
@@ -63,5 +63,40 @@ test("a data object's repeated name is warned about, and refused once the metamo
   await explorer(page).getByLabel("New object name").press("Escape");
 
   await setDataObjectRepeats(page, "Saved with a warning", /Data object · Unique in the repository, warned/);
+  await saved(page);
+});
+
+test("possible duplicates are listed with reasons, found by other names, and dismissed", async ({ page }) => {
+  await signIn(page);
+  await explorer(page).getByLabel("Filter the explorer").fill("Payments Hub");
+  await explorer(page).locator(".row", { hasText: "Payments Hub" }).first().click();
+  await explorer(page).getByRole("button", { name: "+ Object" }).click();
+  await explorer(page).getByLabel("Object type").selectOption({ label: "Application" });
+  await explorer(page).getByLabel("New object name").fill("Payment Hub");
+  await explorer(page).getByLabel("New object name").press("Enter");
+  await saved(page);
+
+  await page.getByRole("menubar").getByRole("menuitem", { name: "Review", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Possible duplicates", exact: true }).click();
+  await page.getByLabel("Filter possible duplicates").fill("Payment Hub");
+  const table = page.getByRole("table", { name: "Possible duplicates" });
+  const pair = table.getByRole("row").filter({ hasText: "Payments Hub" });
+  await expect(pair).toContainText("Similar spelling");
+  await page.screenshot({ path: "test-results/possible-duplicates.png" });
+
+  // Selecting one shows the pair in its properties, where other names can be added; the explorer finds them.
+  await pair.getByRole("button", { name: "Payment Hub", exact: true }).click();
+  const panel = page.getByRole("complementary", { name: "Properties" });
+  await expect(panel.getByRole("list", { name: "Possible duplicates" })).toContainText("Payments Hub");
+  await panel.getByLabel("Also known as").fill("PayHub Next");
+  await panel.getByLabel("Also known as").press("Enter");
+  await saved(page);
+  await explorer(page).getByLabel("Filter the explorer").fill("payhub next");
+  await expect(explorer(page).locator(".row", { hasText: "Payment Hub" })).toBeVisible();
+
+  await pair.getByRole("button", { name: "Not duplicates" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "are not duplicates" })).toBeVisible();
+  await expect(pair).toHaveCount(0);
+  await expect(panel.getByRole("list", { name: "Possible duplicates" })).toHaveCount(0);
   await saved(page);
 });

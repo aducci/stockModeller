@@ -46,7 +46,8 @@ Built in slice P-1. One inspector serves objects, relationships, diagrams and fo
 |---|---|
 | Header | Name, edited in place; one line with the type, key and folder (the folder hides when the panel is narrow); the description, clamped to two lines until focused. Enter commits, Shift+Enter adds a line, Esc reverts. Objects (`setDescription`) and diagrams have descriptions; folders and relationships do not (B24) |
 | Toolbar | Sticky. A **property set** picker (P-2), then a filter over property names, keys and displayed values (`/` focuses it; other sections hide while it is in use); **Hide empty**, which says how many fields it hides; collapse or expand all |
-| Sections | Property groups and the other sections (Tags, Payload, Messages) collapse; a group's header shows filled/total. Open or closed, Hide empty and the label width are remembered per browser |
+| Sections | Property groups and the other sections (Tags, Also known as, Possible duplicates, Payload, Messages) collapse; a group's header shows filled/total. Open or closed, Hide empty and the label width are remembered per browser |
+| Identity (D-3) | An object's **Also known as** section takes abbreviations and former names, comma-separated; search and the explorer filter find them. A **Possible duplicates** section appears only when the object has some: each with its likeness, reasons and *Not duplicates* ([duplicates-and-identity.md](../02-model/duplicates-and-identity.md) §6) |
 | Grid | Two columns with a draggable splitter, 24 px rows, fields borderless until hovered or focused, a clear button on hover, `*` for required. Below 260 px wide, labels sit above values |
 | Editors | Chosen per property type (B23): text, multi-line, number and money (right-aligned, with unit or currency), date, URL (with an open link), switch or checkbox, dropdown (with the value's colour), segmented radio, rating pips, toggle chips, object picker (with a link to the object), read-only `ƒ` for calculated values. Relationship properties are read-only until `setProperties` covers relationships |
 | Later | Several items selected: common properties, "Mixed" where they differ, one change for all. Rendered properties (gauge, ring, pips, bars) from a property's `scale`, as the notation's decorations draw them |
@@ -136,6 +137,7 @@ One menu component serves the top bar's menu bar and the explorer's right-click 
 | Menu | Items |
 |---|---|
 | **File** (top bar) | New folder, New object, New diagram · Rename (F2) · Delete · Close tab, Close all tabs · Switch repository…, Sign out. New items go into the selected folder or the selected item's folder. New diagram opens the dialog with the types grouped by kind (B46), where the folder can be changed, so it needs no selection |
+| **Review** (top bar) | Possible duplicates: opens a tab listing pairs of objects that may be one thing, with the likeness, the reasons and *Not duplicates* ([duplicates-and-identity.md](../02-model/duplicates-and-identity.md) §6, slice D-3) |
 | Explorer: folder | New ▸ (folder, object, diagram, group) · Rename · Delete folder (only when empty) |
 | Explorer: object | Open · New ▸ (as a folder, then each canvas type that can draw it, *Sequence of its interactions* when it has some, and the documents it can be the subject of) · Rename · Add to group ▸ (the groups, then New group…) · Delete object… (the dialog listing what goes with it) |
 | Explorer: group | As an object, plus Ungroup (deletes the group; its members stay) |

@@ -58,7 +58,7 @@ Extend the object type's `uniqueName` into an **identity policy**. Existing valu
 | `uniqueAcross` | `type`, `family` | `type` | `family` = this type, its parents, its subtypes and its siblings under the same parent. *Salesforce* the `application` and *Salesforce* the `saasApplication` clash. Revisits B8, which stays the default |
 | `uniquePerLevel` | boolean | `true` | Names only clash within one semantic level, so *Payment* (conceptual) and *Payment* (logical) are not duplicates (`semantics.md §4`) |
 | `onClash` | `block`, `warn` | `block` | `warn` saves and raises a finding. `block` is today's behaviour |
-| `matchOn` *(proposed, D-3)* | property keys | `[]` | Extra identifying properties for detection and import matching, e.g. `server: [hostname]`, `application: [vendor, product]`. Like ServiceNow's identification rules, ranked |
+| `matchOn` *(proposed, D-5)* | property keys | `[]` | Extra identifying properties for detection and import matching, e.g. `server: [hostname]`, `application: [vendor, product]`. Like ServiceNow's identification rules, ranked |
 
 Every field is inherited through `extends`. `container` scope only applies inside a container: two top-level objects may share a name. The engine checks the policy on create, rename, a change of type or level, a move to another folder, and when a containment gives the object a new container; a clash is refused (`invalid` on `name`) or, with `warn`, saved with a finding that the workbench shows in the change's toast. Admins set all four in the Metamodel tab: select a type, then *Duplicates* in its panel. The publish review lists the types whose setting changes and how many objects already repeat a name under the new one; publishing never changes them.
 
@@ -139,6 +139,20 @@ A pure matcher module (no I/O, so it can live beside the engine and run in the b
 
 **Remembered verdicts.** *Not duplicates* on a pair is stored and never raised again unless one of them is renamed. Without this, every report becomes noise after the first week (the ServiceNow and Salesforce lesson).
 
+**As built in slice D-3** (B54):
+- `possibleDuplicates(state, metamodel, { objectId?, minScore = 0.75 })` in the engine. It runs where the model is loaded, which today is the browser, so the report is current after every change. The server-side `pg_trgm` pass waits until a repository outgrows it: 20,000 objects take about 2.5 s for the whole report and under 0.1 s for one object.
+- **Blocking**: only related types (`kinshipOf` is *same* or *family*) at the same semantic level are compared, and only pairs that share a name key or a neighbour. Name keys are each word's first four letters, the initials and the sorted word set. A bucket of more than 300 objects is skipped, because a word or hub that common says nothing.
+- **Score**: `1 − (1 − name) × (1 − 0.8 × overlap)`.
+  - *name* is the best `nameSimilarity` over both objects' names and other names. One name starting the other earns nothing here, unlike in the add box.
+  - *overlap* is the Jaccard share of neighbours in common, where a neighbour is a relationship type, a direction and the other end. It needs two shared neighbours to count and counts in full from four.
+  - Being in the same folder or container adds a reason, not score.
+- **Not raised**: objects related to each other directly, and pairs judged *not duplicates* under their current names. The judgement `{ of, name, otherName }` is kept on both objects through `setNotDuplicates`.
+- **Other names**: `aliases` on the object (`setAliases`), edited as *Also known as* in the properties panel. They are matched by this report, by the add box (an exact other name is reused like an exact name) and by the explorer filter. They do not take part in name uniqueness.
+- **Where it shows**:
+  - *Review ▸ Possible duplicates* opens a tab with each pair's likeness, both objects, the reasons and *Not duplicates*.
+  - The object's properties show a *Possible duplicates* section when it has any.
+  - There is no Problems panel yet, so the report is not a rule finding.
+
 ## 7. Investigate: the compare view
 
 Opened from a finding, from multi-select *Compare*, or from the add box's "already exists".
@@ -187,12 +201,12 @@ A client-side `mergePlan(state, metamodel, survivorId, mergedIds, choices)` buil
 |---|---|---|
 | **D-1 Find or create** | ✅ Built: name normaliser and matcher (`packages/engine/src/similar.ts`); the find-or-create box on the canvas and in the explorer, exact-match reuse; external-id uniqueness in the engine. Still to do: the payload picker and document mentions | S–M |
 | **D-2 Type policy** | ✅ Built: `container` scope, `uniqueAcross: family`, `uniquePerLevel`, `onClash`; relationship `distinct` with kind-based defaults; *Duplicates* in the metamodel type panel; findings shown in toasts; Essentials 1.5.0. Not yet: `matchOn` | M |
-| **D-3 Possible duplicates** | Background finding with scores and reasons, shared-neighbour signal, *not duplicates* verdicts stored, `aliases` field | M |
-| **D-4 Compare and merge** | Compare view; `mergePlan`; new edits (`retargetObjectOccurrence`, `setAliases`, `setExternalIds`, `addRedirect`); redirects table; inverse tests; API endpoints | L |
+| **D-3 Possible duplicates** | ✅ Built: `possibleDuplicates` (`packages/engine/src/duplicates.ts`) with scores and reasons and the shared-neighbour signal; the *Possible duplicates* tab and properties section; *not duplicates* judgements stored on both objects; `aliases` (*Also known as*) with `setAliases` and `setNotDuplicates`. Not yet: noise words per type, `matchOn`, the server-side pass | M |
+| **D-4 Compare and merge** | Compare view; `mergePlan`; new edits (`retargetObjectOccurrence`, `setExternalIds`, `addRedirect`; `setAliases` exists from D-3); redirects table; inverse tests; API endpoints | L |
 | **D-5 Import matching** | Match order and probable-match preview in import | M |
 | Later | Embedding signal; LLM-drafted merge rationale; bulk merge templates | |
 
- D-4 is the only one that touches storage (redirects table, aliases column), which would go into `storage.md §7` when built.
+ D-3 added the `aliases` and `not_duplicates` columns (migration 011, `storage.md §7`); D-4 adds the redirects table.
 
 ## 11. Open questions
 

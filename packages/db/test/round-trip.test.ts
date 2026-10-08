@@ -180,6 +180,26 @@ describeDb("engine + database", () => {
     expect(snapshot(after.state)).toEqual(snapshot(result.state));
   });
 
+  it("stores aliases and not-duplicate judgements and reads them back exactly", async () => {
+    const before = await withWorkspace(t.conn, WS, (tx) => loadState(tx, REPO, BASELINE));
+    const server = before.state.objects.get("O-SRV-1")!;
+    const verdict = { of: "O-OTHER", name: server.name, otherName: "Another server" };
+    const result = await submit(t.conn, {
+      id: "C-ALIASES",
+      scenarioId: BASELINE,
+      label: "Aliases",
+      edits: [
+        { edit: "setAliases", id: "O-SRV-1", baseVersion: server.version, aliases: ["App server", "SRV1"] },
+        { edit: "setNotDuplicates", id: "O-SRV-1", baseVersion: server.version, notDuplicates: [verdict] },
+      ],
+    });
+    if (!result.ok) throw new Error(JSON.stringify(result.reasons));
+    const after = await withWorkspace(t.conn, WS, (tx) => loadState(tx, REPO, BASELINE));
+    expect(after.state.objects.get("O-SRV-1")!.aliases).toEqual(["App server", "SRV1"]);
+    expect(after.state.objects.get("O-SRV-1")!.notDuplicates).toEqual([verdict]);
+    expect(snapshot(after.state)).toEqual(snapshot(result.state));
+  });
+
   it("stores a view definition and reads it back exactly", async () => {
     const before = await withWorkspace(t.conn, WS, (tx) => loadState(tx, REPO, BASELINE));
     const diagram = [...before.state.diagrams.live()][0]!;

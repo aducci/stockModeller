@@ -65,6 +65,15 @@ function candidates(state: ModelState, next: () => number, n: number): Edit[] {
     o ? { edit: "setTags", id: o.id, baseVersion: o.version, tags: [`t${n}`] } : null,
     o ? { edit: "setDescription", id: o.id, baseVersion: o.version, description: n % 3 ? `About ${n}` : "" } : null,
     o ? { edit: "confirmProperties", id: o.id, baseVersion: o.version, keys: ["semantic.level"] } : null,
+    o ? { edit: "setAliases", id: o.id, baseVersion: o.version, aliases: n % 3 ? [`Alias ${n}`, "Other"] : [] } : null,
+    o && o2 && o2.id !== o.id
+      ? {
+          edit: "setNotDuplicates",
+          id: o.id,
+          baseVersion: o.version,
+          notDuplicates: n % 3 ? [{ of: o2.id, name: o.name, otherName: o2.name }] : [],
+        }
+      : null,
     o
       ? {
           edit: "setProperties",

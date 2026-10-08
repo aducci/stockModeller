@@ -16,6 +16,7 @@ import {
   type Id,
   type LogEntry,
   type ModelEdit,
+  type NotDuplicate,
   type ObjectOccurrence,
   type PropertyValue,
   type Rejection,
@@ -25,7 +26,7 @@ import {
   type TypeKey,
 } from "@connectome/model";
 import type { Metamodel, ResolvedDiagramType, ResolvedObjectType, ResolvedRelationshipType } from "./metamodel";
-import { containerOf, duplicateRelationships, nameClash } from "./identity";
+import { containerOf, duplicateRelationships, nameClash, sameName } from "./identity";
 import { checkValue } from "./properties";
 import type {
   AnnotationRow,
@@ -208,6 +209,10 @@ class Transaction {
         return this.confirmProperties(edit);
       case "setConfirmations":
         return this.setConfirmations(edit);
+      case "setAliases":
+        return this.setAliases(edit);
+      case "setNotDuplicates":
+        return this.setNotDuplicates(edit);
       case "moveToFolder":
         return this.moveToFolder(edit);
       case "changeObjectType":
@@ -295,6 +300,8 @@ class Transaction {
       tags: this.checkTags(e.tags ?? []),
       externalIds: e.externalIds ?? {},
       ...(e.confirmations && Object.keys(e.confirmations).length > 0 ? { confirmations: e.confirmations } : {}),
+      ...optionalList("aliases", this.checkAliases(e.aliases ?? [])),
+      ...optionalList("notDuplicates", this.checkNotDuplicates(e.id, e.notDuplicates ?? [])),
       version: tombstone?.version ?? 0,
       fieldVersions: {},
       deleted: false,
@@ -413,6 +420,53 @@ class Transaction {
       set: Object.fromEntries(keys.map((k) => [k, before[k] ?? null])),
     });
     return obj.id;
+  }
+
+  private setAliases(e: Extract<ModelEdit, { edit: "setAliases" }>): Id {
+    const obj = this.requireLive("objects", e.id);
+    this.checkBase("objects", obj, e.baseVersion, ["aliases"]);
+    const { aliases: before, ...rest } = obj;
+    this.write("objects", { ...rest, ...optionalList("aliases", this.checkAliases(e.aliases)) });
+    this.markChanged("objects", obj.id, ["aliases"]);
+    this.step({ edit: "setAliases", id: obj.id, baseVersion: PENDING_VERSION, aliases: before ?? [] });
+    return obj.id;
+  }
+
+  private setNotDuplicates(e: Extract<ModelEdit, { edit: "setNotDuplicates" }>): Id {
+    const obj = this.requireLive("objects", e.id);
+    this.checkBase("objects", obj, e.baseVersion, ["notDuplicates"]);
+    const { notDuplicates: before, ...rest } = obj;
+    this.write("objects", {
+      ...rest,
+      ...optionalList("notDuplicates", this.checkNotDuplicates(obj.id, e.notDuplicates)),
+    });
+    this.markChanged("objects", obj.id, ["notDuplicates"]);
+    this.step({ edit: "setNotDuplicates", id: obj.id, baseVersion: PENDING_VERSION, notDuplicates: before ?? [] });
+    return obj.id;
+  }
+
+  /** Other names an object goes by: not blank, not repeated, at most 50. */
+  private checkAliases(aliases: string[]): string[] {
+    if (aliases.length > 50) this.invalid("aliases", "An object can have at most 50 other names");
+    const kept: string[] = [];
+    for (const alias of aliases) {
+      if (!alias.trim()) this.invalid("aliases", "Other names cannot be blank");
+      if (alias.length > MAX_NAME) this.invalid("aliases", `Names have at most ${MAX_NAME} characters`);
+      if (kept.some((k) => sameName(k, alias))) this.invalid("aliases", `"${alias.trim()}" is listed twice`);
+      kept.push(alias);
+    }
+    return kept;
+  }
+
+  /** Not-a-duplicate judgements: never of the object itself, one per other object. */
+  private checkNotDuplicates(selfId: Id, verdicts: NotDuplicate[]): NotDuplicate[] {
+    const seen = new Set<Id>();
+    for (const v of verdicts) {
+      if (v.of === selfId) this.invalid("notDuplicates", "An object cannot be judged against itself");
+      if (seen.has(v.of)) this.invalid("notDuplicates", "An object is listed twice");
+      seen.add(v.of);
+    }
+    return verdicts;
   }
 
   private moveToFolder(e: Extract<ModelEdit, { edit: "moveToFolder" }>): Id {
@@ -541,6 +595,8 @@ class Transaction {
         tags: current.tags,
         externalIds: current.externalIds,
         ...(current.confirmations ? { confirmations: current.confirmations } : {}),
+        ...(current.aliases ? { aliases: current.aliases } : {}),
+        ...(current.notDuplicates ? { notDuplicates: current.notDuplicates } : {}),
       },
       ...this.restoreRank("object", current),
     );
@@ -1866,6 +1922,11 @@ function splitKey(key: string): [VersionedCollection, Id] {
 
 function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** A list field that is left out when empty, as a fresh object has it. */
+function optionalList<K extends "aliases" | "notDuplicates">(key: K, list: NonNullable<ObjectRow[K]>) {
+  return (list.length > 0 ? { [key]: list } : {}) as Partial<Pick<ObjectRow, K>>;
 }
 
 /** An object with these confirmations; none leaves the field out, as a fresh object has it. */

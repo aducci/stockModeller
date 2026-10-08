@@ -3,7 +3,7 @@
 import type { Metamodel, ModelState, ObjectRow } from "@connectome/engine";
 import type { Edit, Id } from "@connectome/model";
 import { useAuth } from "../state/auth";
-import { itemSelected, useWorkbench, type Selection } from "../state/workbench";
+import { DUPLICATES_TAB, itemSelected, useWorkbench, type Selection } from "../state/workbench";
 import { navigate } from "../route";
 import { itemName, targetFolder, whyFolderNotDeletable } from "../explorer";
 import { addToGroupPlan, isGroup, removeFromGroupPlan, type Plan } from "../dragdrop";
@@ -243,4 +243,9 @@ export function metamodelMenu(): MenuEntry[] {
       run: () => store().setMetamodelDraft(null),
     },
   ];
+}
+
+/** The Review menu: reports over the whole repository. */
+export function reviewMenu(): MenuEntry[] {
+  return [{ label: "Possible duplicates", run: () => store().openTab({ kind: "duplicates", id: DUPLICATES_TAB }) }];
 }

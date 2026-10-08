@@ -136,7 +136,12 @@ export interface ModelObject extends ModelItem {
   name: string; key: string | null; folderId: Id; description: string;
   rank?: string;                                // build: place among its siblings in the explorer
   confirmations?: Record<PropertyKey, Confirmation>; // build: who last confirmed each property's value, and when
+  aliases?: string[];               // build: other names it goes by, for search and duplicate detection
+  notDuplicates?: NotDuplicate[];   // build: objects someone judged it is not a duplicate of
 }
+
+/** build: "not the same thing as `of`", judged while the two had these names; a rename of either asks again. */
+export interface NotDuplicate { of: Id; name: string; otherName: string }
 
 /** build: "this value is still right", as of a commit (edit `confirmProperties`). */
 export interface Confirmation { by: Id; at: IsoDateTime }

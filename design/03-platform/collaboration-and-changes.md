@@ -23,7 +23,7 @@ Edit types (full list in [changes.ts](../05-structures/changes.ts)):
 
 | Model edits | Diagram edits |
 |---|---|
-| `createObject`, `setProperties`, `renameObject`, `setDescription`, `confirmProperties`, `setConfirmations`, `moveToFolder`, `changeObjectType`, `deleteObject` | `createDiagram`, `updateDiagram`, `setDiagramProperties`, `deleteDiagram` |
+| `createObject`, `setProperties`, `renameObject`, `setDescription`, `confirmProperties`, `setConfirmations`, `setAliases`, `setNotDuplicates`, `moveToFolder`, `changeObjectType`, `deleteObject` | `createDiagram`, `updateDiagram`, `setDiagramProperties`, `deleteDiagram` |
 | `createRelationship`, `reconnectRelationship`, `deleteRelationship` | `addObjectOccurrence`, `moveObjectOccurrence`, `styleOccurrence`, `removeOccurrence` |
 | `createFolder`, `renameFolder`, `moveFolder`, `deleteFolder` | `addRelationshipOccurrence`, `routeRelationshipOccurrence`, `addAnnotation`, `updateAnnotation` |
 | `changeRelationshipType`, `setPayload` ([semantics §11](../02-model/semantics.md#11-what-changes-in-the-build)), `setRelationshipProperties` (slice A-1b) | |

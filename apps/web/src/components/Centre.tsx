@@ -8,6 +8,7 @@ import { MetamodelAdmin } from "./MetamodelAdmin";
 import { MatrixView } from "./MatrixView";
 import { DocumentView } from "./DocumentView";
 import { SequenceView } from "./SequenceView";
+import { DuplicatesView } from "./DuplicatesView";
 
 export function Centre() {
   const { state, metamodel } = useModel();
@@ -30,7 +31,13 @@ export function Centre() {
             onClick={() => activate(t.id)}
           >
             <span aria-hidden>
-              {t.kind === "diagram" ? KIND_GLYPH[viewKind(state, metamodel, t.id)] : t.kind === "metamodel" ? "◇" : "▭"}
+              {t.kind === "diagram"
+                ? KIND_GLYPH[viewKind(state, metamodel, t.id)]
+                : t.kind === "metamodel"
+                  ? "◇"
+                  : t.kind === "duplicates"
+                    ? "≈"
+                    : "▭"}
             </span>
             <span>{tabName(state, t)}</span>
             {changedTabs.has(t.id) && <span className="change-dot" title="Changed by someone else" />}
@@ -69,6 +76,7 @@ export function Centre() {
             <DiagramEditor key={active.id} id={active.id} />
           ))}
         {active?.kind === "metamodel" && <MetamodelAdmin />}
+        {active?.kind === "duplicates" && <DuplicatesView />}
       </div>
     </main>
   );
@@ -76,6 +84,7 @@ export function Centre() {
 
 function tabName(state: ModelState, tab: Tab): string {
   if (tab.kind === "metamodel") return "Metamodel";
+  if (tab.kind === "duplicates") return "Possible duplicates";
   const item = tab.kind === "diagram" ? state.diagrams.get(tab.id) : state.objects.get(tab.id);
   return item?.name ?? "(deleted)";
 }
