@@ -1,7 +1,7 @@
 // Property administration in the metamodel tab (slice A-1b; design/02-model/metamodel.md §3): the Properties view
 // (every property type, its definition, its list values and the types that carry it) and the panel the Types view
 // opens on one type. Both edit the metamodel draft; nothing reaches the model until it is published.
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { propertyUsage, type Metamodel } from "@connectome/engine";
 import { LEVEL_PROPERTY, type DataType, type PropertyEditor, type PropertyType, type TypeKey } from "@connectome/model";
 import { useModel, useWorkbench } from "../state/workbench";
@@ -564,6 +564,8 @@ export function TypePropertiesPanel(props: {
   onChange(draft: Draft): void;
   /** Without it the panel has no close button (inside the diagram type editor). */
   onClose?(): void;
+  /** The type's own settings (name, parent, meaning), shown above its properties. */
+  general?: ReactNode;
 }) {
   const { kind, type, draft, metamodel, onChange, onClose } = props;
   const showProperty = useWorkbench((s) => s.showMetamodelProperty);
@@ -607,6 +609,7 @@ export function TypePropertiesPanel(props: {
           </button>
         )}
       </header>
+      {props.general}
       <h4>Its properties ({own.length})</h4>
       <ul className="plain mm-type-props" aria-label="Own properties">
         {own.map((key) => (

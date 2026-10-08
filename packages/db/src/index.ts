@@ -3,6 +3,7 @@ export { migrate, listMigrations, MIGRATIONS_DIR } from "./migrate";
 export {
   createWorkspace,
   createRepository,
+  deleteRepository,
   createScenario,
   scenarioAncestry,
   loadMetamodel,

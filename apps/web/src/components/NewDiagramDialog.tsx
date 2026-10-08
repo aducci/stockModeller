@@ -62,8 +62,8 @@ export function NewDiagramDialog({ folderId, onDone }: { folderId: Id | null; on
           : type.definition.name;
   const missing = !type
     ? "Choose a type"
-    : !folder
-      ? "Create a folder first"
+    : !folder && folders.length > 0
+      ? "Choose a folder"
       : kind === "document" && !subjectId
         ? "Choose what the document is about"
         : null;
@@ -73,10 +73,13 @@ export function NewDiagramDialog({ folderId, onDone }: { folderId: Id | null; on
     if (missing || !type) return;
     const title = name.trim() || suggestion;
     const id = ulid();
+    // A repository started from scratch has no folder yet: the first diagram makes one.
+    const firstFolder = folder ? null : ulid();
+    const target = folder || firstFolder!;
     let plan: { label: string; edits: Edit[] };
     if (kind === "document") {
       const subject = state.objects.get(subjectId)!;
-      plan = newDocumentPlan(type.definition, { ...subject, folderId: folder } as ObjectRow, id);
+      plan = newDocumentPlan(type.definition, { ...subject, folderId: target } as ObjectRow, id);
       (plan.edits[0] as { name: string }).name = title;
     } else if (kind === "sequence") {
       const ids = lifelines.filter((x, i) => x && lifelines.indexOf(x) === i);
@@ -86,19 +89,20 @@ export function NewDiagramDialog({ folderId, onDone }: { folderId: Id | null; on
           state,
           metamodel,
           ids,
-          { id, name: title, diagramType: typeKey, folderId: folder },
+          { id, name: title, diagramType: typeKey, folderId: target },
           withMessages,
         ),
       };
     } else if (kind === "canvas" && around) {
-      plan = diagramAroundPlan(state, metamodel, type, { ...state.objects.get(around)!, folderId: folder }, id);
+      plan = diagramAroundPlan(state, metamodel, type, { ...state.objects.get(around)!, folderId: target }, id);
       (plan.edits[0] as { name: string }).name = title;
       plan.label = `Create diagram ${title}`;
     } else
       plan = {
         label: `Create diagram ${title}`,
-        edits: [{ edit: "createDiagram", id, name: title, diagramType: typeKey, folderId: folder }],
+        edits: [{ edit: "createDiagram", id, name: title, diagramType: typeKey, folderId: target }],
       };
+    if (firstFolder) plan.edits.unshift({ edit: "createFolder", id: firstFolder, parentId: null, name: "Diagrams" });
     if (edit(plan.label, plan.edits)) {
       select({ kind: "diagram", id });
       openTab({ kind: "diagram", id });

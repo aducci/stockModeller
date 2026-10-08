@@ -44,4 +44,9 @@ export class StateCache {
     this.entries.set(repositoryId, entry);
     return entry;
   }
+
+  /** Drops a repository's entry, after the repository was deleted. */
+  forget(repositoryId: string): void {
+    this.entries.delete(repositoryId);
+  }
 }

@@ -78,6 +78,23 @@ export class ApiClient {
     return this.request("GET", "/repositories");
   }
 
+  /**
+   * Creates a repository. Its metamodel is the one sent (an exported metamodel, or an empty one to start from
+   * scratch), else the Essentials package.
+   */
+  createRepository(body: {
+    name: string;
+    description?: string;
+    metamodel?: { package: Omit<MetamodelPackage, "version"> & { version?: string }; diagramTypes: DiagramType[] };
+  }): Promise<{ id: Id; name: string; baselineScenarioId: Id; seq: number }> {
+    return this.request("POST", "/repositories", body);
+  }
+
+  /** Deletes a repository and everything in it. It cannot be undone. */
+  deleteRepository(repositoryId: Id): Promise<void> {
+    return this.request("DELETE", `/repositories/${encodeURIComponent(repositoryId)}`);
+  }
+
   scenarios(repositoryId: Id): Promise<{ id: Id; parentId: Id | null; name: string; state: string }[]> {
     return this.request("GET", `/repositories/${encodeURIComponent(repositoryId)}/scenarios`);
   }
@@ -134,7 +151,7 @@ export class ApiClient {
     return this.request("PUT", `${path}${preview ? "?preview=true" : ""}`, body);
   }
 
-  private async request<T>(method: "GET" | "POST" | "PUT", path: string, body?: unknown): Promise<T> {
+  private async request<T>(method: "GET" | "POST" | "PUT" | "DELETE", path: string, body?: unknown): Promise<T> {
     const headers: Record<string, string> = { authorization: this.options.authorization };
     if (body !== undefined) headers["content-type"] = "application/json";
     const res = await this.fetch(`${this.base}${path}`, {

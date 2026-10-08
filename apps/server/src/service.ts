@@ -13,6 +13,7 @@ import {
   changeLog,
   changeLogSince,
   commitChange,
+  deleteRepository,
   findChange,
   getRepository,
   listScenarios,
@@ -328,6 +329,16 @@ export class ModelService {
         return result;
       }),
     );
+  }
+
+  /** Deletes a repository and everything in it; false when there was none. */
+  async deleteRepository(principal: Principal, repositoryId: string): Promise<boolean> {
+    const entry = this.cache.entry(repositoryId);
+    const deleted = await entry.mutex.run(() =>
+      withWorkspace(this.conn, principal.workspaceId, (tx) => deleteRepository(tx, repositoryId)),
+    );
+    this.cache.forget(repositoryId);
+    return deleted;
   }
 
   /** Undoes one of the caller's own changes with a new change built from its stored inverses. */
