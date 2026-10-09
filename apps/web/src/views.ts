@@ -6,6 +6,7 @@ import { placeRelationshipsEdits } from "./document";
 import { interactionPartners, newSequenceEdits } from "./sequence";
 import { symbolFor } from "./diagram";
 import { aboutEdits, canBeAbout } from "./subjects";
+import { decompositionPlan } from "./decompose";
 
 export const KIND_GLYPH: Record<ViewKind, string> = { canvas: "⧉", matrix: "▦", document: "▤", sequence: "⇅" };
 
@@ -46,7 +47,8 @@ export function canvasTypesFor(metamodel: Metamodel, object: ObjectRow): Resolve
 
 /**
  * A new canvas with the object in the middle and what it is related to around it: every relationship of a type the
- * diagram type allows, to an element it allows (at most 12), as one change.
+ * diagram type allows, to an element it allows (at most 12), as one change. A decomposition type (DOC-1b) shows the
+ * object's parts instead.
  */
 export function diagramAroundPlan(
   state: ModelState,
@@ -55,6 +57,7 @@ export function diagramAroundPlan(
   object: ObjectRow,
   id: Id = ulid(),
 ): { label: string; edits: Edit[] } {
+  if (type.definition.decomposes) return decompositionPlan(state, metamodel, type, object, id);
   const name = `${object.name} ${type.definition.name.toLowerCase()}`;
   const diagram = { id, diagramType: type.definition.key } as DiagramRow;
   const symbol = symbolFor(metamodel, diagram, object.type);

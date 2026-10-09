@@ -61,3 +61,40 @@ test("a new view about an element is linked from it, and deleting the view remov
   await row(page, "Legacy CRM").click();
   await expect(docs.getByRole("button", { name: "Legacy CRM high-level design", exact: true })).toHaveCount(0);
 });
+
+// Decomposition (DOC-1b): the value chain's L0 to L3 is one diagram type, drilled into through each process.
+test("a value chain drills into a process, and what is drawn there becomes its part", async ({ page }) => {
+  await signIn(page);
+  await explorer(page).getByLabel("Filter the explorer").fill("Manage Claims value chain");
+  await row(page, "Manage Claims value chain").dblclick();
+  const canvas = page.getByRole("application", { name: "Diagram Manage Claims value chain" });
+  // Recover Costs has no decomposition yet: double-clicking it offers one.
+  await canvas.locator('.occ[data-name="Recover Costs"]').dblclick();
+  await menuItem(page, "New value chain for Recover Costs").click();
+  const child = page.getByRole("application", { name: "Diagram Recover Costs value chain" });
+  await expect(child).toBeVisible();
+  const crumbs = page.getByRole("navigation", { name: "Decomposition" });
+  await expect(crumbs).toHaveText("Manage Claims›Recover Costs");
+
+  // Drawing a process on it makes the process a part of Recover Costs.
+  await page
+    .getByRole("toolbar", { name: "Palette" })
+    .locator(".palette-item", { hasText: /^Process$/ })
+    .click();
+  await child.getByLabel(/^Name of the new/).fill("Bill Insurer");
+  await child.getByLabel(/^Name of the new/).press("Enter");
+  await saved(page);
+  const toasts = page.locator(".toasts");
+  await expect(toasts).toContainText("Create Bill Insurer in Recover Costs");
+
+  // Taking it off the diagram offers to take it out of Recover Costs too.
+  await child.locator('.occ[data-name="Bill Insurer"]').click();
+  await child.press("Delete");
+  await toasts.getByRole("button", { name: "Also remove from Recover Costs" }).click();
+  await saved(page);
+  await expect(toasts).toContainText("Remove Bill Insurer from Recover Costs");
+
+  // Back up through the breadcrumb.
+  await crumbs.getByRole("button", { name: "Manage Claims" }).click();
+  await expect(canvas).toBeVisible();
+});

@@ -204,7 +204,11 @@ describeDb("API", () => {
     const conceptual = await api.get(
       `/repositories/${REPO}/objects?q=${encodeURIComponent("abstraction:conceptual AND type:process")}`,
     );
-    expect((conceptual.body as { items: { id: string }[] }).items.map((o) => o.id)).toEqual(["O-PRC-1"]);
+    expect((conceptual.body as { items: { id: string }[] }).items.map((o) => o.id)).toEqual([
+      "O-PRC-1",
+      "O-PRC-2",
+      "O-PRC-3",
+    ]);
   });
 
   it("reads a diagram with its occurrences and annotations", async () => {

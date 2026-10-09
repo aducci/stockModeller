@@ -3326,3 +3326,20 @@ button.toggle .badge {
   display: flex;
   gap: 6px;
 }
+/* A decomposition's way up and its missing parts (DOC-1b): one quiet line each, above the canvas. */
+.crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  font-size: 12px;
+  color: var(--fg-2);
+}
+.crumb-sep {
+  margin-right: 4px;
+  color: var(--fg-2);
+}
+.diagram-banner {
+  margin: 6px 12px 0;
+}

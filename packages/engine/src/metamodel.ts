@@ -365,6 +365,13 @@ export class Metamodel {
         else if (pt.dataType !== "url" || !pt.many)
           problems.push(`Diagram type "${dt.key}" links from "${link}", which is not a url property with many values`);
       }
+      if (dt.decomposes) {
+        if (!mm.relationshipTypes.has(dt.decomposes.relationship))
+          problems.push(
+            `Diagram type "${dt.key}" decomposes through unknown relationship type "${dt.decomposes.relationship}"`,
+          );
+        for (const t of dt.decomposes.childTypes ?? []) typeRef(t, `Diagram type "${dt.key}" decomposes`);
+      }
       mm.diagramTypes.set(dt.key, {
         definition: dt,
         nesting: dt.nesting ?? "nested",

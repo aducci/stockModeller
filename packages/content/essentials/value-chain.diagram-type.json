@@ -1,0 +1,26 @@
+{
+  "key": "valueChain",
+  "name": "Value chain",
+  "description": "A process broken into its parts, left to right. Each part can have a value chain of its own, so L0 to L3 is a drill-down through this one type: what is drawn on one becomes a part of the process it is about.",
+  "subject": {
+    "type": ["process"],
+    "linkProperty": "documentation.link"
+  },
+  "decomposes": {
+    "relationship": "composedOf",
+    "childTypes": ["process", "processStep"]
+  },
+  "objectTypes": ["process", "processStep", "organisationUnit"],
+  "relationshipTypes": ["triggers", "owns"],
+  "nesting": "lines",
+  "symbols": {
+    "process": {
+      "width": 150,
+      "height": 64
+    },
+    "processStep": {
+      "width": 130,
+      "height": 52
+    }
+  }
+}

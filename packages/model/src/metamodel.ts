@@ -86,6 +86,14 @@ export interface DiagramSubject {
   linkProperty?: PropertyKey;
 }
 
+/** build (slice DOC-1b): a diagram type whose diagrams decompose their subject through a relationship type. */
+export interface Decomposition {
+  /** The relationship type from the subject to each part, e.g. `composedOf`. */
+  relationship: TypeKey;
+  /** Element types (and their subtypes) that become parts when drawn; absent = any the rules allow. */
+  childTypes?: TypeKey[];
+}
+
 export interface DiagramType {
   key: TypeKey;
   name: string;
@@ -97,6 +105,11 @@ export interface DiagramType {
    * the diagram's `definition.subject`; a document takes the element types it accepts from `document.subject`.
    */
   subject?: DiagramSubject;
+  /**
+   * build (slice DOC-1b): drawing an element on a diagram of this type makes it a part of the diagram's subject
+   * (views-and-design-artifacts.md §12).
+   */
+  decomposes?: Decomposition;
   /** build (slice V-1): a matrix type's default definition; a diagram's own definition overrides it key by key. */
   matrix?: MatrixDefinition;
   /** build (slice V-2): a document template (views-and-design-artifacts.md §7.1). */

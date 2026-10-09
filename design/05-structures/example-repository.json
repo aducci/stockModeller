@@ -38,7 +38,9 @@
     { "id": "O-INT-1", "type": "interface", "name": "Claims API", "folderId": "F04", "properties": {} },
     { "id": "O-INT-2", "type": "interface", "name": "Payments API", "folderId": "F04", "properties": { "documentation.link": ["diagram:D-07", "diagram:D-06"] } },
     { "id": "O-DAT-1", "type": "dataObject", "name": "Claim", "folderId": "F08", "properties": {} },
-    { "id": "O-DAT-2", "type": "dataObject", "name": "Payment", "folderId": "F08", "properties": {} }
+    { "id": "O-DAT-2", "type": "dataObject", "name": "Payment", "folderId": "F08", "properties": {} },
+    { "id": "O-PRC-2", "type": "process", "name": "Manage Claims", "folderId": "F03", "properties": { "lifecycle.status": "active", "documentation.link": ["diagram:D-08"] } },
+    { "id": "O-PRC-3", "type": "process", "name": "Recover Costs", "folderId": "F03", "properties": {} }
   ],
   "relationships": [
     { "id": "R-01", "type": "contains", "sourceId": "O-CAP-1", "targetId": "O-CAP-2", "properties": {} },
@@ -61,7 +63,10 @@
     { "id": "R-19", "type": "calls", "sourceId": "O-APP-2", "targetId": "O-INT-1", "properties": { "interaction.pattern": "asynchronous", "interaction.protocol": "AMQP" } },
     { "id": "R-20", "type": "flowsTo", "sourceId": "O-APP-2", "targetId": "O-INT-1", "name": "Claim submitted", "properties": {}, "payload": ["O-DAT-1"], "parentId": "R-19" },
     { "id": "R-21", "type": "accesses", "sourceId": "O-APP-1", "targetId": "O-DAT-1", "properties": { "access.mode": "readWrite" } },
-    { "id": "R-22", "type": "accesses", "sourceId": "O-APP-3", "targetId": "O-DAT-2", "properties": { "access.mode": "write" } }
+    { "id": "R-22", "type": "accesses", "sourceId": "O-APP-3", "targetId": "O-DAT-2", "properties": { "access.mode": "write" } },
+    { "id": "R-26", "type": "composedOf", "sourceId": "O-PRC-2", "targetId": "O-PRC-1", "properties": {} },
+    { "id": "R-27", "type": "composedOf", "sourceId": "O-PRC-2", "targetId": "O-PRC-3", "properties": {} },
+    { "id": "R-28", "type": "triggers", "sourceId": "O-PRC-1", "targetId": "O-PRC-3", "properties": {} }
   ],
   "scenarioChanges": {
     "S0000000000000000000000002": [
@@ -164,6 +169,18 @@
       },
       "objectOccurrences": [],
       "relationshipOccurrences": [],
+      "annotations": []
+    },
+    {
+      "id": "D-08", "name": "Manage Claims value chain", "diagramType": "valueChain", "folderId": "F06",
+      "definition": { "subject": "O-PRC-2" },
+      "objectOccurrences": [
+        { "id": "OO-81", "objectId": "O-PRC-1", "parentOccurrenceId": null, "x": 40, "y": 80, "w": 150, "h": 64, "z": 1 },
+        { "id": "OO-82", "objectId": "O-PRC-3", "parentOccurrenceId": null, "x": 232, "y": 80, "w": 150, "h": 64, "z": 1 }
+      ],
+      "relationshipOccurrences": [
+        { "id": "RO-81", "relationshipId": "R-28", "sourceOccurrenceId": "OO-81", "targetOccurrenceId": "OO-82", "shownAs": "line", "route": { "mode": "auto" } }
+      ],
       "annotations": []
     }
   ],
