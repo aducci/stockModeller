@@ -14,7 +14,8 @@
     { "id": "F06", "parentId": null, "name": "Diagrams" },
     { "id": "F07", "parentId": null, "name": "Catalogues" },
     { "id": "F08", "parentId": null, "name": "Information" },
-    { "id": "F09", "parentId": "F06", "name": "Designs" }
+    { "id": "F09", "parentId": "F06", "name": "Designs" },
+    { "id": "F10", "parentId": null, "name": "RAID" }
   ],
   "objects": [
     { "id": "O-CAP-1", "type": "capability", "name": "Claims Management", "folderId": "F02", "properties": { "assessment.criticality": "high" } },
@@ -40,7 +41,13 @@
     { "id": "O-DAT-2", "type": "dataObject", "name": "Payment", "folderId": "F08", "properties": {} },
     { "id": "O-PRC-2", "type": "process", "name": "Manage Claims", "folderId": "F03", "properties": { "lifecycle.status": "active" } },
     { "id": "O-PRC-3", "type": "process", "name": "Recover Costs", "folderId": "F03", "properties": {} },
-    { "id": "O-FN-1", "type": "applicationFunction", "name": "Pay a claim", "folderId": "F04", "properties": {} }
+    { "id": "O-FN-1", "type": "applicationFunction", "name": "Pay a claim", "folderId": "F04", "properties": {} },
+    { "id": "O-RSK-1", "type": "risk", "name": "Nightly SFTP feed has no retry", "folderId": "F10",
+      "properties": { "raid.status": "open", "raid.owner": "dana@example.com", "raid.impact": "medium", "raid.likelihood": "high",
+                      "raid.mitigation": "Retry the transfer and tell the claims team when a file is missed" } },
+    { "id": "O-ISS-1", "type": "issue", "name": "Payment confirmations as events or polling", "folderId": "F10", "properties": { "raid.status": "open", "raid.owner": "dana@example.com" } },
+    { "id": "O-DEP-1", "type": "dependency", "name": "Payments Hub publishes payment events", "folderId": "F10",
+      "properties": { "raid.status": "open", "raid.owner": "lee@example.com", "raid.dueDate": "2027-03-31" } }
   ],
   "relationships": [
     { "id": "R-01", "type": "contains", "sourceId": "O-CAP-1", "targetId": "O-CAP-2", "properties": {} },
@@ -66,7 +73,10 @@
     { "id": "R-22", "type": "accesses", "sourceId": "O-APP-3", "targetId": "O-DAT-2", "properties": { "access.mode": "write" } },
     { "id": "R-26", "type": "composedOf", "sourceId": "O-PRC-2", "targetId": "O-PRC-1", "properties": {} },
     { "id": "R-27", "type": "composedOf", "sourceId": "O-PRC-2", "targetId": "O-PRC-3", "properties": {} },
-    { "id": "R-28", "type": "triggers", "sourceId": "O-PRC-1", "targetId": "O-PRC-3", "properties": {} }
+    { "id": "R-28", "type": "triggers", "sourceId": "O-PRC-1", "targetId": "O-PRC-3", "properties": {} },
+    { "id": "R-29", "type": "concerns", "sourceId": "O-RSK-1", "targetId": "O-APP-2", "properties": {} },
+    { "id": "R-30", "type": "concerns", "sourceId": "O-ISS-1", "targetId": "O-APP-1", "properties": {} },
+    { "id": "R-31", "type": "concerns", "sourceId": "O-DEP-1", "targetId": "O-APP-3", "properties": {} }
   ],
   "links": [
     { "id": "L-01", "sourceId": "O-APP-1", "kind": "web", "target": { "url": "https://wiki.example.com/claims-manager" }, "label": "Team wiki" },
@@ -139,7 +149,7 @@
         "summary": { "paragraphs": [["Claims Manager registers and assesses claims for the ", { "mention": "O-ORG-1" }, ". It pays settled claims through ", { "mention": "O-INT-2" }, ", which ", { "mention": "O-APP-3" }, " provides, and takes new claims from ", { "mention": "O-APP-2" }, " until that is retired."]] },
         "context": { "diagramId": "D-03" },
         "integrations": { "sequences": { "R-16": "D-05" } },
-        "risks": { "paragraphs": [["The nightly SFTP feed from ", { "mention": "O-APP-2" }, " has no retry; a missed file delays new claims by a day."], ["Open: whether payment confirmations should move to events once Payments Hub supports them."]] }
+        "risks": { "paragraphs": [["The nightly feed from ", { "mention": "O-APP-2" }, " is tracked as ", { "mention": "O-RSK-1" }, "; moving confirmations to events waits on ", { "mention": "O-DEP-1" }, "."]] }
       },
       "objectOccurrences": [],
       "relationshipOccurrences": [],

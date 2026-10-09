@@ -52,7 +52,7 @@ export interface MatrixDefinition {
 
 /** The components a document section can be (§8.1). Built in V-2 and V-4; the rest of §8.1 follows in later slices. */
 export type ComponentKey =
-  "heading" | "prose" | "facts" | "diagramLink" | "relationTable" | "repeater" | "sequenceLink";
+  "heading" | "prose" | "facts" | "diagramLink" | "relationTable" | "repeater" | "sequenceLink" | "register";
 export const COMPONENT_KEYS: readonly ComponentKey[] = [
   "heading",
   "prose",
@@ -61,6 +61,7 @@ export const COMPONENT_KEYS: readonly ComponentKey[] = [
   "relationTable",
   "repeater",
   "sequenceLink",
+  "register",
 ];
 /** Components an author may add in a region; the repeater and sequenceLink need a row, so they come from templates. */
 export const REGION_COMPONENT_KEYS: readonly ComponentKey[] = [
@@ -129,6 +130,7 @@ export type SectionDefinition = SectionCommon &
     | { component: "relationTable"; config: RelationTableConfig }
     | { component: "repeater"; config: RepeaterConfig }
     | { component: "sequenceLink"; config: { diagramType: TypeKey } }
+    | { component: "register"; config: RegisterConfig }
   );
 
 export interface FactsConfig {
@@ -169,6 +171,30 @@ export interface RelationTableExpand {
   sequence?: TypeKey;
   /** A row is to describe until it stands for at least one element or implied flow. */
   required?: boolean;
+}
+
+/** Where a register finds its items (slice DOC-3, views-and-design-artifacts.md §14). */
+export type RegisterSource = "mentions" | "subject" | "members";
+export const REGISTER_SOURCES: readonly RegisterSource[] = ["mentions", "subject", "members"];
+
+/**
+ * build (slice DOC-3): a register of elements of chosen types (RAID items, decisions, requirements), gathered from the
+ * document: those its prose mentions, those tied to its subject, and those tied to an element it shows.
+ */
+export interface RegisterConfig {
+  /** The object types listed, each with its subtypes. */
+  types: TypeKey[];
+  from: RegisterSource[];
+  /** The relationships from an item to what it concerns, e.g. `concerns`. */
+  via: { types?: TypeKey[]; kinds?: SemanticKind[] };
+  /** One table per type. */
+  groupBy?: "type";
+  /** Property keys shown after the name. */
+  columns: PropertyKey[];
+  /** "+ Add" creates one of these types, tied to the subject by a relationship of this type, in one change. */
+  add?: { label?: string; types: TypeKey[]; relationship: TypeKey };
+  /** Findings: an item whose properties match `where` must have `column` set. */
+  checks?: { rule: "notEmpty"; column: PropertyKey; where?: Record<PropertyKey, string> }[];
 }
 
 /**

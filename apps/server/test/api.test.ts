@@ -141,7 +141,7 @@ describeDb("API", () => {
 
   it("reads folders, objects with a query and paging, relationships and occurrences", async () => {
     const folders = await api.get(`/repositories/${REPO}/folders`);
-    expect(folders.body).toHaveLength(9);
+    expect(folders.body).toHaveLength(10);
     for (const f of folders.body as unknown[]) expectContract(f, schema("Folder"));
 
     const apps = await api.get(`/repositories/${REPO}/objects?q=${encodeURIComponent("type:applicationBase")}&limit=2`);

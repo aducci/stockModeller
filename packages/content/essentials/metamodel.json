@@ -1,6 +1,6 @@
 {
   "name": "Essentials",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "layers": [
     {
       "key": "strategy",
@@ -115,6 +115,46 @@
           "key": "missionCritical",
           "label": "Mission critical",
           "color": "#e57373"
+        }
+      ]
+    },
+    {
+      "key": "raidStatus",
+      "values": [
+        {
+          "key": "open",
+          "label": "Open",
+          "color": "#f4c06a",
+          "order": 1
+        },
+        {
+          "key": "closed",
+          "label": "Closed",
+          "color": "#c7c7c7",
+          "order": 2
+        }
+      ]
+    },
+    {
+      "key": "raidLevel",
+      "values": [
+        {
+          "key": "low",
+          "label": "Low",
+          "color": "#a3d39c",
+          "order": 1
+        },
+        {
+          "key": "medium",
+          "label": "Medium",
+          "color": "#e9d06b",
+          "order": 2
+        },
+        {
+          "key": "high",
+          "label": "High",
+          "color": "#e57373",
+          "order": 3
         }
       ]
     }
@@ -248,6 +288,47 @@
       "key": "flow.protocol",
       "name": "Protocol",
       "group": "flow",
+      "dataType": "text"
+    },
+    {
+      "key": "raid.status",
+      "name": "Status",
+      "group": "raid",
+      "dataType": "list",
+      "valueList": "raidStatus",
+      "default": "open"
+    },
+    {
+      "key": "raid.owner",
+      "name": "Owner",
+      "group": "raid",
+      "dataType": "person",
+      "help": "Who sees the item through"
+    },
+    {
+      "key": "raid.dueDate",
+      "name": "Due",
+      "group": "raid",
+      "dataType": "date"
+    },
+    {
+      "key": "raid.impact",
+      "name": "Impact",
+      "group": "raid",
+      "dataType": "list",
+      "valueList": "raidLevel"
+    },
+    {
+      "key": "raid.likelihood",
+      "name": "Likelihood",
+      "group": "raid",
+      "dataType": "list",
+      "valueList": "raidLevel"
+    },
+    {
+      "key": "raid.mitigation",
+      "name": "Mitigation",
+      "group": "raid",
       "dataType": "text"
     }
   ],
@@ -481,6 +562,51 @@
       }
     },
     {
+      "key": "raidItem",
+      "name": "RAID item",
+      "plural": "RAID items",
+      "abstract": true,
+      "category": "motivation",
+      "description": "A risk, assumption, issue or dependency. An admin adds another kind (a question, an open point) as one more subtype.",
+      "defaultFolder": "RAID",
+      "properties": ["raid.status", "raid.owner", "raid.dueDate"],
+      "symbol": {
+        "shape": "rect",
+        "width": 160,
+        "height": 50
+      }
+    },
+    {
+      "key": "risk",
+      "name": "Risk",
+      "plural": "Risks",
+      "extends": "raidItem",
+      "defaultFolder": "RAID",
+      "properties": ["raid.impact", "raid.likelihood", "raid.mitigation"]
+    },
+    {
+      "key": "assumption",
+      "name": "Assumption",
+      "plural": "Assumptions",
+      "extends": "raidItem",
+      "defaultFolder": "RAID"
+    },
+    {
+      "key": "issue",
+      "name": "Issue",
+      "plural": "Issues",
+      "extends": "raidItem",
+      "defaultFolder": "RAID",
+      "description": "Something to resolve, including an open point."
+    },
+    {
+      "key": "dependency",
+      "name": "Dependency",
+      "plural": "Dependencies",
+      "extends": "raidItem",
+      "defaultFolder": "RAID"
+    },
+    {
       "key": "group",
       "name": "Group",
       "plural": "Groups",
@@ -598,6 +724,13 @@
       "verb": "groups",
       "inverseVerb": "is grouped in",
       "semantic": "aggregation"
+    },
+    {
+      "key": "concerns",
+      "name": "Concerns",
+      "verb": "concerns",
+      "inverseVerb": "is concerned by",
+      "semantic": "influence"
     }
   ],
   "relationshipRules": [
@@ -795,6 +928,11 @@
     {
       "relationshipType": "groups",
       "sourceType": "group",
+      "targetType": "*"
+    },
+    {
+      "relationshipType": "concerns",
+      "sourceType": "raidItem",
       "targetType": "*"
     }
   ],

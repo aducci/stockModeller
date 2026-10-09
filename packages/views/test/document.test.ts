@@ -11,6 +11,7 @@ import {
   tableAddOptions,
   withStateAt,
   type FactsModel,
+  type RegisterModel,
   type RelationTableModel,
   type RepeaterModel,
 } from "../src";
@@ -82,9 +83,16 @@ const table = (doc: ReturnType<typeof projectDocument>) =>
 describe("documents", () => {
   it("without a subject or content, list what is missing", () => {
     const doc = projectDocument(exampleState(), metamodel, hld, {});
-    expect(doc.sections.map((s) => s.definition.key)).toEqual(["summary", "facts", "context", "integrations", "risks"]);
+    expect(doc.sections.map((s) => s.definition.key)).toEqual([
+      "summary",
+      "facts",
+      "context",
+      "integrations",
+      "raid",
+      "risks",
+    ]);
     expect(doc.findings).toEqual(["Summary is empty", "Context: no diagram yet", "Information flows: none yet"]);
-    expect([doc.complete, doc.total]).toEqual([2, 5]);
+    expect([doc.complete, doc.total]).toEqual([3, 6]);
   });
 
   it("show the subject's facts that its type has", () => {
@@ -171,7 +179,7 @@ describe("what authors change (§8.2)", () => {
     const by = (key: string) => doc.sections.find((s) => s.definition.key === key)!;
     expect(by("risks").hidden).toBe(true);
     expect(by("summary")).toMatchObject({ hidden: false, title: "Summary", may: { hide: false, rename: false } });
-    expect([doc.complete, doc.total]).toEqual([2, 4]);
+    expect([doc.complete, doc.total]).toEqual([3, 5]);
     const facts = by("facts") as FactsModel & { findings: string[] };
     expect(facts.facts.map((f) => f.key)).toContain("technical.hosting");
     expect(facts.addable).not.toContain("technical.hosting");
@@ -305,5 +313,58 @@ describe("information flows (DOC-2)", () => {
     expect(t.rows[0]!.flows!.map((f) => [f.object.name, f.implied, f.sequence])).toEqual([
       ["Payment status", false, undefined],
     ]);
+  });
+});
+
+describe("the RAID register (slice DOC-3)", () => {
+  const register = (doc: ReturnType<typeof projectDocument>) =>
+    doc.sections.find((s) => s.definition.key === "raid") as RegisterModel & { findings: string[] };
+  const exampleDesign = (state: ModelState) =>
+    projectDocument(state, metamodel, hld, state.diagrams.get("D-04")!.definition ?? {});
+
+  it("gathers the items mentioned, about the subject and about what the document shows, by type", () => {
+    const state = exampleState();
+    const raid = register(exampleDesign(state));
+    expect(raid.groups.map((g) => [g.name, g.rows.map((r) => [r.object.name, r.reasons])])).toEqual([
+      ["Risks", [["Nightly SFTP feed has no retry", ["mentioned", "about Legacy CRM"]]]],
+      ["Issues", [["Payment confirmations as events or polling", ["about Claims Manager"]]]],
+      ["Dependencies", [["Payments Hub publishes payment events", ["mentioned", "about Payments Hub"]]]],
+    ]);
+    const risk = raid.groups[0]!.rows[0]!;
+    expect(risk.cells["raid.impact"]).toMatchObject({ value: "medium", applicable: true });
+    // An issue has no impact.
+    expect(raid.groups[1]!.rows[0]!.cells["raid.impact"]!.applicable).toBe(false);
+    expect(raid.findings).toEqual([]);
+  });
+
+  it("asks open items for an owner, and leaves out closed ones and what the document does not show", () => {
+    const state = exampleState();
+    apply(state, [
+      {
+        edit: "createObject",
+        id: "O-R2",
+        type: "risk",
+        name: "Vendor lock-in",
+        folderId: "F10",
+        properties: { "raid.status": "open" },
+      },
+      { edit: "createRelationship", id: "R-R2", type: "concerns", sourceId: "O-R2", targetId: "O-APP-1" },
+      {
+        edit: "createObject",
+        id: "O-R3",
+        type: "risk",
+        name: "Old risk",
+        folderId: "F10",
+        properties: { "raid.status": "closed" },
+      },
+      { edit: "createRelationship", id: "R-R3", type: "concerns", sourceId: "O-R3", targetId: "O-APP-1" },
+      // About an element the design does not show: not listed.
+      { edit: "createObject", id: "O-R4", type: "risk", name: "Elsewhere", folderId: "F10" },
+      { edit: "createRelationship", id: "R-R4", type: "concerns", sourceId: "O-R4", targetId: "O-SRV-1" },
+    ]);
+    const raid = register(exampleDesign(state));
+    expect(raid.count).toBe(5);
+    expect(raid.findings).toEqual(["RAID: Vendor lock-in has no owner"]);
+    expect(raid.groups[0]!.rows.find((r) => r.object.id === "O-R2")!.toFill).toEqual(["Owner"]);
   });
 });
