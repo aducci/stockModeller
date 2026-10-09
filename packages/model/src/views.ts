@@ -1,10 +1,10 @@
 // Views beyond the free canvas (design/02-model/views-and-design-artifacts.md). Built in slice V-1: the matrix;
-// slice V-2: the document view (design artifacts).
+// slice V-2: the document view (design artifacts); slice CXN-1: the CXN Builder (§14).
 import type { Id, PropertyKey, SemanticCategory, SemanticKind, TypeKey } from "./model";
 
 /** What a diagram of a type shows and how it is laid out (§2). Absent = canvas. */
-export type ViewKind = "canvas" | "matrix" | "document" | "sequence";
-export const VIEW_KINDS: readonly ViewKind[] = ["canvas", "matrix", "document", "sequence"];
+export type ViewKind = "canvas" | "matrix" | "document" | "sequence" | "cxn";
+export const VIEW_KINDS: readonly ViewKind[] = ["canvas", "matrix", "document", "sequence", "cxn"];
 
 /** Kinds whose diagrams hold occurrences drawn by hand (lifelines and messages are occurrences in a sequence). */
 export const DRAWN_KINDS: readonly ViewKind[] = ["canvas", "sequence"];
@@ -22,6 +22,13 @@ export interface ScopeFilter {
   type?: TypeKey[];
   category?: SemanticCategory[];
   folder?: Id;
+  /**
+   * build (slice CXN-1): property values, each property matching any of its values (list values by key). An object's
+   * `semantic.abstraction` counts its type's default when it has none of its own.
+   */
+  where?: Record<PropertyKey, { in: string[] }>;
+  /** build (slice CXN-1): objects with a relationship to this element in either direction, of these types or kinds. */
+  related?: { id: Id; types?: TypeKey[]; kinds?: SemanticKind[] };
 }
 
 /** A structured path (§3): the AST the query parser will produce later (decision V11). */
@@ -46,6 +53,25 @@ export interface MatrixDefinition {
   /** Nest rows under their containers when both are rows. */
   groupRows?: boolean;
   hideEmpty?: boolean;
+}
+
+// ================================================================ CXN Builder (§14)
+
+/** How one pane of a CXN Builder lists its members. */
+export interface CxnPane {
+  shape?: "tree" | "list";
+  sort?: "name" | "rank";
+  /** Hide members already connected (by the chosen type) to the other pane's members. */
+  hideConnected?: boolean;
+}
+
+/**
+ * A CXN Builder's definition (§14.2): the matrix's, `rows` being the left pane and `columns` the right, so it can be
+ * shown as a matrix. `create` is the relationship type it links with, or `link` a link kind (§13) instead.
+ */
+export interface CxnDefinition extends MatrixDefinition {
+  link?: string;
+  panes?: { left?: CxnPane; right?: CxnPane };
 }
 
 // ================================================================ documents (§7–§8)

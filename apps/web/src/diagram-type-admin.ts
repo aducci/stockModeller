@@ -98,12 +98,13 @@ export function setKind(draft: Draft, key: TypeKey, kind: ViewKind): Draft {
     matrix: undefined,
     document: undefined,
   };
-  if (kind === "matrix") {
+  if (kind === "matrix" || kind === "cxn") {
     const [rows, columns] = [type.objectTypes[0], type.objectTypes[1] ?? type.objectTypes[0]];
     patch.matrix = {
       rows: { from: rows ? { type: [rows] } : {} },
       columns: { from: columns ? { type: [columns] } : {} },
       relationships: type.relationshipTypes?.length ? { types: [type.relationshipTypes[0]!] } : {},
+      ...(kind === "cxn" && type.relationshipTypes?.length ? { create: type.relationshipTypes[0]! } : {}),
     };
   }
   if (kind === "document")

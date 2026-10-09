@@ -26,7 +26,8 @@
         "canvas",
         "matrix",
         "document",
-        "sequence"
+        "sequence",
+        "cxn"
       ],
       "default": "canvas",
       "description": "The view kind. See 02-model/views-and-design-artifacts.md §2."
@@ -508,6 +509,50 @@
         },
         "folder": {
           "type": "string"
+        },
+        "where": {
+          "type": "object",
+          "description": "build (slice CXN-1): property values; an object matches when each property has one of the values (list values by key)",
+          "additionalProperties": {
+            "type": "object",
+            "required": [
+              "in"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "in": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "related": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "description": "build (slice CXN-1): objects with a relationship to this element, either direction",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "types": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "kinds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
         }
       }
     },

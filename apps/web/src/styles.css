@@ -3455,3 +3455,311 @@ button.toggle .badge {
   display: inline-flex;
   gap: 6px;
 }
+
+/* CXN Builder (design/02-model/views-and-design-artifacts.md §14): two panes over a link strip. */
+.cxn-view {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+  min-height: 0;
+}
+.cxn-panes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
+}
+.cxn-pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--pane);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  position: relative;
+}
+.cxn-pane > header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 10px 2px;
+}
+.cxn-pane h3 {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+.cxn-count {
+  margin-left: auto;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.cxn-chips,
+.cxn-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+}
+.cxn-tools {
+  padding-bottom: 8px;
+}
+.cxn-tools input[type="search"] {
+  flex: 1;
+  min-width: 120px;
+}
+.cxn-chips .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px 2px 9px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--pane-2);
+  font-size: 12px;
+}
+.cxn-chips select.chip {
+  padding: 2px 6px;
+  background: var(--sky-fill);
+  border-color: transparent;
+  color: var(--fg);
+}
+.cxn-chips .chip button {
+  border: 0;
+  background: none;
+  padding: 0 4px;
+  color: var(--fg-2);
+}
+.cxn-chips button.chip.add {
+  padding: 2px 9px;
+  border-style: dashed;
+  background: transparent;
+  color: var(--fg-2);
+}
+.cxn-chips button.chip.add:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.cxn-tools .seg {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.cxn-tools .seg button {
+  border: 0;
+  border-radius: 0;
+  padding: 2px 8px;
+  font-size: 12px;
+}
+.cxn-tools .seg button[aria-pressed="true"] {
+  background: var(--sky-fill);
+}
+.cxn-tools label.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--fg-2);
+}
+.cxn-rows {
+  flex: 1;
+  min-height: 160px;
+  overflow: auto;
+  border-top: 1px solid var(--line);
+  padding: 4px 0;
+}
+.cxn-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 10px 3px 8px;
+  cursor: pointer;
+  user-select: none;
+}
+.cxn-row:hover {
+  background: var(--pane-2);
+}
+.cxn-row.on {
+  background: var(--sky-fill);
+}
+.cxn-row.drop {
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px;
+}
+.cxn-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.cxn-row.heading {
+  cursor: default;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--fg-2);
+}
+.cxn-row.heading:hover {
+  background: none;
+}
+.cxn-row .box {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 13px;
+  height: 13px;
+  border: 1px solid var(--fg-2);
+  border-radius: 3px;
+  font-size: 10px;
+  color: var(--pane);
+}
+.cxn-row.on .box {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.cxn-row .name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cxn-row .meta {
+  font-size: 11px;
+  white-space: nowrap;
+}
+.cxn-row .cxn-end {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+.cxn-dot {
+  margin-left: auto;
+  padding: 0 6px;
+  border-radius: 8px;
+  background: var(--violet-fill);
+  color: var(--violet-ink);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.cxn-row .cxn-tick {
+  flex: none;
+  width: 20px;
+  border: 0;
+  background: none;
+  padding: 0;
+  text-align: center;
+  font-weight: 600;
+  color: var(--added);
+}
+.cxn-row .cxn-tick.some {
+  color: var(--changed);
+}
+.cxn-row button.cxn-tick:hover {
+  color: var(--removed);
+}
+.cxn-pane > footer {
+  display: flex;
+  gap: 12px;
+  padding: 6px 10px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+}
+.cxn-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px;
+  background: var(--pane);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.cxn-side {
+  max-width: 260px;
+  padding: 5px 10px;
+  border-radius: 4px;
+  background: var(--pane-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cxn-connection {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.cxn-strip button.primary.danger {
+  background: var(--removed);
+  border-color: var(--removed);
+}
+.cxn-why,
+.cxn-existing {
+  flex-basis: 100%;
+  text-align: center;
+  font-size: 12px;
+}
+.cxn-existing b {
+  color: var(--violet-ink);
+  font-variant-numeric: tabular-nums;
+}
+.cxn-filter-menu {
+  position: absolute;
+  z-index: 15;
+  top: 64px;
+  left: 10px;
+  width: 300px;
+  max-height: 380px;
+  overflow: auto;
+  padding: 8px 10px;
+  background: var(--pane);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.18);
+}
+.cxn-filter-menu h4 {
+  margin: 8px 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+.cxn-facet button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  border: 0;
+  background: none;
+  padding: 3px 6px;
+  border-radius: 4px;
+  text-align: left;
+}
+.cxn-facet button:hover:not(:disabled) {
+  background: var(--pane-2);
+}
+.cxn-stats {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  margin: 0;
+}
+.cxn-stats dt {
+  text-align: right;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.cxn-stats dd {
+  margin: 0;
+}
+@media (max-width: 760px) {
+  .cxn-panes {
+    grid-template-columns: 1fr;
+  }
+}

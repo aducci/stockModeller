@@ -11,7 +11,7 @@ import { usePanelPrefs } from "./Inspector";
 import { Toasts } from "./Toasts";
 import { DeleteObjectDialog } from "./DeleteObjectDialog";
 import { MenuBar } from "./Menu";
-import { fileMenu, metamodelMenu, reviewMenu } from "./commands";
+import { fileMenu, metamodelMenu, reviewMenu, toolsMenu } from "./commands";
 
 export function Workbench({ repositoryId, scenarioId }: { repositoryId: string; scenarioId: string | null }) {
   const signIn = useAuth((s) => s.signIn)!;
@@ -108,6 +108,7 @@ function TopBar() {
       <MenuBar
         menus={[
           { label: "File", entries: () => fileMenu(session.store.state, session.store.metamodel) },
+          { label: "Tools", entries: () => toolsMenu(session.store.metamodel) },
           { label: "Review", entries: reviewMenu },
           { label: "Metamodel", entries: metamodelMenu },
         ]}

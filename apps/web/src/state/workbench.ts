@@ -16,10 +16,14 @@ export type Focus = Selection | { kind: "relationship"; id: Id };
 export const itemSelected = (focus: Focus | null): Selection | null =>
   focus && focus.kind !== "relationship" ? focus : null;
 export interface Tab {
-  kind: "object" | "diagram" | "metamodel" | "duplicates" | "objects";
+  kind: "object" | "diagram" | "metamodel" | "duplicates" | "objects" | "cxn";
   id: Id;
   /** The object viewer's folder (kind "objects"). */
   folderId?: Id;
+  /** An unsaved CXN Builder's definition (kind "cxn", views §14); *Save view* turns it into a diagram. */
+  definition?: Record<string, unknown>;
+  /** Objects a CXN Builder opens with selected in its left pane. */
+  selectLeft?: Id[];
 }
 
 /** The metamodel tab's id: there is one, whatever view it shows. */
@@ -93,6 +97,8 @@ interface WorkbenchState {
   select(selection: Focus | null): void;
   openTab(tab: Tab): void;
   closeTab(id: Id): void;
+  /** Changes an open tab in place (an unsaved CXN Builder's definition). */
+  updateTab(id: Id, patch: Partial<Tab>): void;
   closeAllTabs(): void;
   activateTab(id: Id): void;
   /** Applies a change at once and sends it. Returns false (and shows why) when it is refused. */
@@ -273,6 +279,10 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
         const activeTab = s.activeTab === id ? (tabs[Math.min(index, tabs.length - 1)]?.id ?? null) : s.activeTab;
         return { tabs, activeTab, changedTabs: without(s.changedTabs, id) };
       });
+    },
+
+    updateTab(id, patch) {
+      set((s) => ({ tabs: s.tabs.map((t) => (t.id === id ? { ...t, ...patch } : t)) }));
     },
 
     closeAllTabs() {

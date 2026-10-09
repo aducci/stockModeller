@@ -140,6 +140,7 @@ One menu component serves the top bar's menu bar and the explorer's right-click 
 |---|---|
 | **File** (top bar) | New object, New diagram, New folder, New group · Rename (F2) · Delete · Close tab, Close all tabs · Switch repository…, Sign out. New items go into the selected folder or the selected item's folder. New diagram opens the dialog with the types grouped by kind (B46), where the folder can be changed, so it needs no selection |
 | **Review** (top bar) | Possible duplicates: opens a tab listing pairs of objects that may be one thing, with the likeness, the reasons and *Not duplicates* ([duplicates-and-identity.md](../02-model/duplicates-and-identity.md) §6, slice D-3) |
+| **Tools** (top bar) | **CXN Builder**: an unsaved CXN Builder tab for linking sets of elements in bulk; an element's right-click menu has **Connect in CXN Builder…** with that element selected ([views](../02-model/views-and-design-artifacts.md) §14, slice CXN-1) |
 | Explorer: folder | Object viewer · New ▸ (Object, Diagram, Folder, Group: the submenu does not repeat "New") · Rename · Move up, Move down · Delete folder (only when empty) |
 | Explorer: object | Open · New ▸ (as a folder, then each canvas type that can draw it, *Sequence of its interactions* when it has some, and the documents it can be the subject of) · Rename · Add to group ▸ (the groups, then New group…) · Delete object… (the dialog listing what goes with it) |
 | Explorer: group | As an object, plus Ungroup (deletes the group; its members stay) |
