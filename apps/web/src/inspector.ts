@@ -109,6 +109,7 @@ export interface FieldOptions {
 
 export function groupName(key: string): string {
   if (key === "semantic") return "Semantics";
+  if (key === "raid") return "RAID";
   return key.charAt(0).toUpperCase() + key.slice(1);
 }
 

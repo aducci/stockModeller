@@ -35,8 +35,10 @@ describe("search instead of lists", () => {
       "Claims department",
       "Claims Management",
       "Payment",
+      "Payment confirmations as events or polling",
       "Payments API",
       "Payments Hub",
+      "Payments Hub publishes payment events",
     ]);
   });
 
@@ -45,8 +47,10 @@ describe("search instead of lists", () => {
       "Payment",
       "Pay a claim",
       "Pay Claim",
+      "Payment confirmations as events or polling",
       "Payments API",
       "Payments Hub",
+      "Payments Hub publishes payment events",
     ]);
     expect(names(search(state, metamodel, "", { objects: any, diagrams: any, nearFolderId: "F04" }))).toEqual([
       "Claims API",

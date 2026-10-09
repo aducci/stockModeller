@@ -67,6 +67,11 @@
       "id": "F09",
       "parentId": "F06",
       "name": "Designs"
+    },
+    {
+      "id": "F10",
+      "parentId": null,
+      "name": "RAID"
     }
   ],
   "objects": [
@@ -231,6 +236,40 @@
       "name": "Pay a claim",
       "folderId": "F04",
       "properties": {}
+    },
+    {
+      "id": "O-RSK-1",
+      "type": "risk",
+      "name": "Nightly SFTP feed has no retry",
+      "folderId": "F10",
+      "properties": {
+        "raid.status": "open",
+        "raid.owner": "dana@example.com",
+        "raid.impact": "medium",
+        "raid.likelihood": "high",
+        "raid.mitigation": "Retry the transfer and tell the claims team when a file is missed"
+      }
+    },
+    {
+      "id": "O-ISS-1",
+      "type": "issue",
+      "name": "Payment confirmations as events or polling",
+      "folderId": "F10",
+      "properties": {
+        "raid.status": "open",
+        "raid.owner": "dana@example.com"
+      }
+    },
+    {
+      "id": "O-DEP-1",
+      "type": "dependency",
+      "name": "Payments Hub publishes payment events",
+      "folderId": "F10",
+      "properties": {
+        "raid.status": "open",
+        "raid.owner": "lee@example.com",
+        "raid.dueDate": "2027-03-31"
+      }
     }
   ],
   "relationships": [
@@ -427,6 +466,27 @@
       "type": "triggers",
       "sourceId": "O-PRC-1",
       "targetId": "O-PRC-3",
+      "properties": {}
+    },
+    {
+      "id": "R-29",
+      "type": "concerns",
+      "sourceId": "O-RSK-1",
+      "targetId": "O-APP-2",
+      "properties": {}
+    },
+    {
+      "id": "R-30",
+      "type": "concerns",
+      "sourceId": "O-ISS-1",
+      "targetId": "O-APP-1",
+      "properties": {}
+    },
+    {
+      "id": "R-31",
+      "type": "concerns",
+      "sourceId": "O-DEP-1",
+      "targetId": "O-APP-3",
       "properties": {}
     }
   ],
@@ -805,13 +865,20 @@
         "risks": {
           "paragraphs": [
             [
-              "The nightly SFTP feed from ",
+              "The nightly feed from ",
               {
                 "mention": "O-APP-2"
               },
-              " has no retry; a missed file delays new claims by a day."
-            ],
-            ["Open: whether payment confirmations should move to events once Payments Hub supports them."]
+              " is tracked as ",
+              {
+                "mention": "O-RSK-1"
+              },
+              "; moving confirmations to events waits on ",
+              {
+                "mention": "O-DEP-1"
+              },
+              "."
+            ]
           ]
         }
       },

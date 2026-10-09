@@ -29,7 +29,7 @@ test("writes a high-level design whose integrations follow its context diagram",
   await menuItem(page, "High-level design").click();
   await expect(page.getByRole("heading", { name: "Payments Hub high-level design" })).toBeVisible();
   const completeness = page.getByRole("button", { name: /sections complete/ });
-  await expect(completeness).toHaveText("2 of 5 sections complete");
+  await expect(completeness).toHaveText("3 of 6 sections complete");
 
   // Prose with a mention of an existing element and of a new one, created from the text.
   await section(page, "Summary").getByRole("button", { name: "Write summary…" }).click();
@@ -80,7 +80,7 @@ test("writes a high-level design whose integrations follow its context diagram",
     await input.press("Enter");
     await expect(undescribed).toHaveCount(before - 1);
   }
-  await expect(completeness).toHaveText("5 of 5 sections complete");
+  await expect(completeness).toHaveText("6 of 6 sections complete");
   await saved(page);
 
   // All of it is the model: it survives a reload.
@@ -91,7 +91,7 @@ test("writes a high-level design whose integrations follow its context diagram",
   await saved(page);
   await explorer(page).getByLabel("Filter the explorer").fill("Payments Hub high-level design");
   await row(page, "Payments Hub high-level design").dblclick();
-  await expect(completeness).toHaveText("5 of 5 sections complete");
+  await expect(completeness).toHaveText("6 of 6 sections complete");
   await expect(section(page, "Summary").getByRole("button", { name: "Legacy CRM" })).toBeVisible();
   await expect(
     section(page, "Information flows")

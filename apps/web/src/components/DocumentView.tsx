@@ -1,6 +1,15 @@
 // A document view (design/02-model/views-and-design-artifacts.md §7–§8): a design artifact about one subject, built
 // from its type's template. Each section is a component; what an author does in it is an ordinary model edit.
-import { Fragment, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import {
+  createContext,
+  Fragment,
+  useContext,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 import type { DiagramRow, Metamodel, ModelState, ObjectRow } from "@connectome/engine";
 import {
   LAYOUT_KEY,
@@ -31,6 +40,7 @@ import {
   type FactsModel,
   type ProseModel,
   type RegionModel,
+  type RegisterModel,
   type RelationTableModel,
   type RepeaterModel,
   type SectionModel,
@@ -41,6 +51,7 @@ import { useModel, useWorkbench } from "../state/workbench";
 import { notationFor } from "../notation";
 import { createLinkedDiagramPlan, placeRelationshipEdits } from "../document";
 import { sequenceForInteractionEdits } from "../sequence";
+import { addItemPlan, registerAddOf, type RegisterAdd } from "../raid";
 import { displayValue, fieldGroups } from "../inspector";
 import { byName } from "../text";
 import { DiagramPicture } from "./DiagramDrawing";
@@ -55,6 +66,9 @@ interface SectionProps<M> {
   model: M & SectionModel;
   subject: ObjectRow | undefined;
 }
+
+/** What the document's register lets prose turn into an item (Make RAID item), for every section below it. */
+const RegisterAddContext = createContext<RegisterAdd | undefined>(undefined);
 
 export function DocumentView({ id }: { id: Id }) {
   const { state, metamodel } = useModel();
@@ -73,57 +87,59 @@ export function DocumentView({ id }: { id: Id }) {
     doc.template!.subject.type?.length ? doc.template!.subject.type.some((t) => metamodel.isA(o.type, t)) : true;
 
   return (
-    <div className="document-view">
-      <article className="document">
-        <header className="doc-header">
-          <div className="doc-kind muted">{type?.name}</div>
-          <h1>{document.name}</h1>
-          <div className="doc-subject">
-            <span className="muted">About</span>
-            {doc.subject ? (
-              <ObjectChip object={doc.subject} metamodel={metamodel} />
-            ) : (
-              <>
-                {doc.subjectId && <span className="doc-warning">The subject was deleted.</span>}
-                <SearchPicker
-                  label="Subject"
-                  placeholder="Search for the subject…"
-                  scope={{ objects: candidate, nearFolderId: document.folderId }}
-                  onPick={(f) => chooseSubject(f.id)}
-                />
-              </>
+    <RegisterAddContext.Provider value={registerAddOf(doc)}>
+      <div className="document-view">
+        <article className="document">
+          <header className="doc-header">
+            <div className="doc-kind muted">{type?.name}</div>
+            <h1>{document.name}</h1>
+            <div className="doc-subject">
+              <span className="muted">About</span>
+              {doc.subject ? (
+                <ObjectChip object={doc.subject} metamodel={metamodel} />
+              ) : (
+                <>
+                  {doc.subjectId && <span className="doc-warning">The subject was deleted.</span>}
+                  <SearchPicker
+                    label="Subject"
+                    placeholder="Search for the subject…"
+                    scope={{ objects: candidate, nearFolderId: document.folderId }}
+                    onPick={(f) => chooseSubject(f.id)}
+                  />
+                </>
+              )}
+              <button
+                className={`doc-complete${doc.complete === doc.total ? " done" : ""}`}
+                aria-expanded={showFindings}
+                onClick={() => setShowFindings(!showFindings)}
+              >
+                {doc.complete} of {doc.total} sections complete
+              </button>
+            </div>
+            {showFindings && (
+              <ul className="doc-findings" aria-label="What is missing">
+                {doc.findings.length === 0 && <li>Nothing is missing.</li>}
+                {doc.findings.map((f) => (
+                  <li key={f}>{f}</li>
+                ))}
+              </ul>
             )}
-            <button
-              className={`doc-complete${doc.complete === doc.total ? " done" : ""}`}
-              aria-expanded={showFindings}
-              onClick={() => setShowFindings(!showFindings)}
-            >
-              {doc.complete} of {doc.total} sections complete
-            </button>
-          </div>
-          {showFindings && (
-            <ul className="doc-findings" aria-label="What is missing">
-              {doc.findings.length === 0 && <li>Nothing is missing.</li>}
-              {doc.findings.map((f) => (
-                <li key={f}>{f}</li>
-              ))}
-            </ul>
+          </header>
+          {doc.blocks.map((b) =>
+            b.kind === "section" ? (
+              <DocumentSection
+                key={b.section.definition.key}
+                document={document}
+                model={b.section}
+                subject={doc.subject}
+              />
+            ) : (
+              <Region key={b.region.definition.region} document={document} doc={doc} region={b.region} />
+            ),
           )}
-        </header>
-        {doc.blocks.map((b) =>
-          b.kind === "section" ? (
-            <DocumentSection
-              key={b.section.definition.key}
-              document={document}
-              model={b.section}
-              subject={doc.subject}
-            />
-          ) : (
-            <Region key={b.region.definition.region} document={document} doc={doc} region={b.region} />
-          ),
-        )}
-      </article>
-    </div>
+        </article>
+      </div>
+    </RegisterAddContext.Provider>
   );
 }
 
@@ -176,6 +192,7 @@ function DocumentSection(props: {
   if (model.component === "relationTable") body = <RelationTableSection {...common} model={model} />;
   if (model.component === "repeater") body = <RepeaterSection {...common} model={model} />;
   if (model.component === "sequenceLink") body = <SequenceLinkSection {...common} model={model} />;
+  if (model.component === "register") body = <RegisterSection {...common} model={model} />;
   const Heading = nested ? "h4" : "h2";
   return (
     <section className={`doc-section${nested ? " nested" : ""}`} data-section={section.key} aria-label={label}>
@@ -429,6 +446,9 @@ function ProseSection({ document, section, model, subject }: SectionProps<ProseM
   const [query, setQuery] = useState<{ at: number; text: string; create: boolean } | null>(null);
   const [active, setActive] = useState(0);
   const [createType, setCreateType] = useState("");
+  // Make RAID item (slice DOC-3): the selected text becomes an item of the document's register.
+  const register = useContext(RegisterAddContext);
+  const [selection, setSelection] = useState<{ start: number; end: number } | null>(null);
   const area = useRef<HTMLTextAreaElement>(null);
   // Where the caret goes once an inserted mention is rendered: set in the same commit, so a key typed right after
   // choosing the mention cannot land before the caret moves.
@@ -488,6 +508,18 @@ function ProseSection({ document, section, model, subject }: SectionProps<ProseM
     const id = ulid();
     if (edit(`Create ${name}`, [{ edit: "createObject", id, type: typeKey, name, folderId }])) insert({ id, name });
   };
+  const makeItem = (type: string) => {
+    if (text === null || !selection || !register) return;
+    // Mentions in the selection read as their names.
+    const selected = text.slice(selection.start, selection.end).replace(/@\[([^\]\n]*)\]\([^)\s]+\)/g, "$1");
+    if (!selected.trim()) return;
+    const plan = addItemPlan(state, metamodel, register.relationship, type, selected, subject, subject ?? document);
+    if (!edit(plan.label, plan.edits)) return;
+    const token = `@[${plan.name}](${plan.id})`;
+    setText(text.slice(0, selection.start) + token + text.slice(selection.end));
+    setSelection(null);
+    caretAfter.current = selection.start + token.length;
+  };
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Escape") {
       if (query) setQuery(null);
@@ -520,9 +552,28 @@ function ProseSection({ document, section, model, subject }: SectionProps<ProseM
             setText(e.target.value);
             track(e.target.value, e.target.selectionStart);
           }}
+          onSelect={(e) => {
+            const { selectionStart: start, selectionEnd: end } = e.currentTarget;
+            setSelection(end > start ? { start, end } : null);
+          }}
           onKeyDown={onKeyDown}
           onBlur={save}
         />
+        {register && selection && !query && (
+          <div
+            className="doc-make-item"
+            role="group"
+            aria-label={`Make ${register.title} item`}
+            onMouseDown={(e) => e.preventDefault()}
+          >
+            <span className="muted">Make {register.title} item from the selection:</span>
+            {register.types.map((t) => (
+              <button key={t} onClick={() => makeItem(t)}>
+                {metamodel.objectType(t)?.definition.name ?? t}
+              </button>
+            ))}
+          </div>
+        )}
         {query && (
           <div className="doc-mentions" role="listbox" aria-label="Mention" onMouseDown={(e) => e.preventDefault()}>
             {matches.map((o, i) => {
@@ -1043,6 +1094,131 @@ function RelationTableSection({ document, section, model, subject }: SectionProp
           ))}
           <button className="link" onClick={() => setAdding(null)}>
             Cancel
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------- register (slice DOC-3)
+
+function RegisterSection({ document, model, subject }: SectionProps<RegisterModel>) {
+  const { state, metamodel } = useModel();
+  const edit = useWorkbench((s) => s.edit);
+  const select = useWorkbench((s) => s.select);
+  const add = model.config.add;
+  const [adding, setAdding] = useState(false);
+  const [type, setType] = useState(add?.types[0] ?? "");
+  const [name, setName] = useState("");
+  const typeName = (t: string) => metamodel.objectType(t)?.definition.name ?? t;
+  const create = () => {
+    if (!add || !name.trim()) return;
+    const plan = addItemPlan(state, metamodel, add.relationship, type, name, subject, subject ?? document);
+    if (edit(plan.label, plan.edits)) setName("");
+  };
+  const set = (o: ObjectRow, key: string, value: PropertyValue | null) =>
+    edit(`Set ${metamodel.propertyType(key)?.name ?? key} of ${o.name}`, [
+      { edit: "setProperties", id: o.id, baseVersion: o.version, set: { [key]: value } },
+    ]);
+  return (
+    <div className="doc-table doc-register">
+      {model.count === 0 && <p className="muted">Nothing yet: add one, or mention one in the text above.</p>}
+      {model.groups.map((group) => (
+        <table key={group.type ?? "all"} aria-label={group.name}>
+          <thead>
+            <tr>
+              <th scope="col">{group.name}</th>
+              {model.columns.map((c) => (
+                <th key={c.key} scope="col">
+                  {c.label}
+                </th>
+              ))}
+              <th scope="col">Why it is here</th>
+            </tr>
+          </thead>
+          <tbody>
+            {group.rows.map((row) => {
+              const n = notationFor(metamodel.objectType(row.object.type));
+              return (
+                <tr key={row.object.id} className={row.toFill.length ? "to-describe" : undefined}>
+                  <th scope="row">
+                    <button
+                      className="doc-chip"
+                      onClick={() => select({ kind: "object", id: row.object.id })}
+                      title={`${typeName(row.object.type)}: select to see it in the properties panel`}
+                    >
+                      <Glyph glyph={n.glyph} colour={n.ink} />
+                      {row.object.name}
+                    </button>
+                  </th>
+                  {model.columns.map((c) => {
+                    const cell = row.cells[c.key]!;
+                    if (!cell.applicable)
+                      return (
+                        <td
+                          key={c.key}
+                          className="muted na"
+                          title={`${typeName(row.object.type)} has no ${c.label.toLowerCase()}`}
+                        >
+                          –
+                        </td>
+                      );
+                    const list = metamodel.propertyType(c.key)?.valueList;
+                    const colour =
+                      list && typeof cell.value === "string"
+                        ? metamodel.valueList(list)?.values.find((v) => v.key === cell.value)?.color
+                        : undefined;
+                    return (
+                      <td key={c.key} className={row.toFill.includes(c.label) ? "missing" : undefined}>
+                        {colour && <span className="doc-swatch" style={{ background: colour }} aria-hidden />}
+                        <CellEditor
+                          label={`${c.label} of ${row.object.name}`}
+                          propertyKey={c.key}
+                          value={cell.value}
+                          metamodel={metamodel}
+                          onCommit={(value) => set(row.object, c.key, value)}
+                        />
+                      </td>
+                    );
+                  })}
+                  <td className="muted">{row.reasons.join(", ")}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      ))}
+      {add && !adding && (
+        <button className="doc-add" onClick={() => setAdding(true)}>
+          + {add.label ?? "Add"}
+        </button>
+      )}
+      {add && adding && (
+        <div className="doc-add-form">
+          <select aria-label="Kind of item" value={type} onChange={(e) => setType(e.target.value)}>
+            {add.types.map((t) => (
+              <option key={t} value={t}>
+                {typeName(t)}
+              </option>
+            ))}
+          </select>
+          <input
+            aria-label="Name of the new item"
+            placeholder={subject ? `About ${subject.name}…` : "Name…"}
+            value={name}
+            autoFocus
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") create();
+              if (e.key === "Escape") setAdding(false);
+            }}
+          />
+          <button disabled={!name.trim()} onClick={create}>
+            Add
+          </button>
+          <button className="link" onClick={() => setAdding(false)}>
+            Done
           </button>
         </div>
       )}

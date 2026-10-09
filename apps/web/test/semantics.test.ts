@@ -37,6 +37,7 @@ describe("relationship groups", () => {
       ["Interacts with", ["calls → Payments API"]],
       ["Downstream", ["flows to → Payments Hub"]],
       ["Upstream", ["receives from ← Legacy CRM"]],
+      ["Influenced by", ["is concerned by ← Payment confirmations as events or polling"]],
     ]);
   });
 

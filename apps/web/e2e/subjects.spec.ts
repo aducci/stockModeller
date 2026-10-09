@@ -35,7 +35,7 @@ test("an element's links point at what is about it, and its symbols open its dia
   await links.getByRole("button", { name: "+ Add link" }).click();
   await properties(page).getByLabel("Kind of link").selectOption({ label: "Related to" });
   await properties(page).getByRole("combobox", { name: "Link to" }).fill("Payments H");
-  await page.getByRole("option", { name: /^Payments Hub/ }).click();
+  await page.getByRole("option", { name: /^Payments Hub SaaS/ }).click();
   await expect(links.getByRole("list", { name: "Related to" })).toContainText("Payments Hub");
   await saved(page);
   await links
