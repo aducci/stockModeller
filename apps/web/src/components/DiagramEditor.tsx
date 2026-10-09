@@ -13,20 +13,18 @@ import {
 import { RENDITIONS, ulid, type Edit, type Id } from "@connectome/model";
 import type { DiagramRow, ObjectOccurrenceRow } from "@connectome/engine";
 import { useModel, useWorkbench } from "../state/workbench";
-import { ON_LITERAL_FILL, lineFor, notationFor } from "../notation";
+import { notationFor } from "../notation";
 import { FindOrCreate } from "./FindOrCreate";
 import { Glyph, GlyphUse } from "./Glyph";
 import { ContextMenu, type MenuEntry } from "./Menu";
-import { OccurrenceShape } from "./OccurrenceShape";
+import { ArrowMarkers, LineShape, SymbolShape, drawnLines, paintOrder, symbolLook } from "./DiagramDrawing";
 import {
   connectChoices,
   defaultFolderFor,
-  edgePoint,
   freeSpot,
   layoutBoxes,
   nestingChoice,
   paletteTypes,
-  renditionFor,
   renditionSize,
   snap,
   stepZoom,
@@ -34,46 +32,13 @@ import {
   type Box,
   type ConnectChoice,
 } from "../diagram";
-import { addPayloadPlan, messageType, payloadText } from "../semantics";
+import { addPayloadPlan, messageType } from "../semantics";
 import { canvasTypesFor, diagramAroundPlan } from "../views";
 import { byName } from "../text";
 
 /** Drag-and-drop payloads: an object type from the palette, or an existing object from the explorer. */
 export const DRAG_TYPE = "application/x-connectome-type";
 export const DRAG_OBJECT = "application/x-connectome-object";
-
-/**
- * Arrowheads for the semantic kinds (design/02-model/notation-and-metamodel-admin.md §3). Open heads are filled
- * with the canvas colour so a line never shows through them.
- */
-const ARROW_MARKERS = (
-  <>
-    <marker id="a-arrowOpen" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
-      <path d="M1,1 L9,5 L1,9" fill="none" stroke="currentColor" strokeWidth={1.5} />
-    </marker>
-    <marker id="a-arrowSmall" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="5" markerHeight="5" orient="auto">
-      <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
-    </marker>
-    <marker id="a-triangleOpen" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="10" markerHeight="10" orient="auto">
-      <path d="M1,1 L11,6 L1,11 z" fill="var(--canvas)" stroke="currentColor" strokeWidth={1.2} />
-    </marker>
-    <marker id="a-diamond" viewBox="0 0 14 8" refX="1" refY="4" markerWidth="12" markerHeight="7" orient="auto">
-      <path d="M1,4 L7,1 L13,4 L7,7 z" fill="currentColor" />
-    </marker>
-    <marker id="a-diamondOpen" viewBox="0 0 14 8" refX="1" refY="4" markerWidth="12" markerHeight="7" orient="auto">
-      <path d="M1,4 L7,1 L13,4 L7,7 z" fill="var(--canvas)" stroke="currentColor" strokeWidth={1.2} />
-    </marker>
-    <marker id="a-dot" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="6" markerHeight="6" orient="auto">
-      <circle cx={4} cy={4} r={3} fill="currentColor" />
-    </marker>
-  </>
-);
-
-/** `arrow` keeps the existing marker, so a pending connection and a flow look the same. */
-function markerUrl(head: string) {
-  if (head === "none") return undefined;
-  return head === "arrow" ? "url(#arrow)" : `url(#a-${head})`;
-}
 
 /** The order R steps through an occurrence's renditions. */
 const RENDITION_ORDER = Object.keys(RENDITIONS);
@@ -154,46 +119,10 @@ export function DiagramEditor({ id }: { id: Id }) {
   const all = [...boxes.values()];
   const width = Math.max(800, ...all.map((b) => b.x + b.w + MARGIN));
   const height = Math.max(600, ...all.map((b) => b.y + b.h + MARGIN));
-  const area = (o: ObjectOccurrenceRow) => boxes.get(o.id)!.w * boxes.get(o.id)!.h;
-  // Larger symbols behind smaller ones, so nothing placed over a container is hidden by it.
-  const ordered = [...occurrences].filter((o) => boxes.has(o.id)).sort((a, b) => area(b) - area(a) || a.z - b.z);
-  const lines = state.relationshipOccurrences.find("byDiagram", id).filter((l) => l.shownAs !== "nesting");
-  const parallel = new Map<Id, { index: number; count: number }>();
-  const pairs = new Map<string, Id[]>();
-  for (const l of [...lines].sort((x, y) => x.id.localeCompare(y.id))) {
-    const key = [l.sourceOccurrenceId, l.targetOccurrenceId].sort().join("|");
-    pairs.set(key, [...(pairs.get(key) ?? []), l.id]);
-  }
-  for (const ids of pairs.values()) ids.forEach((lineId, index) => parallel.set(lineId, { index, count: ids.length }));
-  // Line geometry. Lines between the same two symbols are drawn side by side, never on top of each other (§8).
-  const drawn = lines.flatMap((l) => {
-    const a = boxes.get(l.sourceOccurrenceId);
-    const b = boxes.get(l.targetOccurrenceId);
-    if (!a || !b) return [];
-    const centre = (x: Box) => ({ x: x.x + x.w / 2, y: x.y + x.h / 2 });
-    const p0 = edgePoint(a, centre(b));
-    const q0 = edgePoint(b, centre(a));
-    const { index, count } = parallel.get(l.id)!;
-    const len = Math.hypot(q0.x - p0.x, q0.y - p0.y) || 1;
-    const flip = l.sourceOccurrenceId < l.targetOccurrenceId ? 1 : -1;
-    const shift = (index - (count - 1) / 2) * 12 * flip;
-    const nx = (-(q0.y - p0.y) / len) * shift;
-    const ny = ((q0.x - p0.x) / len) * shift;
-    const rel = state.relationships.get(l.relationshipId);
-    const type = rel ? metamodel.relationshipType(rel.type) : undefined;
-    const interaction = type?.semantic === "interaction";
-    const operation = rel?.properties["interaction.operation"];
-    // An interaction shows its operation; a flow what it carries (design/04-ux/diagram-editor.md §8).
-    const label = interaction
-      ? `⇄ ${typeof operation === "string" ? operation : (type?.name ?? "")}`
-      : rel && rel.payload.length > 0
-        ? payloadText(state, rel)
-        : "";
-    const chosen = rel !== undefined && workbenchSelection?.kind === "relationship" && workbenchSelection.id === rel.id;
-    const p = { x: p0.x + nx, y: p0.y + ny };
-    const q = { x: q0.x + nx, y: q0.y + ny };
-    return [{ l, p, q, rel, type, interaction, label, chosen }];
-  });
+  const ordered = paintOrder([...occurrences], boxes);
+  const isChosen = (rel: { id: Id } | undefined) =>
+    rel !== undefined && workbenchSelection?.kind === "relationship" && workbenchSelection.id === rel.id;
+  const drawn = drawnLines(state, metamodel, id, boxes);
   const repeats = new Map<Id, number>();
   for (const o of occurrences) repeats.set(o.objectId, (repeats.get(o.objectId) ?? 0) + 1);
   const nextZ = Math.max(0, ...occurrences.map((o) => o.z)) + 1;
@@ -773,10 +702,7 @@ export function DiagramEditor({ id }: { id: Id }) {
             <pattern id="grid" width={16} height={16} patternUnits="userSpaceOnUse">
               <path d="M16 0H0V16" fill="none" className="grid-line" />
             </pattern>
-            <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-              <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
-            </marker>
-            {ARROW_MARKERS}
+            <ArrowMarkers />
           </defs>
           <rect width={width} height={height} fill="url(#grid)" pointerEvents="none" />
           {/* Lines are picked (and dropped on) beneath the symbols, so they never take a symbol's clicks. */}
@@ -802,15 +728,8 @@ export function DiagramEditor({ id }: { id: Id }) {
           ))}
           {ordered.map((o) => {
             const b = boxes.get(o.id)!;
-            const object = state.objects.get(o.objectId);
-            const symbol = symbolFor(metamodel, diagram, object?.type ?? "", o.style);
-            const typeNotation = notationFor(object ? metamodel.objectType(object.type) : undefined);
-            // A literal fill (set by a diagram type or on the occurrence) is light in either theme, so it takes dark ink.
-            const notation = symbol.fill ? { ...typeNotation, ink: ON_LITERAL_FILL } : typeNotation;
-            const ink = symbol.fill ? ON_LITERAL_FILL : "var(--fg)";
-            const container = state.objectOccurrences.count("byParent", o.id) > 0;
-            // Semantic zoom never collapses a container: what is nested inside it stays visible.
-            const rendition = renditionFor(metamodel, diagram, symbol, container ? 1 : zoom);
+            const look = symbolLook(state, metamodel, diagram, o, zoom);
+            const { object, ink, rendition } = look;
             const count = repeats.get(o.objectId) ?? 1;
             const classes = [
               "occ",
@@ -842,18 +761,7 @@ export function DiagramEditor({ id }: { id: Id }) {
                   setOccMenu({ x: e.clientX, y: e.clientY, occId: o.id });
                 }}
               >
-                <OccurrenceShape
-                  box={b}
-                  form={rendition.form}
-                  rows={rendition.rows ?? 3}
-                  object={object}
-                  notation={notation}
-                  fill={symbol.fill ?? notation.fill}
-                  stroke={symbol.stroke ?? notation.stroke}
-                  shape={symbol.shape}
-                  container={container}
-                  zoom={zoom}
-                />
+                <SymbolShape look={look} box={b} zoom={zoom} />
                 {drillTarget(o) && (
                   <g
                     className="drill"
@@ -884,38 +792,9 @@ export function DiagramEditor({ id }: { id: Id }) {
               </g>
             );
           })}
-          {drawn.map(({ l, p, q, rel, type, interaction, label, chosen }) => {
-            const line = lineFor(metamodel, rel?.type);
-            return (
-              <g key={l.id}>
-                <line
-                  className={["line", interaction && "interaction", chosen && "selected"].filter(Boolean).join(" ")}
-                  data-relationship={type?.verb}
-                  x1={p.x}
-                  y1={p.y}
-                  x2={q.x}
-                  y2={q.y}
-                  strokeDasharray={line.dash}
-                  markerStart={markerUrl(line.start)}
-                  markerEnd={markerUrl(line.end)}
-                />
-                {line.mid && !label && (
-                  <GlyphUse
-                    glyph={line.mid}
-                    x={(p.x + q.x) / 2 - 8}
-                    y={(p.y + q.y) / 2 - 8}
-                    size={16}
-                    colour="var(--fg-2)"
-                  />
-                )}
-                {label && rel && (
-                  <text className="line-label" x={(p.x + q.x) / 2} y={(p.y + q.y) / 2 - 4}>
-                    {label}
-                  </text>
-                )}
-              </g>
-            );
-          })}
+          {drawn.map((line) => (
+            <LineShape key={line.l.id} metamodel={metamodel} line={line} selected={isChosen(line.rel)} />
+          ))}
           {handleBox && (
             <circle
               className="handle"

@@ -41,9 +41,9 @@ import { useModel, useWorkbench } from "../state/workbench";
 import { notationFor } from "../notation";
 import { createLinkedDiagramPlan, placeRelationshipEdits } from "../document";
 import { sequenceForInteractionEdits } from "../sequence";
-import { edgePoint, layoutBoxes } from "../diagram";
 import { displayValue, fieldGroups } from "../inspector";
 import { byName } from "../text";
+import { DiagramPicture } from "./DiagramDrawing";
 import { Glyph } from "./Glyph";
 import { PropertyGroups, type GridContext } from "./Inspector";
 
@@ -787,12 +787,16 @@ function DiagramLinkSection({ document, section, model, subject }: SectionProps<
             Unlink
           </button>
         </div>
-        <DiagramPreview
-          state={state}
-          diagramId={model.diagram.id}
-          subjectId={subject?.id}
-          onOpen={() => openTab({ kind: "diagram", id: model.diagram!.id })}
-        />
+        {state.objectOccurrences.count("byDiagram", model.diagram.id) > 0 ? (
+          <DiagramPicture
+            state={state}
+            metamodel={metamodel}
+            diagramId={model.diagram.id}
+            onOpen={() => openTab({ kind: "diagram", id: model.diagram!.id })}
+          />
+        ) : (
+          <p className="muted">Nothing is drawn yet. Open the diagram to draw.</p>
+        )}
       </div>
     );
   return (
@@ -821,75 +825,6 @@ function DiagramLinkSection({ document, section, model, subject }: SectionProps<
         </select>
       )}
     </div>
-  );
-}
-
-/** A live, read-only drawing of a diagram: boxes and straight lines, the subject emphasised. */
-function DiagramPreview(props: { state: ModelState; diagramId: Id; subjectId: Id | undefined; onOpen(): void }) {
-  const { state, diagramId, subjectId, onOpen } = props;
-  const boxes = layoutBoxes(state, diagramId);
-  const occurrences = state.objectOccurrences.find("byDiagram", diagramId);
-  if (occurrences.length === 0) return <p className="muted">Nothing is drawn yet. Open the diagram to draw.</p>;
-  const all = [...boxes.values()];
-  const pad = 24;
-  const minX = Math.min(...all.map((b) => b.x)) - pad;
-  const minY = Math.min(...all.map((b) => b.y)) - pad;
-  const maxX = Math.max(...all.map((b) => b.x + b.w)) + pad;
-  const maxY = Math.max(...all.map((b) => b.y + b.h)) + pad;
-  const lines = state.relationshipOccurrences.find("byDiagram", diagramId).filter((r) => r.shownAs === "line");
-  return (
-    <svg
-      className="doc-preview"
-      role="img"
-      aria-label="Diagram preview"
-      viewBox={`${minX} ${minY} ${maxX - minX} ${maxY - minY}`}
-      style={{ maxHeight: Math.min(360, maxY - minY) }}
-      onDoubleClick={onOpen}
-    >
-      <defs>
-        <marker
-          id={`doc-arrow-${diagramId}`}
-          viewBox="0 0 10 10"
-          refX="9"
-          refY="5"
-          markerWidth="7"
-          markerHeight="7"
-          orient="auto"
-        >
-          <path d="M0,0 L10,5 L0,10 z" className="doc-preview-arrow" />
-        </marker>
-      </defs>
-      {lines.map((l) => {
-        const a = boxes.get(l.sourceOccurrenceId);
-        const b = boxes.get(l.targetOccurrenceId);
-        if (!a || !b) return null;
-        const p = edgePoint(a, { x: b.x + b.w / 2, y: b.y + b.h / 2 });
-        const q = edgePoint(b, { x: a.x + a.w / 2, y: a.y + a.h / 2 });
-        return (
-          <line
-            key={l.id}
-            x1={p.x}
-            y1={p.y}
-            x2={q.x}
-            y2={q.y}
-            className="doc-preview-line"
-            markerEnd={`url(#doc-arrow-${diagramId})`}
-          />
-        );
-      })}
-      {occurrences.map((o) => {
-        const box = boxes.get(o.id)!;
-        const object = state.objects.get(o.objectId);
-        return (
-          <g key={o.id} className={o.objectId === subjectId ? "subject" : undefined}>
-            <rect x={box.x} y={box.y} width={box.w} height={box.h} rx={6} className="doc-preview-box" />
-            <text x={box.x + box.w / 2} y={box.y + box.h / 2} textAnchor="middle" dominantBaseline="central">
-              {object?.name ?? "?"}
-            </text>
-          </g>
-        );
-      })}
-    </svg>
   );
 }
 

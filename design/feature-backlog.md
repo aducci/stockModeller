@@ -26,3 +26,13 @@ Today: an object type can already name a `defaultFolder` (a path of folder names
 - What a review is stored as (its own table, or a diagram of kind `list` with a review definition), and whether feedback is per property, per element or both.
 - Who may start one and who may answer; due dates and reminders.
 - What finishing a review does: confirms the values (today's confirmations), records comments, or both.
+
+## Snapshot of a document's RAID register when it is issued (asked October 2026)
+
+**Asked:** when a design document is issued for review or sign-off, keep a snapshot of its RAID register, so a review can see which risks, assumptions, issues and dependencies were open at that moment.
+
+**Why it waits:** it belongs with issuing documents (V-8), which needs "as of" from M2, and the RAID register itself comes first (documents design, slice DOC-3).
+
+**To settle first:**
+- Whether the snapshot is the model as of the issue's sequence (live, needs M2) or a frozen copy stored with the issue.
+- Whether the snapshot covers only the register or the whole document.
