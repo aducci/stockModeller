@@ -37,6 +37,7 @@ test("the object viewer adds, renames and deletes a folder's objects, and Ctrl+â
   await menuItem(page, "Object viewer").click();
   const viewer = page.locator(".object-viewer");
   await expect(activeTab(page)).toContainText("Viewer Lab objects");
+  await expect(viewer.getByLabel("Add to", { exact: true })).toHaveText("Add to Viewer Lab");
   await viewer.getByLabel("New object type").selectOption({ label: "Process" });
   for (const name of ["Alpha step", "Beta step"]) {
     await viewer.getByLabel("New object name").fill(name);
@@ -44,8 +45,12 @@ test("the object viewer adds, renames and deletes a folder's objects, and Ctrl+â
   }
   const rows = viewer.getByRole("table", { name: "Objects" }).locator("tbody tr");
   await expect(rows).toHaveCount(2);
-  // A new object starts at its type's level.
-  await expect(viewer.getByLabel("Level of Alpha step")).toHaveValue("conceptual");
+  // No property columns until some are picked; a new object starts at its type's abstraction.
+  await expect(viewer.getByLabel("Abstraction of Alpha step")).toHaveCount(0);
+  await viewer.locator(".ov-columns summary").click();
+  await viewer.getByRole("group", { name: "Property columns" }).getByLabel("Abstraction").check();
+  await expect(viewer.getByLabel("Abstraction of Alpha step")).toHaveValue("conceptual");
+  await viewer.locator(".ov-columns summary").click();
   await viewer.getByLabel("Name of Alpha step").fill("Alpha one");
   await viewer.getByLabel("Name of Alpha step").press("Enter");
   await saved(page);
@@ -65,6 +70,52 @@ test("the object viewer adds, renames and deletes a folder's objects, and Ctrl+â
   await page.reload();
   await saved(page);
   await expect(childLabels(page, "Viewer Lab")).toHaveText(["Alpha one"]);
+});
+
+test("the object viewer shows folders and contents as a tree, and quick add goes into the selected row", async ({
+  page,
+}) => {
+  await signIn(page);
+  await row(page, "Viewer Lab").click({ button: "right" });
+  await menuItem(page, "New").hover();
+  await menuItem(page, "Folder").click();
+  await explorer(page).getByLabel("New folder name").fill("Sub lab");
+  await explorer(page).getByLabel("New folder name").press("Enter");
+  await saved(page);
+  await row(page, "Viewer Lab").click({ button: "right" });
+  await menuItem(page, "Object viewer").click();
+  const viewer = page.locator(".object-viewer");
+  const tr = (name: string) => viewer.locator(`tbody tr[data-name="${name}"]`);
+  await expect(tr("Sub lab")).toHaveAttribute("data-kind", "folder");
+
+  // + on an object: the new object goes inside it, offered only what its containment rules allow.
+  await tr("Alpha one").getByRole("button", { name: "Add inside Alpha one" }).click();
+  await expect(viewer.getByLabel("Add to", { exact: true })).toContainText("Add inside Alpha one");
+  await expect(viewer.getByLabel("New object name")).toBeFocused();
+  const type = viewer.getByLabel("New object type");
+  await expect(type.locator("option")).not.toHaveCount(0);
+  await expect(type.locator("option", { hasText: "Location" })).toHaveCount(0);
+  await type.selectOption({ label: "Process step" });
+  await viewer.getByLabel("New object name").fill("Check form");
+  await viewer.getByLabel("New object name").press("Enter");
+  await expect(tr("Check form")).toHaveCount(1);
+  await expect(tr("Alpha one").getByRole("button", { name: "Close Alpha one" })).toBeVisible();
+  await saved(page);
+
+  // Clicking a folder row makes it the target.
+  await tr("Sub lab").locator(".ov-type").click();
+  await expect(viewer.getByLabel("Add to", { exact: true })).toContainText("Add to Sub lab");
+  await viewer.getByLabel("New object type").selectOption({ label: "Process" });
+  await viewer.getByLabel("New object name").fill("Gamma");
+  await viewer.getByLabel("New object name").press("Enter");
+  await saved(page);
+  await viewer.getByLabel("Filter objects").fill("Gamma");
+  await expect(tr("Gamma").locator("td").nth(3)).toHaveText("Sub lab");
+  await viewer.getByLabel("Filter objects").fill("");
+
+  await page.reload();
+  await saved(page);
+  await expect(childLabels(page, "Alpha one")).toHaveText(["Check form"]);
 });
 
 test("the side panel minimises to a rail and comes back", async ({ page }) => {
@@ -131,8 +182,8 @@ test("a relationship type's rules are edited in its panel, and a matrix cell can
   await expect(rules.locator("li")).toHaveCount(count);
   await expect(page.getByRole("region", { name: "Unpublished changes" })).toHaveCount(0);
 
-  // Level and abstract explain themselves.
+  // Abstraction and abstract explain themselves.
   await page.getByRole("table", { name: "Object types" }).locator("tbody tr").first().click();
-  await page.getByRole("button", { name: "About levels" }).click();
+  await page.getByRole("button", { name: "About abstraction" }).click();
   await expect(page.getByRole("note")).toContainText("Conceptual");
 });
