@@ -27,6 +27,7 @@ import {
   setKind,
   setSymbol,
   updateDiagramType,
+  withSubject,
 } from "../diagram-type-admin";
 import { TypePropertiesPanel } from "./PropertyAdmin";
 import { newDiagramType, rootObjectTypes } from "../type-admin";
@@ -256,8 +257,71 @@ function GeneralTab({ type, draft, metamodel, update, onChange, inUse }: TabProp
         metamodel={metamodel}
         update={update}
       />
+      <SubjectField type={type} metamodel={metamodel} update={update} />
       <TypePropertiesPanel kind="diagram" type={type.key} draft={draft} metamodel={metamodel} onChange={onChange} />
     </div>
+  );
+}
+
+/**
+ * What the type's diagrams can be about (DOC-1): a diagram made from an element (a child diagram, New from an
+ * element) is about it, and a link to it can go in one of the element's link properties.
+ */
+function SubjectField(props: { type: DiagramType; metamodel: Metamodel; update(patch: Partial<DiagramType>): void }) {
+  const { type, metamodel, update } = props;
+  const chosen = type.subject?.type;
+  const linkProperties = metamodel.allPropertyTypes().filter((p) => p.dataType === "url" && p.many);
+  return (
+    <fieldset className="dt-choices">
+      <legend>About an element</legend>
+      <p className="muted small">
+        A diagram made from an element is about it: it is listed under the element and opens from its symbols.
+      </p>
+      {kindOf(type) === "document" ? (
+        <p className="muted small">The template decides which elements a document can be about.</p>
+      ) : (
+        <>
+          <label>
+            <input
+              type="checkbox"
+              checked={chosen === undefined}
+              onChange={(e) =>
+                update(withSubject(type, { type: e.target.checked ? undefined : [...type.objectTypes] }))
+              }
+            />
+            Any element
+          </label>
+          {chosen !== undefined &&
+            typeTree(metamodel).map(({ type: t, depth }) => (
+              <label key={t.definition.key} style={{ paddingLeft: depth * 16 }}>
+                <input
+                  type="checkbox"
+                  checked={chosen.includes(t.definition.key)}
+                  onChange={(e) =>
+                    update(withSubject(type, { type: toggled(chosen, t.definition.key, e.target.checked) ?? [] }))
+                  }
+                />
+                {t.definition.name}
+              </label>
+            ))}
+        </>
+      )}
+      <label className="field">
+        <span>Link it from</span>
+        <select
+          aria-label="Link it from"
+          value={type.subject?.linkProperty ?? ""}
+          onChange={(e) => update(withSubject(type, { linkProperty: e.target.value || undefined }))}
+        >
+          <option value="">Nowhere</option>
+          {linkProperties.map((p) => (
+            <option key={p.key} value={p.key}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+      </label>
+    </fieldset>
   );
 }
 

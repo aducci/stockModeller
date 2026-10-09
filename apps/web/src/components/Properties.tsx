@@ -513,7 +513,8 @@ function ViewSection({ id }: { id: Id }) {
         </dd>
         <dt>Type</dt>
         <dd>{type?.definition.name ?? diagram.diagramType}</dd>
-        {kind === "document" && (
+        {/* Every view may be about an element (DOC-1); only a document always is. */}
+        {(kind === "document" || subject) && (
           <>
             <dt>About</dt>
             <dd>

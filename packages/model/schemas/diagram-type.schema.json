@@ -22,6 +22,30 @@
       "default": "canvas",
       "description": "The view kind. See 02-model/views-and-design-artifacts.md §2."
     },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "build (slice DOC-1): what this type's diagrams are about. A diagram's subject is set when it is made from an element (a child diagram, New from an element) and kept in its definition's subject. A document takes the element types it accepts from document.subject. See 02-model/views-and-design-artifacts.md §12.",
+      "properties": {
+        "type": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Element types (and their subtypes) a diagram of this type may be about; absent = any"
+        },
+        "category": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "linkProperty": {
+          "type": "string",
+          "description": "A url property with many values: making a diagram of this type about an element adds a link to it there, in the same change"
+        }
+      }
+    },
     "matrix": {
       "type": "object",
       "required": ["rows", "columns", "relationships"],

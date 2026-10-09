@@ -5,6 +5,7 @@ import { SUBJECT_KEY, ulid, type Edit, type Id, type ViewKind } from "@connectom
 import { placeRelationshipsEdits } from "./document";
 import { interactionPartners, newSequenceEdits } from "./sequence";
 import { symbolFor } from "./diagram";
+import { aboutEdits, canBeAbout } from "./subjects";
 
 export const KIND_GLYPH: Record<ViewKind, string> = { canvas: "⧉", matrix: "▦", document: "▤", sequence: "⇅" };
 
@@ -31,11 +32,16 @@ export function viewKind(state: ModelState, metamodel: Metamodel, id: Id): ViewK
   return kindOfType(diagram && metamodel.diagramType(diagram.diagramType));
 }
 
-/** Canvas types an object can be drawn on, for its "New ▸" menu. */
+/** Canvas types an object can be drawn on and be the subject of, for its "New ▸" menu. */
 export function canvasTypesFor(metamodel: Metamodel, object: ObjectRow): ResolvedDiagramType[] {
   return metamodel
     .allDiagramTypes()
-    .filter((t) => kindOfType(t) === "canvas" && metamodel.diagramAllowsObjectType(t, object.type));
+    .filter(
+      (t) =>
+        kindOfType(t) === "canvas" &&
+        metamodel.diagramAllowsObjectType(t, object.type) &&
+        canBeAbout(metamodel, t, object),
+    );
 }
 
 /**
@@ -77,12 +83,22 @@ export function diagramAroundPlan(
       return other && metamodel.diagramAllowsObjectType(type, other.type);
     })
     .slice(0, 12);
+  // The diagram is about the object (DOC-1): its subject, and a link in the object's documentation.
+  const about = aboutEdits(state, metamodel, type.definition.key, object.id, id);
   return {
     label: `New ${name}`,
     edits: [
-      { edit: "createDiagram", id, name, diagramType: type.definition.key, folderId: object.folderId },
+      {
+        edit: "createDiagram",
+        id,
+        name,
+        diagramType: type.definition.key,
+        folderId: object.folderId,
+        definition: about.definition,
+      },
       { edit: "addObjectOccurrence", diagramId: id, occurrence: centre },
       ...placeRelationshipsEdits(state, metamodel, diagram, related, object.id, [centre]),
+      ...about.edits,
     ],
   };
 }
@@ -96,14 +112,19 @@ export function sequenceOfPlan(
   id: Id = ulid(),
 ): { label: string; edits: Edit[] } {
   const name = `${object.name} interactions`;
+  const about = aboutEdits(state, metamodel, type.definition.key, object.id, id);
   return {
     label: `New ${name}`,
-    edits: newSequenceEdits(state, metamodel, [object.id, ...interactionPartners(state, metamodel, object.id)], {
-      id,
-      name,
-      diagramType: type.definition.key,
-      folderId: object.folderId,
-    }),
+    edits: [
+      ...newSequenceEdits(state, metamodel, [object.id, ...interactionPartners(state, metamodel, object.id)], {
+        id,
+        name,
+        diagramType: type.definition.key,
+        folderId: object.folderId,
+        definition: about.definition,
+      }),
+      ...about.edits,
+    ],
   };
 }
 

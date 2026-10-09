@@ -3,6 +3,9 @@
   "name": "Integration specification",
   "description": "A design artifact about how one application or interface integrates: its context, a described row per integration, and per integration its details, sequence and error handling.",
   "kind": "document",
+  "subject": {
+    "linkProperty": "documentation.link"
+  },
   "objectTypes": ["applicationBase", "interface", "service"],
   "document": {
     "subject": {

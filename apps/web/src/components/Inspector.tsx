@@ -4,7 +4,14 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
 import { create } from "zustand";
 import type { ModelState, Metamodel } from "@connectome/engine";
-import type { Id, PropertySet, PropertyValue } from "@connectome/model";
+import {
+  DIAGRAM_LINK,
+  linkedDiagramId,
+  linksOf,
+  type Id,
+  type PropertySet,
+  type PropertyValue,
+} from "@connectome/model";
 import { useWorkbench } from "../state/workbench";
 import { displayValue, type EditorKind, type Field, type FieldGroup } from "../inspector";
 import { byName } from "../text";
@@ -498,7 +505,7 @@ const EDITORS: Record<EditorKind, (p: EditorProps) => ReactNode> = {
       onCommit={(t) => ctx.commit(field, t.trim() === "" ? null : t)}
     />
   ),
-  url: (p) => <LinkEditor {...p} />,
+  url: (p) => (p.field.pt.many ? <LinksEditor {...p} /> : <LinkEditor {...p} />),
   number: ({ id, field, ctx, readOnly }) => (
     <TextField
       id={id}
@@ -691,6 +698,97 @@ function LinkEditor({ id, field, ctx, readOnly }: EditorProps) {
       }}
       onCancel={() => setEditing(false)}
     />
+  );
+}
+
+/**
+ * Several links (a url property with `many`, slice DOC-1): web pages, and documents and diagrams of the repository,
+ * shown by their current name. Making a document about an element adds one here; people add and remove them too.
+ */
+function LinksEditor({ id, field, ctx, readOnly }: EditorProps) {
+  const openTab = useWorkbench((s) => s.openTab);
+  const [adding, setAdding] = useState(false);
+  const links = linksOf(field.value);
+  const commit = (next: string[]) => ctx.commit(field, next.length > 0 ? next : null);
+  const diagrams = [...ctx.state.diagrams.live()].filter((d) => !links.includes(`${DIAGRAM_LINK}${d.id}`)).sort(byName);
+  return (
+    <span className="links-value" id={id} role="group" aria-label={field.pt.name}>
+      {links.map((link) => {
+        const diagramId = linkedDiagramId(link);
+        const diagram = diagramId ? ctx.state.diagrams.get(diagramId) : undefined;
+        return (
+          <span className="link-item" key={link}>
+            {diagramId ? (
+              diagram ? (
+                <button
+                  className="link"
+                  title={`Open ${diagram.name}`}
+                  onClick={() => openTab({ kind: "diagram", id: diagram.id })}
+                >
+                  {diagram.name}
+                </button>
+              ) : (
+                <span className="muted">Deleted diagram</span>
+              )
+            ) : (
+              <a className="link-value" href={link} target="_blank" rel="noreferrer noopener" title={link}>
+                {link.replace(/^https?:\/\/(www\.)?/i, "").replace(/\/$/, "")}
+              </a>
+            )}
+            {!readOnly && (
+              <button
+                className="link remove-link"
+                aria-label={`Remove ${diagram?.name ?? link}`}
+                title="Remove this link"
+                onClick={() => commit(links.filter((l) => l !== link))}
+              >
+                ×
+              </button>
+            )}
+          </span>
+        );
+      })}
+      {!readOnly &&
+        (adding ? (
+          <span className="link-add">
+            <TextField
+              label={`New ${field.pt.name.toLowerCase()} link`}
+              className="value"
+              type="url"
+              value=""
+              placeholder="https://…"
+              autoFocus
+              onCommit={(t) => {
+                setAdding(false);
+                const next = t.trim();
+                if (next === "") return true;
+                return commit([...links, /^https?:\/\//i.test(next) ? next : `https://${next}`]);
+              }}
+              onCancel={() => setAdding(false)}
+            />
+            <select
+              aria-label="Link a diagram or document"
+              value=""
+              onChange={(e) => {
+                setAdding(false);
+                if (e.target.value) commit([...links, `${DIAGRAM_LINK}${e.target.value}`]);
+              }}
+            >
+              <option value="">or a diagram or document…</option>
+              {diagrams.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          </span>
+        ) : (
+          <button className="link add-link" onClick={() => setAdding(true)}>
+            + Add link
+          </button>
+        ))}
+      {links.length === 0 && readOnly && <span className="muted">Empty</span>}
+    </span>
   );
 }
 

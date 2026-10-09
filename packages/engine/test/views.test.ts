@@ -183,3 +183,69 @@ describe("documents", () => {
     ).toThrow(/belongs in a repeater[\s\S]*not a relation table[\s\S]*not "diagramLink"/);
   });
 });
+
+describe("diagram subjects and documentation links (DOC-1)", () => {
+  const app = (state: ReturnType<typeof exampleState>) => state.objects.get("O-APP-1")!;
+  const setLinks = (state: ReturnType<typeof exampleState>, value: unknown) =>
+    apply(state, [
+      {
+        edit: "setProperties",
+        id: "O-APP-1",
+        baseVersion: app(state).version,
+        set: { "documentation.link": value as string[] },
+      },
+    ]);
+
+  it("lets any diagram be about an object, and only an object", () => {
+    const state = exampleState();
+    applyOk(state, [
+      {
+        edit: "createDiagram",
+        id: "D-ABOUT",
+        name: "About",
+        diagramType: "context",
+        folderId: "F09",
+        definition: { subject: "O-APP-1" },
+      },
+    ]);
+    expect(state.diagrams.get("D-ABOUT")!.definition).toEqual({ subject: "O-APP-1" });
+    expect(
+      apply(state, [
+        {
+          edit: "createDiagram",
+          id: "D-BAD",
+          name: "Bad",
+          diagramType: "context",
+          folderId: "F09",
+          definition: { subject: "O-NOPE" },
+        },
+      ]),
+    ).toMatchObject({ ok: false, reasons: [{ code: "invalid", property: "definition.subject" }] });
+  });
+
+  it("keeps several links, web pages and diagrams, in a url property with many", () => {
+    const state = exampleState();
+    expect(setLinks(state, ["https://wiki.example.com/x", "diagram:D-01"]).ok).toBe(true);
+    expect(app(state).properties["documentation.link"]).toEqual(["https://wiki.example.com/x", "diagram:D-01"]);
+    // A single link stored before the type allowed many is still valid.
+    expect(setLinks(state, "https://wiki.example.com/y").ok).toBe(true);
+    expect(setLinks(state, ["ftp://x"])).toMatchObject({ ok: false });
+    expect(setLinks(state, ["diagram:"])).toMatchObject({ ok: false });
+    expect(setLinks(state, ["diagram:D-01", "diagram:D-01"])).toMatchObject({ ok: false });
+    expect(setLinks(state, [1])).toMatchObject({ ok: false });
+  });
+
+  it("refuses a link property that is not a url with many, and many on anything but a url", () => {
+    const types = essentials.diagramTypes.map((t) =>
+      t.key === "context" ? { ...t, subject: { linkProperty: "ownership.businessOwner" } } : t,
+    );
+    expect(() => Metamodel.compile(essentials.metamodel, types)).toThrow(MetamodelError);
+    const pkg = {
+      ...essentials.metamodel,
+      propertyTypes: essentials.metamodel.propertyTypes!.map((p) =>
+        p.key === "technical.users" ? { ...p, many: true } : p,
+      ),
+    };
+    expect(() => Metamodel.compile(pkg, essentials.diagramTypes)).toThrow(/only url properties/);
+  });
+});

@@ -66,6 +66,8 @@ export interface PropertyType {
   unit?: string;
   valueList?: string;
   objectTypes?: TypeKey[];
+  /** build (slice DOC-1): url only. A list of links, each a web address or `diagram:<id>` (see `DIAGRAM_LINK`). */
+  many?: boolean;
   required?: boolean;
   default?: PropertyValue;
   help?: string;

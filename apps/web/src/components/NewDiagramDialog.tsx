@@ -79,7 +79,7 @@ export function NewDiagramDialog({ folderId, onDone }: { folderId: Id | null; on
     let plan: { label: string; edits: Edit[] };
     if (kind === "document") {
       const subject = state.objects.get(subjectId)!;
-      plan = newDocumentPlan(type.definition, { ...subject, folderId: target } as ObjectRow, id);
+      plan = newDocumentPlan(state, metamodel, type.definition, { ...subject, folderId: target } as ObjectRow, id);
       (plan.edits[0] as { name: string }).name = title;
     } else if (kind === "sequence") {
       const ids = lifelines.filter((x, i) => x && lifelines.indexOf(x) === i);

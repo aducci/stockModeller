@@ -56,6 +56,20 @@ export function updateDiagramType(draft: Draft, key: TypeKey, patch: Partial<Dia
   };
 }
 
+/**
+ * Changes what a type's diagrams can be about (DOC-1): the element types (none = any) and the property that links
+ * them from the element. An empty subject is removed, so a type that never said anything stays as it was.
+ */
+export function withSubject(
+  type: DiagramType,
+  patch: Partial<NonNullable<DiagramType["subject"]>>,
+): Partial<DiagramType> {
+  const next: Record<string, unknown> = { ...type.subject, ...patch };
+  for (const [k, v] of Object.entries(next))
+    if (v === undefined || (Array.isArray(v) && v.length === 0)) delete next[k];
+  return { subject: Object.keys(next).length > 0 ? (next as DiagramType["subject"]) : undefined };
+}
+
 export const removeDiagramType = (draft: Draft, key: TypeKey): Draft => ({
   ...draft,
   diagramTypes: draft.diagramTypes.filter((t) => t.key !== key),

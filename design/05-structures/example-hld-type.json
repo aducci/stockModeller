@@ -3,6 +3,9 @@
   "name": "High-level design",
   "description": "A design artifact about one application: summary, key facts, its context diagram and a described row for every integration drawn on it.",
   "kind": "document",
+  "subject": {
+    "linkProperty": "documentation.link"
+  },
   "objectTypes": [
     "applicationBase",
     "service"

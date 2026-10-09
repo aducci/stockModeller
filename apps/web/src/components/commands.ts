@@ -10,6 +10,7 @@ import { itemName, targetFolder, whyFolderNotDeletable } from "../explorer";
 import { addToGroupPlan, childrenOf, dropPlan, isGroup, parentOf, removeFromGroupPlan, type Plan } from "../dragdrop";
 import { byName } from "../text";
 import { newDocumentPlan, templatesFor } from "../document";
+import { unlinkEdits } from "../subjects";
 import { interactionPartners } from "../sequence";
 import { canvasTypesFor, diagramAroundPlan, sequenceOfPlan, sequenceType } from "../views";
 import type { MenuEntry } from "./Menu";
@@ -46,7 +47,7 @@ export function renameItem(item: Selection) {
 }
 
 /** Deletes an item: a folder only when empty, an object after the dialog listing what goes with it. */
-export function deleteItem(state: ModelState, item: Selection) {
+export function deleteItem(state: ModelState, metamodel: Metamodel, item: Selection) {
   const { edit, askDeleteObject, select, closeTab } = store();
   if (item.kind === "object") return askDeleteObject(item.id);
   if (item.kind === "folder") {
@@ -60,7 +61,9 @@ export function deleteItem(state: ModelState, item: Selection) {
   }
   const diagram = state.diagrams.get(item.id);
   if (!diagram) return;
-  if (edit(`Delete diagram ${diagram.name}`, [{ edit: "deleteDiagram", id: diagram.id }])) {
+  // Links to it in the elements' documentation go with it (DOC-1); Undo puts both back.
+  const unlink = unlinkEdits(state, metamodel, diagram.id);
+  if (edit(`Delete diagram ${diagram.name}`, [...unlink, { edit: "deleteDiagram", id: diagram.id }])) {
     closeTab(diagram.id);
     select(null);
   }
@@ -133,7 +136,10 @@ function viewItems(state: ModelState, metamodel: Metamodel, object: ObjectRow): 
           } as MenuEntry,
         ]
       : []),
-    ...templates.map((t): MenuEntry => ({ label: t.name, run: () => open(newDocumentPlan(t, object)) })),
+    ...templates.map((t): MenuEntry => ({
+      label: t.name,
+      run: () => open(newDocumentPlan(state, metamodel, t, object)),
+    })),
   ];
   return entries.length ? ["separator", ...entries] : [];
 }
@@ -173,7 +179,7 @@ export function itemMenu(state: ModelState, metamodel: Metamodel, item: Selectio
       shortcut: "Del",
       danger: true,
       disabled: item.kind === "folder" ? whyFolderNotDeletable(state, item.id) : null,
-      run: () => deleteItem(state, item),
+      run: () => deleteItem(state, metamodel, item),
     },
   ];
 }
@@ -216,7 +222,7 @@ export function backgroundMenu(): MenuEntry[] {
 }
 
 /** The File menu in the top bar: acts on the shared selection. */
-export function fileMenu(state: ModelState): MenuEntry[] {
+export function fileMenu(state: ModelState, metamodel: Metamodel): MenuEntry[] {
   const { tabs, activeTab, closeTab, closeAllTabs } = store();
   const selection = itemSelected(store().selection);
   const current = selection && itemName(state, selection) !== undefined ? selection : null;
@@ -231,7 +237,7 @@ export function fileMenu(state: ModelState): MenuEntry[] {
       shortcut: "Del",
       danger: true,
       disabled: !current ? none : current.kind === "folder" ? whyFolderNotDeletable(state, current.id) : null,
-      run: () => current && deleteItem(state, current),
+      run: () => current && deleteItem(state, metamodel, current),
     },
     "separator",
     { label: "Close tab", disabled: activeTab ? null : "No tab is open", run: () => activeTab && closeTab(activeTab) },

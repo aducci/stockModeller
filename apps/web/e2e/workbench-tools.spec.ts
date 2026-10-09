@@ -152,8 +152,9 @@ test("a symbol gets a child diagram, shows the marker, and double-click drills d
   await symbol.click({ button: "right" });
   await menuItem(page, "Child diagram").hover();
   await menuItem(page, "Unlink child diagram").click();
-  await expect(symbol.locator(".drill")).toHaveCount(0);
   await saved(page);
+  // The new child is about the element (DOC-1), so the symbol still opens it, now as the element's diagram.
+  await expect(symbol.locator(".drill title")).toContainText(`About it: ${child}`);
 });
 
 test("a relationship type's rules are edited in its panel, and a matrix cell can be cancelled", async ({ page }) => {

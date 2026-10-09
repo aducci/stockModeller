@@ -1,6 +1,6 @@
 {
   "name": "Essentials",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "layers": [
     {
       "key": "strategy",
@@ -208,7 +208,8 @@
       "name": "Documentation",
       "group": "documentation",
       "dataType": "url",
-      "help": "Where the application is documented"
+      "many": true,
+      "help": "Where it is documented: web pages, and the documents and diagrams about it in this repository"
     },
     {
       "key": "technical.users",
@@ -253,7 +254,8 @@
       "properties": [
         "assessment.criticality",
         "cost.totalCost",
-        "cost.applicationCount"
+        "cost.applicationCount",
+        "documentation.link"
       ],
       "symbol": {
         "shape": "roundRect",
@@ -271,7 +273,8 @@
       "defaultFolder": "Business/Processes",
       "properties": [
         "ownership.businessOwner",
-        "lifecycle.status"
+        "lifecycle.status",
+        "documentation.link"
       ],
       "symbol": {
         "shape": "roundRect",
@@ -291,7 +294,10 @@
         "shape": "roundRect",
         "width": 120,
         "height": 50
-      }
+      },
+      "properties": [
+        "documentation.link"
+      ]
     },
     {
       "key": "service",
@@ -303,7 +309,8 @@
       "defaultFolder": "Business/Services",
       "properties": [
         "lifecycle.status",
-        "ownership.businessOwner"
+        "ownership.businessOwner",
+        "documentation.link"
       ],
       "symbol": {
         "shape": "roundRect",
@@ -319,7 +326,8 @@
       "category": "actor",
       "defaultFolder": "Business/Organisation",
       "properties": [
-        "ownership.businessOwner"
+        "ownership.businessOwner",
+        "documentation.link"
       ],
       "symbol": {
         "shape": "rect",
@@ -364,12 +372,20 @@
         {
           "key": "ownership",
           "name": "Ownership",
-          "properties": ["ownership.businessOwner", "ownership.technicalOwner", "documentation.link"]
+          "properties": [
+            "ownership.businessOwner",
+            "ownership.technicalOwner",
+            "documentation.link"
+          ]
         },
         {
           "key": "cost",
           "name": "Cost",
-          "properties": ["cost.runCost", "cost.totalCost", "technical.users"]
+          "properties": [
+            "cost.runCost",
+            "cost.totalCost",
+            "technical.users"
+          ]
         }
       ],
       "symbol": {
@@ -412,7 +428,8 @@
       "defaultFolder": "Applications/Interfaces",
       "properties": [
         "lifecycle.status",
-        "ownership.technicalOwner"
+        "ownership.technicalOwner",
+        "documentation.link"
       ],
       "symbol": {
         "shape": "ellipse",
@@ -433,7 +450,10 @@
       "symbol": {
         "shape": "rect",
         "icon": "data"
-      }
+      },
+      "properties": [
+        "documentation.link"
+      ]
     },
     {
       "key": "server",

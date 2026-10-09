@@ -232,6 +232,10 @@
             "$ref": "#/$defs/typeRef"
           }
         },
+        "many": {
+          "type": "boolean",
+          "description": "build (slice DOC-1): url properties only. The value is a list of links; each is a web address or diagram:<id>, a link to a diagram or document in the repository"
+        },
         "required": {
           "type": "boolean"
         },

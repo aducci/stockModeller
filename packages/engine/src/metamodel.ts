@@ -220,6 +220,8 @@ export class Metamodel {
       if (pt.valueList && !mm.valueLists.has(pt.valueList)) {
         problems.push(`Property type "${pt.key}" uses unknown value list "${pt.valueList}"`);
       }
+      if (pt.many && pt.dataType !== "url")
+        problems.push(`Property type "${pt.key}" is a ${pt.dataType}: only url properties can hold many values`);
       if (pt.dataType === "calculated" && !pt.formula) problems.push(`Calculated property "${pt.key}" has no formula`);
     }
 
@@ -354,6 +356,14 @@ export class Metamodel {
       }
       for (const p of dt.properties ?? []) {
         if (!mm.propertyTypes.has(p)) problems.push(`Diagram type "${dt.key}" uses unknown property type "${p}"`);
+      }
+      for (const t of dt.subject?.type ?? []) typeRef(t, `Diagram type "${dt.key}" subject`);
+      const link = dt.subject?.linkProperty;
+      if (link !== undefined) {
+        const pt = mm.propertyTypes.get(link);
+        if (!pt) problems.push(`Diagram type "${dt.key}" links from unknown property type "${link}"`);
+        else if (pt.dataType !== "url" || !pt.many)
+          problems.push(`Diagram type "${dt.key}" links from "${link}", which is not a url property with many values`);
       }
       mm.diagramTypes.set(dt.key, {
         definition: dt,

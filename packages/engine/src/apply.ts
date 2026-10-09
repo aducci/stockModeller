@@ -1123,6 +1123,7 @@ class Transaction {
     const dt = this.diagramTypeOf(e.diagramType, "diagramType");
     this.refLive("folders", e.folderId, "folderId");
     const properties = e.properties ? this.checkProperties(dt.properties, {}, e.properties, "properties") : undefined;
+    this.checkSubject(e.definition?.[SUBJECT_KEY], `definition.${SUBJECT_KEY}`);
     const tombstone = this.state.diagrams.getAny(e.id);
     this.write("diagrams", {
       id: e.id,
@@ -1170,6 +1171,16 @@ class Transaction {
     return diagram.id;
   }
 
+  /** A view's subject must name an object; a deleted one is allowed, so undo can always put it back. */
+  private checkSubject(subject: unknown, field: string) {
+    if (
+      subject !== undefined &&
+      subject !== null &&
+      (typeof subject !== "string" || !this.state.objects.getAny(subject))
+    )
+      this.invalid(field, "The subject must be an object");
+  }
+
   /** Patches a view's definition key by key (slice V-1); null removes a key. The engine checks only its shape. */
   private setViewDefinition(e: Extract<DiagramEdit, { edit: "setViewDefinition" }>): Id {
     const diagram = this.requireLive("diagrams", e.diagramId);
@@ -1181,14 +1192,7 @@ class Transaction {
       e.baseVersion,
       keys.map((k) => `definition.${k}`),
     );
-    // A document's subject must name an object; a deleted one is allowed, so undo can always put it back.
-    const subject = e.set[SUBJECT_KEY];
-    if (
-      subject !== undefined &&
-      subject !== null &&
-      (typeof subject !== "string" || !this.state.objects.getAny(subject))
-    )
-      this.invalid(`set.${SUBJECT_KEY}`, "The subject must be an object");
+    this.checkSubject(e.set[SUBJECT_KEY], `set.${SUBJECT_KEY}`);
     const definition: Record<string, unknown> = { ...diagram.definition };
     const previous: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(e.set)) {
@@ -1810,7 +1814,10 @@ class Transaction {
   }
 
   private valueContext() {
-    return { metamodel: this.mm, objectTypeOf: (id: string) => this.state.objects.get(id)?.type };
+    return {
+      metamodel: this.mm,
+      objectTypeOf: (id: string) => this.state.objects.get(id)?.type,
+    };
   }
 
   private storedProperties(obj: ObjectRow): Record<string, PropertyValue> {

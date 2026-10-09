@@ -1,6 +1,6 @@
 {
   "name": "Essentials",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "layers": [
     {
       "key": "strategy",
@@ -208,7 +208,8 @@
       "name": "Documentation",
       "group": "documentation",
       "dataType": "url",
-      "help": "Where the application is documented"
+      "many": true,
+      "help": "Where it is documented: web pages, and the documents and diagrams about it in this repository"
     },
     {
       "key": "technical.users",
@@ -250,7 +251,7 @@
       "abstraction": "conceptual",
       "uniqueName": "folder",
       "defaultFolder": "Business/Capabilities",
-      "properties": ["assessment.criticality", "cost.totalCost", "cost.applicationCount"],
+      "properties": ["assessment.criticality", "cost.totalCost", "cost.applicationCount", "documentation.link"],
       "symbol": {
         "shape": "roundRect",
         "width": 160,
@@ -265,7 +266,7 @@
       "category": "behaviour",
       "abstraction": "conceptual",
       "defaultFolder": "Business/Processes",
-      "properties": ["ownership.businessOwner", "lifecycle.status"],
+      "properties": ["ownership.businessOwner", "lifecycle.status", "documentation.link"],
       "symbol": {
         "shape": "roundRect",
         "width": 140,
@@ -284,7 +285,8 @@
         "shape": "roundRect",
         "width": 120,
         "height": 50
-      }
+      },
+      "properties": ["documentation.link"]
     },
     {
       "key": "service",
@@ -294,7 +296,7 @@
       "category": "service",
       "abstraction": "conceptual",
       "defaultFolder": "Business/Services",
-      "properties": ["lifecycle.status", "ownership.businessOwner"],
+      "properties": ["lifecycle.status", "ownership.businessOwner", "documentation.link"],
       "symbol": {
         "shape": "roundRect",
         "icon": "service",
@@ -308,7 +310,7 @@
       "layer": "business",
       "category": "actor",
       "defaultFolder": "Business/Organisation",
-      "properties": ["ownership.businessOwner"],
+      "properties": ["ownership.businessOwner", "documentation.link"],
       "symbol": {
         "shape": "rect",
         "icon": "people"
@@ -396,7 +398,7 @@
       "category": "interface",
       "abstraction": "logical",
       "defaultFolder": "Applications/Interfaces",
-      "properties": ["lifecycle.status", "ownership.technicalOwner"],
+      "properties": ["lifecycle.status", "ownership.technicalOwner", "documentation.link"],
       "symbol": {
         "shape": "ellipse",
         "icon": "interface",
@@ -416,7 +418,8 @@
       "symbol": {
         "shape": "rect",
         "icon": "data"
-      }
+      },
+      "properties": ["documentation.link"]
     },
     {
       "key": "server",
