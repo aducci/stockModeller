@@ -3,7 +3,7 @@
 // registry keyed by the property type, so a new data type or editor hint is one entry, not a new panel.
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
 import { create } from "zustand";
-import type { ModelState, Metamodel } from "@connectome/engine";
+import type { ModelState, Metamodel, ObjectRow } from "@connectome/engine";
 import {
   DIAGRAM_LINK,
   linkedDiagramId,
@@ -14,7 +14,7 @@ import {
 } from "@connectome/model";
 import { useWorkbench } from "../state/workbench";
 import { displayValue, type EditorKind, type Field, type FieldGroup } from "../inspector";
-import { byName } from "../text";
+import { PickField, SearchPicker } from "./SearchPicker";
 
 // ---------------------------------------------------------------- remembered layout (per browser)
 
@@ -715,7 +715,6 @@ function LinksEditor({ id, field, ctx, readOnly }: EditorProps) {
   const [adding, setAdding] = useState(false);
   const links = linksOf(field.value);
   const commit = (next: string[]) => ctx.commit(field, next.length > 0 ? next : null);
-  const diagrams = [...ctx.state.diagrams.live()].filter((d) => !links.includes(`${DIAGRAM_LINK}${d.id}`)).sort(byName);
   return (
     <span className="links-value" id={id} role="group" aria-label={field.pt.name}>
       {links.map((link) => {
@@ -771,21 +770,15 @@ function LinksEditor({ id, field, ctx, readOnly }: EditorProps) {
               }}
               onCancel={() => setAdding(false)}
             />
-            <select
-              aria-label="Link a diagram or document"
-              value=""
-              onChange={(e) => {
+            <SearchPicker
+              label="Link a diagram or document"
+              placeholder="or search for a diagram or document…"
+              scope={{ diagrams: (d) => !links.includes(`${DIAGRAM_LINK}${d.id}`) }}
+              onPick={(f) => {
                 setAdding(false);
-                if (e.target.value) commit([...links, `${DIAGRAM_LINK}${e.target.value}`]);
+                commit([...links, `${DIAGRAM_LINK}${f.id}`]);
               }}
-            >
-              <option value="">or a diagram or document…</option>
-              {diagrams.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
+            />
           </span>
         ) : (
           <button className="link add-link" onClick={() => setAdding(true)}>
@@ -803,14 +796,10 @@ function RefsEditor({ id, field, ctx, readOnly }: EditorProps) {
   const ids = typeof field.value === "string" ? [field.value] : Array.isArray(field.value) ? field.value : [];
   const commit = (next: string[]) => ctx.commit(field, next.length > 0 ? next : null);
   const allowed = field.pt.objectTypes ?? [];
-  const choices = [...ctx.state.objects.live()]
-    .filter(
-      (o) =>
-        o.id !== ctx.itemId &&
-        !ids.includes(o.id) &&
-        (allowed.length === 0 || allowed.some((t) => ctx.metamodel.isA(o.type, t))),
-    )
-    .sort(byName);
+  const choice = (o: ObjectRow) =>
+    o.id !== ctx.itemId &&
+    !ids.includes(o.id) &&
+    (allowed.length === 0 || allowed.some((t) => ctx.metamodel.isA(o.type, t)));
   return (
     <span className="links-value" id={id} role="group" aria-label={field.pt.name}>
       {ids.map((ref) => {
@@ -841,19 +830,13 @@ function RefsEditor({ id, field, ctx, readOnly }: EditorProps) {
           </span>
         );
       })}
-      {!readOnly && choices.length > 0 && (
-        <select
-          aria-label={`Add to ${field.pt.name.toLowerCase()}`}
-          value=""
-          onChange={(e) => e.target.value && commit([...ids, e.target.value])}
-        >
-          <option value="">+ Add…</option>
-          {choices.map((o) => (
-            <option key={o.id} value={o.id}>
-              {o.name}
-            </option>
-          ))}
-        </select>
+      {!readOnly && (
+        <SearchPicker
+          label={`Add to ${field.pt.name.toLowerCase()}`}
+          placeholder="+ Add…"
+          scope={{ objects: choice }}
+          onPick={(f) => commit([...ids, f.id])}
+        />
       )}
       {ids.length === 0 && readOnly && <span className="muted">Empty</span>}
     </span>
@@ -863,26 +846,26 @@ function RefsEditor({ id, field, ctx, readOnly }: EditorProps) {
 function ObjectRefEditor({ id, field, ctx, readOnly }: EditorProps) {
   const select = useWorkbench((s) => s.select);
   const allowed = field.pt.objectTypes ?? [];
-  const choices = [...ctx.state.objects.live()]
-    .filter((o) => o.id !== ctx.itemId && (allowed.length === 0 || allowed.some((t) => ctx.metamodel.isA(o.type, t))))
-    .sort(byName);
   const target = typeof field.value === "string" ? ctx.state.objects.get(field.value) : undefined;
   return (
     <>
-      <select
-        id={id}
-        className={`value${field.empty ? " is-empty" : ""}`}
-        value={str(field.value)}
-        disabled={readOnly}
-        onChange={(e) => ctx.commit(field, e.target.value || null)}
-      >
-        <option value="">Empty</option>
-        {choices.map((o) => (
-          <option key={o.id} value={o.id}>
-            {o.name}
-          </option>
-        ))}
-      </select>
+      {readOnly ? (
+        <span id={id} className={`value${field.empty ? " is-empty" : ""}`}>
+          {target?.name ?? "Empty"}
+        </span>
+      ) : (
+        <PickField
+          id={id}
+          label={field.pt.name}
+          value={str(field.value)}
+          placeholder="Empty: search…"
+          scope={{
+            objects: (o) =>
+              o.id !== ctx.itemId && (allowed.length === 0 || allowed.some((t) => ctx.metamodel.isA(o.type, t))),
+          }}
+          onChange={(v) => ctx.commit(field, v || null)}
+        />
+      )}
       {target && (
         <button
           className="link open-link"

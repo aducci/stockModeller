@@ -22,7 +22,8 @@ import {
   type SetPicker,
 } from "./Inspector";
 import { RelationsSections } from "./Relations";
-import { addPayloadPlan, messagePlan, messagesOf, payloadChoices } from "../semantics";
+import { SearchPicker } from "./SearchPicker";
+import { addPayloadPlan, messagePlan, messagesOf } from "../semantics";
 import { folderPath } from "../text";
 import { KIND_GLYPH, KIND_NAME, documentsLinking, kindOfType, sequenceType } from "../views";
 import { sequenceForInteractionEdits } from "../sequence";
@@ -391,22 +392,16 @@ function PayloadEditor(props: { relationship: RelationshipRow; state: ModelState
           </span>
         );
       })}
-      <select
-        aria-label="Add to payload"
-        value=""
-        onChange={(e) => {
-          const plan = addPayloadPlan(state, metamodel, relationship.id, e.target.value);
+      <SearchPicker
+        label="Add to payload"
+        placeholder="Add…"
+        scope={{ objects: (o) => !relationship.payload.includes(o.id) }}
+        onPick={(f) => {
+          const plan = addPayloadPlan(state, metamodel, relationship.id, f.id);
           if ("error" in plan) notify(plan.error, "error");
           else edit(plan.label, plan.edits);
         }}
-      >
-        <option value="">Add…</option>
-        {payloadChoices(state, metamodel, relationship).map((o) => (
-          <option key={o.id} value={o.id}>
-            {o.name}
-          </option>
-        ))}
-      </select>
+      />
     </div>
   );
 }

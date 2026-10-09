@@ -72,7 +72,8 @@ test("builds an integration specification from patterns, within the template's l
   await section(page, "Context").getByRole("button", { name: "Create context diagram" }).click();
   const integrations = section(page, "Integrations");
   await integrations.getByRole("button", { name: "+ Add integration" }).click();
-  await integrations.getByLabel("Counterpart").selectOption({ label: "Claims Manager" });
+  await integrations.getByRole("combobox", { name: "Counterpart" }).fill("Claims Manager");
+  await page.getByRole("option", { name: /^Claims Manager/ }).click();
   await integrations.getByRole("button", { name: "Claims Manager calls Quotes API" }).click();
   const details = section(page, "Integration details");
   const block = details.getByRole("group", { name: "Claims Manager" });

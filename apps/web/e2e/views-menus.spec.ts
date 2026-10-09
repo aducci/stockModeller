@@ -47,7 +47,8 @@ test("creates views of every kind from one dialog and from an element's New menu
   await dialog(page).getByRole("radio", { name: "High-level design" }).check();
   await expect(dialog(page).getByRole("button", { name: "Create" })).toBeDisabled();
   await expect(dialog(page)).toContainText("Choose what the document is about");
-  await dialog(page).getByLabel("About").selectOption({ label: "Legacy CRM (Application)" });
+  await dialog(page).getByRole("combobox", { name: "About" }).fill("Legacy");
+  await page.getByRole("option", { name: /^Legacy CRM/ }).click();
   await expect(dialog(page).getByLabel("Diagram name")).toHaveAttribute("placeholder", "Legacy CRM high-level design");
   await dialog(page).getByRole("button", { name: "Create" }).click();
   await expect(dialog(page)).toHaveCount(0);

@@ -389,7 +389,7 @@ Agreed with the product owner on 2026-10-09 (the discussion and the full proposa
 |---|---|---|
 | The document's picture of a linked diagram | Drawn by the canvas's own renderer, read-only (B64) | DOC-0 ✅ |
 | **Subject on any diagram** | Every diagram may be about one element, kept in `definition.subject` as documents already were. A diagram type says which elements its diagrams may be about (`subject.type`, `subject.category`; a document keeps `document.subject`) and may name a `linkProperty`. The subject is set quietly by gestures (*Child diagram ▸ New*, *New ▸* on an element, a document's linked diagram) and never asked for unless the kind needs it (documents) | DOC-1 |
-| **Documentation links** | A url property type can hold `many` links, each a web address or `diagram:<id>` (a diagram or document of the repository, shown by its current name). Making a diagram about an element adds a link to it in the type's `linkProperty`, in the same change; deleting the diagram takes its links out (B66). People add and remove links by hand too | DOC-1 |
+| **Documentation links** (replaced by Links, §13) | A url property type can hold `many` links, each a web address or `diagram:<id>` (a diagram or document of the repository, shown by its current name). Making a diagram about an element adds a link to it in the type's `linkProperty`, in the same change; deleting the diagram takes its links out (B66). People add and remove links by hand too | DOC-1 |
 | Explorer and symbols | An element lists the diagrams about it (↗), and every symbol of it without a child diagram of its own opens one about it (not a document); a symbol's own child diagram (B58) still wins (B65) | DOC-1 |
 | Decomposition diagrams | A diagram type may set `decomposes: { relationship, childTypes }`: drawing on a diagram about X makes the new element a part of X, a banner offers X's parts not yet drawn, and a breadcrumb follows the subjects up. L0 to L3 is depth in that tree, not four types (B67) | DOC-1b ✅ |
 | Information flows | Reference properties with `many` on relationship types (an element list, e.g. *Information flows*); relationships get an abstraction with type and diagram-type defaults; a conceptual connection implies the more concrete flows between the scopes of its ends (realisation, composition, containment, depth 3), excludable per connection; `relationTable.expand` lists them per connector; Essentials *Application function* and *Information flow* (B68) | DOC-2 ✅ |
@@ -400,3 +400,39 @@ As built in DOC-1: the subject and links need no migration (the definition and p
 As built in DOC-1b: drawing a new element, or dropping an existing one, on a decomposition adds the relationship from the subject when the element's type is one of `childTypes` and a rule allows it; an element that already has another parent through a single-parent type is drawn but not taken (the toast says why). Double-clicking a symbol with nothing to open offers *New ‹type› for ‹element›* for each decomposition type that can be about it, then *Rename*. A new decomposition shows the parts the element already has in a row, with the lines between them its type shows. The banner's *Ignore*, and taking a part's last symbol off the diagram, add the part to `definition.ignoredParts`; the removal's toast offers *Also remove from ‹subject›*, which deletes the relationship. Essentials 1.7.0 adds the *Value chain* type and the rule *process composed of process*.
 
 As built in DOC-2: the relation table's `expand` (`property`, `exclude`, `add.types`, `sequence`, `required`) lists under each row the elements the connection lists, then the implied ones (*implied by ‹relationship›*), then implied relationships that reference no element. *+ Add flow* creates the element in its type's default folder (else the subject's) and lists it; *Keep* lists an implied element, *Not part of this* adds it to the exclusion property, × takes a listed one out. A flow's sequence is a sequence diagram about it, made with the two ends of the relationship it comes through (the connection itself for a listed flow) and their messages, and linked from the flow's documentation. The context's missing banner leaves out relationships implied by a connection that is drawn. The pattern *Context and integrations* takes `title` and `expand` as parameters; the High-level design passes *Information flows* and the expansion, the Integration specification neither.
+
+## 13. Documents and links, redesigned
+
+The product owner reviewed §12 on 2026-10-09 and found document setup and documentation links too complicated (D13). This section replaces the parts of §12 it names; the information flows, decomposition and the RAID plan stand.
+
+**A document type says what it describes, and nothing else about elements.** On the diagram-type admin's General tab, a document type has one field, *Describes*: the element types (1..n, each with its subtypes) a document of this type can be about. It is stored as the template's `document.subject.type`, and the type's `objectTypes` is kept equal to it. *Elements it can show*, *Relationships it can show* and *About an element* are canvas settings and are not shown for documents; the Notation tab is not offered either. Each document is about exactly one element (`definition.subject`); one element having several documents of a type is allowed, and the admin keeps it to one by convention. What a document shows is decided section by section (its context diagram's own type, its tables' sources), never by the document type.
+
+**Links are their own records, not a property.** A link goes from an element to a target, which is one of:
+
+| Target | Stored as |
+|---|---|
+| A document of the repository | `diagramId` |
+| A diagram, matrix or sequence of the repository | `diagramId` |
+| Another element | `objectId` |
+| A web page | `url` |
+
+Every link has a **link kind** and an optional label. Link kinds are metamodel settings (`linkKinds` in the package: `key`, `name`, `inverseName`, `targets`), so an admin adds a kind such as *Runbook* or *Standard* without code. Essentials ships four:
+
+| Kind | Name / read from the target | Targets | Behaviour |
+|---|---|---|---|
+| `document` | *Documented in* / *Documents* | documents | Making a document about an element adds one |
+| `drillDown` | *Drills down to* / *Drill-down of* | diagrams, matrices, sequences | Making a diagram about an element adds one; double-clicking a symbol of the element opens the first, after the symbol's own child diagram (B58) |
+| `web` | *Web link* | web pages | Opens in a new tab, shown by its label or its address |
+| `related` | *Related to* / *Related from* | elements | A light cross-reference that is not a modelled relationship |
+
+A diagram type names the kind its diagrams are linked by, `subject.linkKind`, which replaces `subject.linkProperty`. Deleting an element deletes its links and the links to it; deleting a diagram deletes the links to it; each is undone exactly.
+
+The properties panel shows **Links** as its own section under the properties, grouped by kind, each link opening its target, with × to remove it and *+ Add link*: the kind first, then a search for the target (only what the kind allows) or a web address and label. Under it, **Linked from** lists the links that point at the element or diagram, by the kind's inverse name, read only. Links are stored in their own table (`link`: source element, kind, one target, label, rank), indexed by source and by each target, so an element with hundreds of links, and *Linked from* across a large repository, stay fast and searchable. The *Documentation* property (`documentation.link`) is retired: its values become links (`diagram:<id>` of a document → `document`, of another view → `drillDown`, a web address → `web`), in the migration that adds the table.
+
+**Search instead of lists.** Wherever a person picks an element or a diagram from the whole repository, the app shows a type-ahead search instead of a list of everything: it filters as they type (start of a word first, then anywhere in the name), shows each match's type and folder, offers a few items near the current one before anything is typed, and shows at most 20 matches. It is used for a symbol's *Child diagram ▸ Link to existing…*, link targets, reference properties (one or many), a document's *Add integration* counterpart, the *New diagram* dialog's subject, a sequence's *Add lifeline* and a flow's payload.
+
+| Slice | What | State |
+|---|---|---|
+| DOC-R1 | *Describes* on document types; search pickers instead of long lists; this section | ✅ |
+| DOC-R2 | Link kinds, the `link` table and edits, the Links and Linked from sections, documents and diagrams adding links by kind, the migration from *Documentation* | Next |
+| DOC-3 | RAID, as planned in §12 | After DOC-R2 |

@@ -6,9 +6,9 @@ import { ulid, type Edit, type Id } from "@connectome/model";
 import { canBeSubject } from "@connectome/views";
 import { useModel, useWorkbench } from "../state/workbench";
 import { folderChain } from "../explorer";
-import { byName } from "../text";
 import { newDocumentPlan } from "../document";
 import { newSequenceEdits } from "../sequence";
+import { PickField } from "./SearchPicker";
 import { KINDS, KIND_GLYPH, diagramAroundPlan, kindOfType } from "../views";
 
 export function NewDiagramDialog({ folderId, onDone }: { folderId: Id | null; onDone(): void }) {
@@ -46,9 +46,8 @@ export function NewDiagramDialog({ folderId, onDone }: { folderId: Id | null; on
   const [withMessages, setWithMessages] = useState(true);
   const type = metamodel.diagramType(typeKey);
   const kind = kindOfType(type);
-  const objects = [...state.objects.live()].sort(byName);
-  const subjects = type?.template ? objects.filter((o) => canBeSubject(metamodel, type.template!, o)) : [];
-  const drawable = type ? objects.filter((o) => metamodel.diagramAllowsObjectType(type, o.type)) : [];
+  const subjects = (o: ObjectRow) => !!type?.template && canBeSubject(metamodel, type.template, o);
+  const drawable = (o: ObjectRow) => !!type && metamodel.diagramAllowsObjectType(type, o.type);
   const named = (id: Id) => state.objects.get(id)?.name;
 
   const suggestion = !type
@@ -110,18 +109,24 @@ export function NewDiagramDialog({ folderId, onDone }: { folderId: Id | null; on
     }
   };
 
-  const objectSelect = (label: string, value: Id, onChange: (id: Id) => void, list: ObjectRow[], none: string) => (
-    <label className="field">
+  const objectSelect = (
+    label: string,
+    value: Id,
+    onChange: (id: Id) => void,
+    allowed: (o: ObjectRow) => boolean,
+    none: string,
+  ) => (
+    // Not a <label>: a click in the list would also "click" the picked item's × through it.
+    <div className="field">
       <span>{label}</span>
-      <select aria-label={label} value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="">{none}</option>
-        {list.map((o) => (
-          <option key={o.id} value={o.id}>
-            {o.name} ({metamodel.objectType(o.type)?.definition.name ?? o.type})
-          </option>
-        ))}
-      </select>
-    </label>
+      <PickField
+        label={label}
+        value={value}
+        placeholder={none}
+        scope={{ objects: allowed, nearFolderId: folder || null }}
+        onChange={onChange}
+      />
+    </div>
   );
 
   return (
@@ -166,7 +171,7 @@ export function NewDiagramDialog({ folderId, onDone }: { folderId: Id | null; on
           })}
         </div>
         <div className="fields">
-          {kind === "document" && objectSelect("About", subjectId, setSubjectId, subjects, "Choose the subject…")}
+          {kind === "document" && objectSelect("About", subjectId, setSubjectId, subjects, "Search for the subject…")}
           {kind === "sequence" && (
             <>
               {objectSelect(
@@ -174,14 +179,14 @@ export function NewDiagramDialog({ folderId, onDone }: { folderId: Id | null; on
                 lifelines[0],
                 (id) => setLifelines([id, lifelines[1]]),
                 drawable,
-                "None yet",
+                "Search for an element…",
               )}
               {objectSelect(
                 "Second lifeline",
                 lifelines[1],
                 (id) => setLifelines([lifelines[0], id]),
                 drawable,
-                "None yet",
+                "Search for an element…",
               )}
               <label className="check">
                 <input type="checkbox" checked={withMessages} onChange={(e) => setWithMessages(e.target.checked)} />
@@ -189,7 +194,8 @@ export function NewDiagramDialog({ folderId, onDone }: { folderId: Id | null; on
               </label>
             </>
           )}
-          {kind === "canvas" && objectSelect("Start around", around, setAround, drawable, "An empty diagram")}
+          {kind === "canvas" &&
+            objectSelect("Start around", around, setAround, drawable, "An empty diagram, or search…")}
           {kind === "matrix" && (
             <p className="muted">Rows, columns and relationships come from the type; change them in the toolbar.</p>
           )}

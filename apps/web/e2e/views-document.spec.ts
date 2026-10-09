@@ -62,7 +62,8 @@ test("writes a high-level design whose integrations follow its context diagram",
 
   // A new integration is a relationship placed on the context in the same change; it must be described.
   await integrations.getByRole("button", { name: "+ Add integration" }).click();
-  await integrations.getByLabel("Counterpart").selectOption({ label: "Fraud Screening" });
+  await integrations.getByRole("combobox", { name: "Counterpart" }).fill("Fraud");
+  await page.getByRole("option", { name: /^Fraud Screening/ }).click();
   await integrations.getByRole("button", { name: "Payments Hub flows to Fraud Screening" }).click();
   const fraud = integrations.locator("tbody tr[data-relationship]", { hasText: "Fraud Screening" });
   await expect(fraud).toContainText("to describe");

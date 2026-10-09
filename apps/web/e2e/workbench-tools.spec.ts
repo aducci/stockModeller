@@ -155,6 +155,20 @@ test("a symbol gets a child diagram, shows the marker, and double-click drills d
   await saved(page);
   // The new child is about the element (DOC-1), so the symbol still opens it, now as the element's diagram.
   await expect(symbol.locator(".drill title")).toContainText(`About it: ${child}`);
+
+  // Another diagram is found by search, not picked from a list of every diagram (views §13).
+  await symbol.click({ button: "right" });
+  await menuItem(page, "Child diagram").hover();
+  await menuItem(page, "Link to existing…").click();
+  const linking = page.getByRole("dialog", { name: "Link a child diagram" });
+  await linking.getByRole("combobox", { name: "Child diagram" }).fill("value chain");
+  await page.getByRole("option", { name: /^Manage Claims value chain/ }).click();
+  await expect(linking).toHaveCount(0);
+  await expect(symbol.locator(".drill title")).toContainText("Child diagram: Manage Claims value chain");
+  await symbol.click({ button: "right" });
+  await menuItem(page, "Child diagram").hover();
+  await menuItem(page, "Unlink child diagram").click();
+  await saved(page);
 });
 
 test("a relationship type's rules are edited in its panel, and a matrix cell can be cancelled", async ({ page }) => {

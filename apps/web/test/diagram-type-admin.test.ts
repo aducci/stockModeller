@@ -9,6 +9,7 @@ import {
   newDiagramTypeKey,
   offTypeOccurrences,
   removeDiagramType,
+  setDescribes,
   setKind,
   setSymbol,
   updateDiagramType,
@@ -42,6 +43,16 @@ describe("diagram types on the draft", () => {
     draft = setSymbol(draft, "sequence", "application", "shape", "hexagon");
     draft = setSymbol(draft, "sequence", "application", "shape", undefined);
     expect(type(draft, "sequence").symbols).toBeUndefined();
+  });
+
+  it("sets what a document type describes, keeping its element types equal, and never to nothing", () => {
+    const draft = setDescribes(published, "hld", ["application", "interface"]);
+    expect(type(draft, "hld").document!.subject).toEqual({ type: ["application", "interface"] });
+    expect(type(draft, "hld").objectTypes).toEqual(["application", "interface"]);
+    expect(type(draft, "hld").document!.sections).toEqual(type(published, "hld").document!.sections);
+    expect(compileDraft(draft).problems).toEqual([]);
+    expect(setDescribes(draft, "hld", [])).toBe(draft);
+    expect(setDescribes(draft, "context", ["application"])).toBe(draft);
   });
 
   it("changes kind with the new kind's settings, and counts what changed", () => {

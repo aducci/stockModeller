@@ -37,8 +37,10 @@ test("draws an interaction as a sequence: request, response, a step moved, kept 
   await page.getByRole("dialog", { name: "New diagram" }).getByLabel("Diagram name").fill("Register a claim");
   await page.getByRole("dialog", { name: "New diagram" }).getByLabel("Diagram name").press("Enter");
 
-  await page.getByLabel("Add lifeline").selectOption({ label: "Claims Manager" });
-  await page.getByLabel("Add lifeline").selectOption({ label: "Intake API" });
+  for (const name of ["Claims Manager", "Intake API"]) {
+    await page.getByRole("combobox", { name: "Add lifeline" }).fill(name);
+    await page.getByRole("option", { name: new RegExp(`^${name}`) }).click();
+  }
   const sequence = page.getByRole("img", { name: "Register a claim" });
   await expect(sequence.locator("[data-lifeline]")).toHaveCount(2);
 
