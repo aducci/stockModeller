@@ -1,7 +1,7 @@
 // What a diagram is about (design/02-model/views-and-design-artifacts.md §12, slice DOC-1): any diagram may have a
-// subject, set when it is made from an element, and its type may link it from the element's documentation. Pure.
+// subject, set when it is made from an element, and its type may link it from the element (by link kind, §13). Pure.
 import type { DiagramRow, Metamodel, ModelState, ObjectRow, ResolvedDiagramType } from "@connectome/engine";
-import { DIAGRAM_LINK, SUBJECT_KEY, linkedDiagramId, linksOf, type Edit, type Id } from "@connectome/model";
+import { SUBJECT_KEY, ulid, type Edit, type Id } from "@connectome/model";
 import { matchesFilter } from "@connectome/views";
 
 /** The element a diagram is about, if it has one. */
@@ -25,13 +25,21 @@ export function diagramsAbout(state: ModelState, metamodel: Metamodel, objectId:
     .sort((a, b) => Number(isDocument(a)) - Number(isDocument(b)) || a.name.localeCompare(b.name));
 }
 
-/** The diagram a symbol of the element opens when the symbol has no child diagram of its own: one about it. */
+/**
+ * The diagram a symbol of the element opens when the symbol has no child diagram of its own: the first link of a
+ * drill-down kind (slice DOC-R2), else a diagram about it that is not a document.
+ */
 export function subjectDiagramFor(
   state: ModelState,
   metamodel: Metamodel,
   objectId: Id,
   from: Id,
 ): DiagramRow | undefined {
+  for (const link of state.links.find("bySource", objectId)) {
+    if (!("diagramId" in link.target) || !metamodel.linkKind(link.kind)?.drillDown) continue;
+    const diagram = state.diagrams.get(link.target.diagramId);
+    if (diagram && diagram.id !== from) return diagram;
+  }
   return diagramsAbout(state, metamodel, objectId).find(
     (d) => d.id !== from && metamodel.diagramType(d.diagramType)?.definition.kind !== "document",
   );
@@ -39,7 +47,7 @@ export function subjectDiagramFor(
 
 /**
  * The definition and edits that make a new diagram about an element: its subject, and, when the diagram type names
- * a link property the element's type carries, a link to the diagram added to the element's links (one change).
+ * a link kind, a link of that kind from the element to the diagram (one change, after the diagram is created).
  */
 export function aboutEdits(
   state: ModelState,
@@ -47,40 +55,17 @@ export function aboutEdits(
   diagramType: string,
   subjectId: Id,
   diagramId: Id,
+  linkId: Id = ulid(),
 ): { definition: Record<string, unknown>; edits: Edit[] } {
   const definition = { [SUBJECT_KEY]: subjectId };
-  const property = metamodel.diagramType(diagramType)?.definition.subject?.linkProperty;
-  const object = state.objects.get(subjectId);
-  if (!property || !object || !metamodel.objectType(object.type)?.properties.has(property))
-    return { definition, edits: [] };
-  const links = linksOf(object.properties[property]);
-  const link = `${DIAGRAM_LINK}${diagramId}`;
-  if (links.includes(link)) return { definition, edits: [] };
+  const kind = metamodel.diagramType(diagramType)?.definition.subject?.linkKind;
+  if (!kind || !metamodel.linkKind(kind) || !state.objects.get(subjectId)) return { definition, edits: [] };
+  const linked = state.links
+    .find("bySource", subjectId)
+    .some((l) => l.kind === kind && "diagramId" in l.target && l.target.diagramId === diagramId);
+  if (linked) return { definition, edits: [] };
   return {
     definition,
-    edits: [
-      { edit: "setProperties", id: object.id, baseVersion: object.version, set: { [property]: [...links, link] } },
-    ],
+    edits: [{ edit: "createLink", id: linkId, sourceId: subjectId, kind, target: { diagramId } }],
   };
-}
-
-/** Edits that take links to a diagram out of every element's link properties, e.g. when the diagram is deleted. */
-export function unlinkEdits(state: ModelState, metamodel: Metamodel, diagramId: Id): Edit[] {
-  const linkProperties = metamodel
-    .allPropertyTypes()
-    .filter((p) => p.dataType === "url" && p.many)
-    .map((p) => p.key);
-  if (linkProperties.length === 0) return [];
-  const edits: Edit[] = [];
-  for (const object of state.objects.live()) {
-    const set: Record<string, string[] | null> = {};
-    for (const key of linkProperties) {
-      const links = linksOf(object.properties[key]);
-      const kept = links.filter((l) => linkedDiagramId(l) !== diagramId);
-      if (kept.length !== links.length) set[key] = kept.length > 0 ? kept : null;
-    }
-    if (Object.keys(set).length > 0)
-      edits.push({ edit: "setProperties", id: object.id, baseVersion: object.version, set });
-  }
-  return edits;
 }

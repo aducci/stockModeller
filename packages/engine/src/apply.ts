@@ -14,6 +14,7 @@ import {
   type DiagramEdit,
   type Edit,
   type Id,
+  type LinkTarget,
   type LogEntry,
   type ModelEdit,
   type NotDuplicate,
@@ -34,6 +35,7 @@ import type {
   DiagramRow,
   FieldStamp,
   FolderRow,
+  LinkRow,
   ObjectOccurrenceRow,
   ObjectRow,
   RelationshipOccurrenceRow,
@@ -267,6 +269,12 @@ class Transaction {
         return this.addRelationshipOccurrence(edit);
       case "routeRelationshipOccurrence":
         return this.routeRelationshipOccurrence(edit);
+      case "createLink":
+        return this.createLink(edit);
+      case "updateLink":
+        return this.updateLink(edit);
+      case "deleteLink":
+        return this.deleteLinkEdit(edit);
       case "addAnnotation":
         return this.addAnnotation(edit);
       case "updateAnnotation":
@@ -582,6 +590,9 @@ class Transaction {
       );
     }
     this.dropReferences(obj.id);
+    // Its links, and the links to it, go too (slice DOC-R2).
+    for (const link of [...this.state.links.find("bySource", obj.id), ...this.state.links.find("byObject", obj.id)])
+      if (this.state.links.get(link.id)) this.deleteLink(link);
     for (const occ of this.state.objectOccurrences.find("byObject", obj.id)) this.removeObjectOccurrence(occ);
     for (const rel of this.relationshipsOf(obj.id)) {
       // Deleting an interaction has already deleted its messages.
@@ -1303,6 +1314,8 @@ class Transaction {
 
   /** Deletes a diagram and everything on it. Objects are never deleted with a diagram. */
   private deleteDiagram(diagram: DiagramRow): void {
+    // Links to it go first, so the inverse restores the diagram before them (slice DOC-R2).
+    for (const link of this.state.links.find("byDiagram", diagram.id)) this.deleteLink(link);
     // Symbols elsewhere that drill down to it lose the link first, so the inverse restores the diagram before them.
     for (const occ of this.state.objectOccurrences.find("byDrillDown", diagram.id)) {
       if (occ.diagramId === diagram.id) continue;
@@ -1677,6 +1690,103 @@ class Transaction {
     if (!(labelPosition >= 0 && labelPosition <= 1)) this.invalid("labelPosition", "Label position is between 0 and 1");
   }
 
+  // ------------------------------------------------------------------ links (slice DOC-R2)
+
+  private createLink(e: Extract<ModelEdit, { edit: "createLink" }>): Id {
+    this.requireNewId("links", e.id);
+    const source = this.refLive("objects", e.sourceId, "sourceId");
+    const kind = this.mm.linkKind(e.kind);
+    if (!kind) this.invalid("kind", `Unknown link kind ${e.kind}`);
+    const target = this.checkLinkTarget(e.target, kind.targets, source.id);
+    if (e.label !== undefined) this.checkLinkLabel(e.label, "label");
+    const same = this.state.links
+      .find("bySource", source.id)
+      .find((l) => l.kind === e.kind && sameTarget(l.target, target));
+    if (same) this.invalid("target", `${source.name} already has this link`);
+    this.write("links", {
+      id: e.id,
+      sourceId: source.id,
+      kind: e.kind,
+      target,
+      ...(e.label !== undefined ? { label: e.label } : {}),
+      deleted: false,
+      ...this.meta(this.state.links.getAny(e.id)),
+    });
+    this.step({ edit: "deleteLink", id: e.id });
+    return e.id;
+  }
+
+  private updateLink(e: Extract<ModelEdit, { edit: "updateLink" }>): Id {
+    const link = this.requireLive("links", e.id);
+    const next: LinkRow = { ...link };
+    const previous: { kind?: string; label?: string | null } = {};
+    if (e.set.kind !== undefined) {
+      const kind = this.mm.linkKind(e.set.kind);
+      if (!kind) this.invalid("set.kind", `Unknown link kind ${e.set.kind}`);
+      this.checkLinkTarget(link.target, kind.targets, link.sourceId, "set.kind");
+      previous.kind = link.kind;
+      next.kind = e.set.kind;
+    }
+    if (e.set.label !== undefined) {
+      if (e.set.label !== null) this.checkLinkLabel(e.set.label, "set.label");
+      previous.label = link.label ?? null;
+      if (e.set.label === null) delete next.label;
+      else next.label = e.set.label;
+    }
+    this.write("links", next);
+    this.step({ edit: "updateLink", id: link.id, set: previous });
+    return link.id;
+  }
+
+  private deleteLinkEdit(e: Extract<ModelEdit, { edit: "deleteLink" }>): Id {
+    this.deleteLink(this.requireLive("links", e.id));
+    return e.id;
+  }
+
+  private deleteLink(link: LinkRow): void {
+    this.write("links", { ...link, deleted: true });
+    this.step({
+      edit: "createLink",
+      id: link.id,
+      sourceId: link.sourceId,
+      kind: link.kind,
+      target: link.target,
+      ...(link.label !== undefined ? { label: link.label } : {}),
+    });
+  }
+
+  /** A link points at exactly one live thing its kind allows; a document is not "a diagram" and the reverse. */
+  private checkLinkTarget(
+    target: LinkTarget,
+    allowed: readonly string[],
+    sourceId: Id,
+    property = "target",
+  ): LinkTarget {
+    const keys = Object.keys(target);
+    if (keys.length !== 1) this.invalid(property, "A link points at exactly one diagram, element or web address");
+    if ("diagramId" in target) {
+      const diagram = this.refLive("diagrams", target.diagramId, "target.diagramId");
+      const isDocument = this.mm.diagramType(diagram.diagramType)?.definition.kind === "document";
+      if (!allowed.includes(isDocument ? "document" : "diagram"))
+        this.invalid(property, `This kind of link cannot point at a ${isDocument ? "document" : "diagram"}`);
+      return { diagramId: diagram.id };
+    }
+    if ("objectId" in target) {
+      const object = this.refLive("objects", target.objectId, "target.objectId");
+      if (object.id === sourceId) this.invalid("target.objectId", "An element cannot link to itself");
+      if (!allowed.includes("element")) this.invalid(property, "This kind of link cannot point at an element");
+      return { objectId: object.id };
+    }
+    if (typeof target.url !== "string" || !/^https?:\/\/\S+$/i.test(target.url))
+      this.invalid("target.url", "A web link starts with http:// or https://");
+    if (!allowed.includes("web")) this.invalid(property, "This kind of link cannot point at a web page");
+    return { url: target.url };
+  }
+
+  private checkLinkLabel(label: string, property: string): void {
+    if (label.trim() === "" || label.length > 200) this.invalid(property, "A label has 1 to 200 characters");
+  }
+
   // ------------------------------------------------------------------ annotations
 
   private addAnnotation(e: Extract<DiagramEdit, { edit: "addAnnotation" }>): Id {
@@ -2046,4 +2156,10 @@ function optionalList<K extends "aliases" | "notDuplicates">(key: K, list: NonNu
 function withConfirmations(obj: ObjectRow, confirmations: Record<string, Confirmation>): ObjectRow {
   const { confirmations: _drop, ...rest } = obj;
   return Object.keys(confirmations).length > 0 ? { ...rest, confirmations } : rest;
+}
+
+function sameTarget(a: LinkTarget, b: LinkTarget): boolean {
+  if ("diagramId" in a) return "diagramId" in b && a.diagramId === b.diagramId;
+  if ("objectId" in a) return "objectId" in b && a.objectId === b.objectId;
+  return "url" in b && a.url === b.url;
 }

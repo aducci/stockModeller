@@ -122,6 +122,41 @@
           }
         }
       }
+    },
+    "linkKinds": {
+      "type": "array",
+      "description": "build (slice DOC-R2): the kinds of link an element can have (views-and-design-artifacts.md §13). Links are records of their own, each of one kind",
+      "items": {
+        "type": "object",
+        "required": ["key", "name", "targets"],
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "type": "string",
+            "pattern": "^[a-z][a-zA-Z0-9]*$"
+          },
+          "name": {
+            "type": "string",
+            "description": "Read from the element, e.g. Documented in"
+          },
+          "inverseName": {
+            "type": "string",
+            "description": "Read from the target under Linked from, e.g. Documents; absent = the name"
+          },
+          "targets": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "enum": ["document", "diagram", "element", "web"]
+            }
+          },
+          "drillDown": {
+            "type": "boolean",
+            "description": "Double-clicking a symbol of the element opens the first link of this kind, after the symbol's own child diagram"
+          }
+        }
+      }
     }
   },
   "$defs": {

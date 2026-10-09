@@ -34,6 +34,20 @@ const viewDefinition = z
   .record(z.string().regex(/^[a-z][a-zA-Z0-9]*$/), z.unknown())
   .refine((d) => JSON.stringify(d).length <= 262_144, "A view definition can be at most 256 kB");
 
+/** A link (slice DOC-R2): its kind, a label and exactly one target. */
+const linkKind = z.string().regex(/^[a-z][a-zA-Z0-9]*$/);
+const linkLabel = z.string().min(1).max(200);
+const linkTarget = z.union([
+  z.strictObject({ diagramId: id }),
+  z.strictObject({ objectId: id }),
+  z.strictObject({
+    url: z
+      .string()
+      .regex(/^https?:\/\/\S+$/i)
+      .max(2000),
+  }),
+]);
+
 const shape = z.enum(["rect", "roundRect", "ellipse", "hexagon", "cylinder", "person", "icon"]);
 const arrow = z.enum(["none", "arrow", "diamond", "circle"]);
 const symbolStyle = z.strictObject({
@@ -206,6 +220,20 @@ export const editSchema = z.discriminatedUnion("edit", [
     id,
     rank: z.string().min(1).max(200).nullable(),
   }),
+  z.strictObject({
+    edit: z.literal("createLink"),
+    id,
+    sourceId: id,
+    kind: linkKind,
+    target: linkTarget,
+    label: linkLabel.optional(),
+  }),
+  z.strictObject({
+    edit: z.literal("updateLink"),
+    id,
+    set: z.strictObject({ kind: linkKind.optional(), label: linkLabel.nullable().optional() }),
+  }),
+  z.strictObject({ edit: z.literal("deleteLink"), id }),
   // diagram edits
   z.strictObject({
     edit: z.literal("createDiagram"),

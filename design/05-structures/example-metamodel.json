@@ -1,6 +1,6 @@
 {
   "name": "Essentials",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "layers": [
     {
       "key": "strategy",
@@ -204,14 +204,6 @@
       }
     },
     {
-      "key": "documentation.link",
-      "name": "Documentation",
-      "group": "documentation",
-      "dataType": "url",
-      "many": true,
-      "help": "Where it is documented: web pages, and the documents and diagrams about it in this repository"
-    },
-    {
       "key": "integration.informationFlows",
       "name": "Information flows",
       "group": "integration",
@@ -278,8 +270,7 @@
       "properties": [
         "assessment.criticality",
         "cost.totalCost",
-        "cost.applicationCount",
-        "documentation.link"
+        "cost.applicationCount"
       ],
       "symbol": {
         "shape": "roundRect",
@@ -297,8 +288,7 @@
       "defaultFolder": "Business/Processes",
       "properties": [
         "ownership.businessOwner",
-        "lifecycle.status",
-        "documentation.link"
+        "lifecycle.status"
       ],
       "symbol": {
         "shape": "roundRect",
@@ -318,10 +308,7 @@
         "shape": "roundRect",
         "width": 120,
         "height": 50
-      },
-      "properties": [
-        "documentation.link"
-      ]
+      }
     },
     {
       "key": "service",
@@ -333,8 +320,7 @@
       "defaultFolder": "Business/Services",
       "properties": [
         "lifecycle.status",
-        "ownership.businessOwner",
-        "documentation.link"
+        "ownership.businessOwner"
       ],
       "symbol": {
         "shape": "roundRect",
@@ -350,8 +336,7 @@
       "category": "actor",
       "defaultFolder": "Business/Organisation",
       "properties": [
-        "ownership.businessOwner",
-        "documentation.link"
+        "ownership.businessOwner"
       ],
       "symbol": {
         "shape": "rect",
@@ -378,8 +363,7 @@
         "assessment.criticality",
         "cost.runCost",
         "cost.totalCost",
-        "technical.users",
-        "documentation.link"
+        "technical.users"
       ],
       "propertySets": [
         {
@@ -398,8 +382,7 @@
           "name": "Ownership",
           "properties": [
             "ownership.businessOwner",
-            "ownership.technicalOwner",
-            "documentation.link"
+            "ownership.technicalOwner"
           ]
         },
         {
@@ -452,8 +435,7 @@
       "defaultFolder": "Applications/Interfaces",
       "properties": [
         "lifecycle.status",
-        "ownership.technicalOwner",
-        "documentation.link"
+        "ownership.technicalOwner"
       ],
       "symbol": {
         "shape": "ellipse",
@@ -470,9 +452,6 @@
       "category": "behaviour",
       "abstraction": "logical",
       "defaultFolder": "Applications/Functions",
-      "properties": [
-        "documentation.link"
-      ],
       "symbol": {
         "shape": "roundRect",
         "width": 140,
@@ -487,9 +466,6 @@
       "category": "behaviour",
       "abstraction": "logical",
       "defaultFolder": "Applications/Information flows",
-      "properties": [
-        "documentation.link"
-      ],
       "symbol": {
         "shape": "rect",
         "width": 140,
@@ -508,10 +484,7 @@
       "symbol": {
         "shape": "rect",
         "icon": "data"
-      },
-      "properties": [
-        "documentation.link"
-      ]
+      }
     },
     {
       "key": "server",
@@ -926,6 +899,41 @@
         "Lifecycle status": "lifecycle.status",
         "Business owner": "ownership.businessOwner"
       }
+    }
+  ],
+  "linkKinds": [
+    {
+      "key": "document",
+      "name": "Documented in",
+      "inverseName": "Documents",
+      "targets": [
+        "document"
+      ]
+    },
+    {
+      "key": "drillDown",
+      "name": "Drills down to",
+      "inverseName": "Drill-down of",
+      "targets": [
+        "diagram"
+      ],
+      "drillDown": true
+    },
+    {
+      "key": "web",
+      "name": "Web link",
+      "inverseName": "Web link",
+      "targets": [
+        "web"
+      ]
+    },
+    {
+      "key": "related",
+      "name": "Related to",
+      "inverseName": "Related from",
+      "targets": [
+        "element"
+      ]
     }
   ]
 }

@@ -414,7 +414,7 @@ components:
         rows:
           type: object
           description: Engine rows per collection (packages/engine/src/rows.ts)
-          required: [folders, objects, relationships, diagrams, objectOccurrences, relationshipOccurrences, annotations]
+          required: [folders, objects, relationships, diagrams, objectOccurrences, relationshipOccurrences, annotations, links]
           additionalProperties: false
           properties:
             folders: { type: array, items: { $ref: '#/components/schemas/SnapshotRow' } }
@@ -424,6 +424,7 @@ components:
             objectOccurrences: { type: array, items: { $ref: '#/components/schemas/SnapshotRow' } }
             relationshipOccurrences: { type: array, items: { $ref: '#/components/schemas/SnapshotRow' } }
             annotations: { type: array, items: { $ref: '#/components/schemas/SnapshotRow' } }
+            links: { type: array, items: { $ref: '#/components/schemas/SnapshotRow' }, description: 'build (slice DOC-R2): links from elements (views-and-design-artifacts.md §13)' }
     SnapshotRow:
       type: object
       required: [id, deleted]
@@ -521,7 +522,7 @@ components:
                  addObjectOccurrence, moveObjectOccurrence, styleOccurrence, setDrillDown, removeOccurrence,
                  addRelationshipOccurrence, routeRelationshipOccurrence, addAnnotation, updateAnnotation, removeAnnotation,
                  setTags, setDescription, confirmProperties, setConfirmations, setAliases, setNotDuplicates,
-                 setRelationshipProperties, setDiagramProperties]
+                 setRelationshipProperties, setDiagramProperties, createLink, updateLink, deleteLink]
       additionalProperties: true
     ChangeRequestBody:
       type: object

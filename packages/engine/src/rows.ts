@@ -3,6 +3,7 @@ import type {
   Annotation,
   Diagram,
   Id,
+  Link,
   ModelObject,
   ObjectOccurrence,
   Relationship,
@@ -42,6 +43,8 @@ export type FolderRow = { id: Id; parentId: Id | null; name: string; rank?: stri
 export type ObjectOccurrenceRow = ObjectOccurrence & { diagramId: Id } & RowMeta;
 export type RelationshipOccurrenceRow = RelationshipOccurrence & { diagramId: Id } & RowMeta;
 export type AnnotationRow = Annotation & { diagramId: Id } & RowMeta;
+/** build (slice DOC-R2): a link from an element; not versioned (the last writer wins). */
+export type LinkRow = Link & RowMeta;
 
 export interface Rows {
   objects: ObjectRow;
@@ -51,6 +54,7 @@ export interface Rows {
   objectOccurrences: ObjectOccurrenceRow;
   relationshipOccurrences: RelationshipOccurrenceRow;
   annotations: AnnotationRow;
+  links: LinkRow;
 }
 
 export type CollectionName = keyof Rows;
@@ -62,6 +66,7 @@ export const COLLECTIONS: readonly CollectionName[] = [
   "objectOccurrences",
   "relationshipOccurrences",
   "annotations",
+  "links",
 ];
 
 /** The collections whose rows carry a version (and take part in per-property conflict checks). */

@@ -10,7 +10,6 @@ import { itemName, targetFolder, whyFolderNotDeletable } from "../explorer";
 import { addToGroupPlan, childrenOf, dropPlan, isGroup, parentOf, removeFromGroupPlan, type Plan } from "../dragdrop";
 import { byName } from "../text";
 import { newDocumentPlan, templatesFor } from "../document";
-import { unlinkEdits } from "../subjects";
 import { interactionPartners } from "../sequence";
 import { canvasTypesFor, diagramAroundPlan, sequenceOfPlan, sequenceType } from "../views";
 import type { MenuEntry } from "./Menu";
@@ -61,9 +60,8 @@ export function deleteItem(state: ModelState, metamodel: Metamodel, item: Select
   }
   const diagram = state.diagrams.get(item.id);
   if (!diagram) return;
-  // Links to it in the elements' documentation go with it (DOC-1); Undo puts both back.
-  const unlink = unlinkEdits(state, metamodel, diagram.id);
-  if (edit(`Delete diagram ${diagram.name}`, [...unlink, { edit: "deleteDiagram", id: diagram.id }])) {
+  // Links to it go with it in the engine (DOC-R2); Undo puts both back.
+  if (edit(`Delete diagram ${diagram.name}`, [{ edit: "deleteDiagram", id: diagram.id }])) {
     closeTab(diagram.id);
     select(null);
   }

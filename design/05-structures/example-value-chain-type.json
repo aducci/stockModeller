@@ -6,7 +6,7 @@
     "type": [
       "process"
     ],
-    "linkProperty": "documentation.link"
+    "linkKind": "drillDown"
   },
   "decomposes": {
     "relationship": "composedOf",

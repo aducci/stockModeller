@@ -30,6 +30,11 @@ const INDEXES: { [C in CollectionName]: Record<string, IndexKey<Rows[C]>> } = {
     byTarget: (r) => r.targetOccurrenceId,
   },
   annotations: { byDiagram: (r) => r.diagramId, byParent: (r) => r.parentOccurrenceId },
+  links: {
+    bySource: (r) => r.sourceId,
+    byObject: (r) => ("objectId" in r.target ? r.target.objectId : null),
+    byDiagram: (r) => ("diagramId" in r.target ? r.target.diagramId : null),
+  },
 };
 
 function values(value: string | readonly string[] | null): readonly string[] {
@@ -141,6 +146,7 @@ export class ModelState {
   readonly objectOccurrences = new Collection<Rows["objectOccurrences"]>(INDEXES.objectOccurrences);
   readonly relationshipOccurrences = new Collection<Rows["relationshipOccurrences"]>(INDEXES.relationshipOccurrences);
   readonly annotations = new Collection<Rows["annotations"]>(INDEXES.annotations);
+  readonly links = new Collection<Rows["links"]>(INDEXES.links);
 
   private journal: JournalEntry[] | null = null;
 

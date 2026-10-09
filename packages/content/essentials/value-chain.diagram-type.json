@@ -4,7 +4,7 @@
   "description": "A process broken into its parts, left to right. Each part can have a value chain of its own, so L0 to L3 is a drill-down through this one type: what is drawn on one becomes a part of the process it is about.",
   "subject": {
     "type": ["process"],
-    "linkProperty": "documentation.link"
+    "linkKind": "drillDown"
   },
   "decomposes": {
     "relationship": "composedOf",

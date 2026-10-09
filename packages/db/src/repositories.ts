@@ -45,7 +45,7 @@ export async function deleteRepository(tx: Tx, repositoryId: string): Promise<bo
 /** Creates a repository with its baseline scenario and installs its metamodel. */
 export async function createRepository(tx: Tx, repo: NewRepository): Promise<void> {
   Metamodel.compile(repo.metamodel, repo.diagramTypes); // refuse a broken metamodel before writing anything
-  const { name, version, layers, exchangeMappings, documentPatterns } = repo.metamodel;
+  const { name, version, layers, exchangeMappings, documentPatterns, linkKinds } = repo.metamodel;
   await tx
     .insertInto("repository")
     .values({
@@ -56,7 +56,7 @@ export async function createRepository(tx: Tx, repo: NewRepository): Promise<voi
       // Package-level parts with no table of their own (yet).
       settings: json({
         ...(repo.settings ?? { currency: "EUR" }),
-        metamodel: { name, layers, exchangeMappings, documentPatterns },
+        metamodel: { name, layers, exchangeMappings, documentPatterns, linkKinds },
       }),
     })
     .execute();
@@ -259,6 +259,7 @@ export async function loadMetamodelPackage(
     derivationRules: ofKind("derivation"),
     ...(meta.exchangeMappings ? { exchangeMappings: meta.exchangeMappings } : {}),
     ...(meta.documentPatterns ? { documentPatterns: meta.documentPatterns } : {}),
+    ...(meta.linkKinds ? { linkKinds: meta.linkKinds } : {}),
   };
   return { metamodel, diagramTypes: diagramTypes.map((d) => d.definition) };
 }
@@ -294,12 +295,15 @@ export async function saveMetamodel(
     .select("settings")
     .where("id", "=", repositoryId)
     .executeTakeFirstOrThrow();
-  const { name, layers, exchangeMappings, documentPatterns } = pkg;
+  const { name, layers, exchangeMappings, documentPatterns, linkKinds } = pkg;
   await tx
     .updateTable("repository")
     .set({
       metamodel_version: pkg.version,
-      settings: json({ ...(repo.settings as object), metamodel: { name, layers, exchangeMappings, documentPatterns } }),
+      settings: json({
+        ...(repo.settings as object),
+        metamodel: { name, layers, exchangeMappings, documentPatterns, linkKinds },
+      }),
     })
     .where("id", "=", repositoryId)
     .execute();

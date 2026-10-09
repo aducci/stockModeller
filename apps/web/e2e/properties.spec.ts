@@ -109,26 +109,30 @@ test("shows a shared property set, saves and edits one of my own, and edits a li
   await expect(picker).toHaveValue(/^my/);
   await picker.selectOption({ label: "Edit this set…" });
   await panel.getByLabel("Include Business fit in the set").uncheck();
-  await panel.getByLabel("Include Documentation in the set").check();
+  await panel.getByLabel("Include Technical fit in the set").check();
   await panel.getByRole("button", { name: "Done" }).click();
   await expect(panel.locator(".prop-row")).toHaveCount(5);
   await expect(panel.locator('[data-property="assessment.businessFit"]')).toHaveCount(0);
 
-  // Links (DOC-1): added one at a time, typed without a scheme, shown as links, removed with ×.
-  await panel.getByRole("button", { name: "+ Add link" }).click();
-  await panel.getByLabel("New documentation link").fill("wiki.example.com/apps/legacy-crm");
-  await panel.getByLabel("New documentation link").press("Enter");
-  const link = panel.locator(".link-value");
+  // Links (DOC-R2): a web link with a label, typed without a scheme, shown by its label, removed with ×.
+  const links = panel.getByRole("group", { name: "Links" });
+  await links.getByRole("button", { name: "+ Add link" }).click();
+  await panel.getByLabel("Kind of link").selectOption({ label: "Web link" });
+  await panel.getByLabel("Label of the new link").fill("Runbook");
+  await panel.getByLabel("Web address").fill("wiki.example.com/apps/legacy-crm");
+  await panel.getByLabel("Web address").press("Enter");
+  const link = links.locator(".link-value");
   await expect(link).toHaveAttribute("href", "https://wiki.example.com/apps/legacy-crm");
-  await expect(link).toHaveText("wiki.example.com/apps/legacy-crm");
+  await expect(link).toHaveText("↗ Runbook");
   await saved(page);
   await page.reload();
   await saved(page);
   await select(page, "Legacy CRM");
   await expect(panel.getByLabel("Property set")).toHaveValue(/^my/);
-  await expect(panel.locator(".link-value")).toHaveAttribute("href", "https://wiki.example.com/apps/legacy-crm");
-  await panel.getByRole("button", { name: "Remove https://wiki.example.com/apps/legacy-crm" }).click();
-  await expect(panel.locator(".link-value")).toHaveCount(0);
+  await expect(links.locator(".link-value")).toHaveAttribute("href", "https://wiki.example.com/apps/legacy-crm");
+  await links.getByRole("listitem").filter({ hasText: "Runbook" }).hover();
+  await links.getByRole("button", { name: "Remove the link to wiki.example.com/apps/legacy-crm" }).click();
+  await expect(links.locator(".link-value")).toHaveCount(0);
   await saved(page);
 });
 

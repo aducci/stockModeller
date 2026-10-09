@@ -70,7 +70,7 @@ describe("diagram types on the draft", () => {
     expect(changes.changed.map((t) => t.key)).toEqual(["sequence"]);
     expect(changes.removed.map((t) => t.key)).toEqual(["capabilityMatrix"]);
     // Carried properties count with the properties, not as a changed type.
-    const carried = updateDiagramType(published, "context", { properties: ["documentation.link"] });
+    const carried = updateDiagramType(published, "context", { properties: ["ownership.businessOwner"] });
     expect(diagramTypeChanges(published, carried).changed).toEqual([]);
   });
 

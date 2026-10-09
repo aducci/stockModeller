@@ -309,6 +309,23 @@ export interface Annotation extends Rect {
   style: Partial<SymbolStyle>;
 }
 
+/**
+ * build (slice DOC-R2, views-and-design-artifacts.md §13): a link from an element to a document or diagram, another
+ * element or a web page, of a kind the metamodel defines (`linkKinds`). Links are their own records, not properties.
+ */
+export interface Link {
+  id: Id;
+  /** The element the link is on. */
+  sourceId: Id;
+  /** A link kind key, e.g. `document`, `drillDown`, `web`, `related`. */
+  kind: string;
+  target: LinkTarget;
+  label?: string;
+}
+
+/** Exactly one of: a diagram or document of the repository, an element, a web address. */
+export type LinkTarget = { diagramId: Id } | { objectId: Id } | { url: string };
+
 // ================================================================ catalogues and other views
 export type CatalogueColumn =
   | { kind: "name" | "key" | "type" | "folder" }

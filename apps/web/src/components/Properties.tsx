@@ -23,6 +23,7 @@ import {
 } from "./Inspector";
 import { RelationsSections } from "./Relations";
 import { SearchPicker } from "./SearchPicker";
+import { LinkedFromSection, LinksSection } from "./Links";
 import { addPayloadPlan, messagePlan, messagesOf } from "../semantics";
 import { folderPath } from "../text";
 import { KIND_GLYPH, KIND_NAME, documentsLinking, kindOfType, sequenceType } from "../views";
@@ -126,9 +127,14 @@ export function ObjectProperties({ id, withRelations = false }: { id: Id; withRe
         hidden={hidden}
         sectionIds={[
           ...groups.map((g) => `${prefix}:${g.key}`),
-          ...["tags", "aliases", "duplicates", ...(withRelations ? ["relationships", "trace", "occurs"] : [])].map(
-            (s) => `object:${s}`,
-          ),
+          ...[
+            "links",
+            "linked-from",
+            "tags",
+            "aliases",
+            "duplicates",
+            ...(withRelations ? ["relationships", "trace", "occurs"] : []),
+          ].map((s) => `object:${s}`),
         ]}
         sets={sets}
       />
@@ -149,6 +155,8 @@ export function ObjectProperties({ id, withRelations = false }: { id: Id; withRe
 
       {!filtering && (
         <>
+          <LinksSection object={object} />
+          <LinkedFromSection id="object:linked-from" target={{ objectId: object.id }} />
           <Section id="object:tags" title="Tags" count={object.tags.length || undefined}>
             <TextField
               label="Tags"
@@ -471,6 +479,7 @@ function DiagramProperties({ id }: { id: Id }) {
         carried={carried}
         onClear={(key, label) => setValue(key, `Clear ${label} of ${diagram.name}`, null)}
       />
+      <LinkedFromSection id="diagram:linked-from" target={{ diagramId: id }} />
       <Section id="diagram:contents" title="Contents">
         <p className="muted">
           {state.objectOccurrences.count("byDiagram", id)} shapes ·{" "}

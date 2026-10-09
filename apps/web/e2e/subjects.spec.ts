@@ -1,5 +1,6 @@
-// What a diagram is about (DOC-1, design/02-model/views-and-design-artifacts.md §12): an element's documentation
-// links the documents and diagrams about it, the explorer lists them under it, and its symbols open them.
+// What a diagram is about (DOC-1, design/02-model/views-and-design-artifacts.md §12) and links (DOC-R2, §13): an
+// element's links point at the documents and diagrams about it, the explorer lists them under it, its symbols open
+// them, and what it points at shows the link under Linked from.
 import { expect, test, type Page } from "@playwright/test";
 
 test.use({ viewport: { width: 1600, height: 1000 } });
@@ -19,14 +20,37 @@ const row = (page: Page, name: string) => explorer(page).locator(".row", { hasTe
 const properties = (page: Page) => page.getByRole("complementary", { name: "Properties" });
 const menuItem = (page: Page, name: string | RegExp) => page.getByRole("menuitem", { name, exact: true });
 
-test("an element's documentation links what is about it, and its symbols open its diagram", async ({ page }) => {
+test("an element's links point at what is about it, and its symbols open its diagram", async ({ page }) => {
   await signIn(page);
   await explorer(page).getByLabel("Filter the explorer").fill("Claims Manager");
   await row(page, "Claims Manager").click();
-  const docs = properties(page).getByRole("group", { name: "Documentation" });
-  await expect(docs.getByRole("button", { name: "Claims Manager high-level design", exact: true })).toBeVisible();
-  await expect(docs.locator(".link-value")).toHaveText("wiki.example.com/claims-manager");
-  await docs.getByRole("button", { name: "Claims Manager high-level design", exact: true }).click();
+  const links = properties(page).getByRole("group", { name: "Links" });
+  const documented = links.getByRole("list", { name: "Documented in" });
+  await expect(documented.getByRole("button", { name: "Claims Manager high-level design", exact: true })).toBeVisible();
+  await expect(links.getByRole("list", { name: "Web link" }).locator(".link-value")).toHaveText("↗ Team wiki");
+  await expect(links.getByRole("list", { name: "Related to" })).toContainText("Legacy CRM");
+  await expect(links.getByRole("list", { name: "Related to" })).toContainText("Reads customer data from it");
+
+  // A link to another element is found by search; the element shows it under Linked from.
+  await links.getByRole("button", { name: "+ Add link" }).click();
+  await properties(page).getByLabel("Kind of link").selectOption({ label: "Related to" });
+  await properties(page).getByRole("combobox", { name: "Link to" }).fill("Payments H");
+  await page.getByRole("option", { name: /^Payments Hub/ }).click();
+  await expect(links.getByRole("list", { name: "Related to" })).toContainText("Payments Hub");
+  await saved(page);
+  await links
+    .getByRole("list", { name: "Related to" })
+    .getByRole("button", { name: "Payments Hub", exact: true })
+    .click();
+  const from = properties(page).getByRole("group", { name: "Linked from" });
+  await expect(from.getByRole("list", { name: "Related from" })).toContainText("Claims Manager");
+  await from.getByRole("button", { name: "Claims Manager", exact: true }).click();
+  await links.getByRole("listitem").filter({ hasText: "Payments Hub" }).hover();
+  await links.getByRole("button", { name: "Remove the link to Payments Hub" }).click();
+  await expect(links.getByRole("list", { name: "Related to" })).not.toContainText("Payments Hub");
+  await saved(page);
+
+  await documented.getByRole("button", { name: "Claims Manager high-level design", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Claims Manager high-level design" })).toBeVisible();
 
   // Every symbol of Claims Manager opens the diagram about it, here from the landscape.
@@ -50,7 +74,7 @@ test("a new view about an element is linked from it, and deleting the view remov
   await saved(page);
 
   await row(page, "Legacy CRM").click();
-  const docs = properties(page).getByRole("group", { name: "Documentation" });
+  const docs = properties(page).getByRole("list", { name: "Documented in" });
   await expect(docs.getByRole("button", { name: "Legacy CRM high-level design", exact: true })).toBeVisible();
 
   await explorer(page).getByLabel("Filter the explorer").fill("Legacy CRM high-level design");

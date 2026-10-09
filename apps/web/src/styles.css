@@ -3391,3 +3391,67 @@ button.toggle .badge {
 .picked-name {
   font-weight: 500;
 }
+
+/* Links and Linked from (design/02-model/views-and-design-artifacts.md §13) */
+.links {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.link-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.link-kind {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 11px;
+}
+.link-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.link-row > .link,
+.link-row > .link-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.link-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.link-actions {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 4px;
+  opacity: 0;
+}
+.link-row:hover .link-actions,
+.link-row:focus-within .link-actions {
+  opacity: 1;
+}
+.link-add-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.link-add-form > select,
+.link-add-form > input {
+  flex: 1 1 140px;
+}
+.link-add-form .search-picker {
+  flex: 1 1 100%;
+}
+.link-add-actions {
+  display: inline-flex;
+  gap: 6px;
+}

@@ -2,7 +2,17 @@
 import { describe, expect, it } from "vitest";
 import type { Edit, Id } from "@connectome/model";
 import { COLLECTIONS, invertLog, type ModelState, type TouchedRow } from "../src";
+import { essentials } from "@connectome/content";
+import { Metamodel } from "../src";
 import { apply, applyOk, checkInvariants, exampleState, line, metamodel, occurrence, snapshot } from "./fixtures";
+
+/** Essentials with a property on landscapes, so diagram properties are edited too (Essentials has none since DOC-R2). */
+const withDiagramProperty = Metamodel.compile(
+  essentials.metamodel,
+  essentials.diagramTypes.map((t) =>
+    t.key === "applicationLandscape" ? { ...t, properties: ["ownership.businessOwner"] } : t,
+  ),
+);
 
 /** Destructive edits are picked less often, so the model keeps growing structure to test against. */
 const RARE = new Set([
@@ -42,6 +52,7 @@ function candidates(state: ModelState, next: () => number, n: number): Edit[] {
   const f = pick(folders);
   const d = pick(diagrams);
   const an = pick(anns);
+  const link = pick([...state.links.live()]);
   const id = `G${n}`;
   // A nesting relationship with an occurrence of its parent: lets us place the child inside it.
   const nestable = rels
@@ -175,7 +186,7 @@ function candidates(state: ModelState, next: () => number, n: number): Edit[] {
           edit: "setDiagramProperties",
           id: d.id,
           baseVersion: d.version,
-          set: { "documentation.link": pick([`https://docs.example/${n}`, null])! },
+          set: { "ownership.businessOwner": pick([`owner${n}@example.com`, null])! },
         }
       : null,
     d ? { edit: "deleteDiagram", id: d.id } : null,
@@ -267,6 +278,29 @@ function candidates(state: ModelState, next: () => number, n: number): Edit[] {
       : null,
     ro ? { edit: "setMessageStep", diagramId: ro.diagramId, occurrenceId: ro.id, step: pick([`a${n}`, null])! } : null,
     an ? { edit: "removeAnnotation", diagramId: an.diagramId, annotationId: an.id } : null,
+    // Links (slice DOC-R2): to a view of the right kind, an element or a web page; relabelled, re-kinded, deleted.
+    o && d
+      ? {
+          edit: "createLink",
+          id,
+          sourceId: o.id,
+          kind: metamodel.diagramType(d.diagramType)?.definition.kind === "document" ? "document" : "drillDown",
+          target: { diagramId: d.id },
+        }
+      : null,
+    o && o2 ? { edit: "createLink", id, sourceId: o.id, kind: "related", target: { objectId: o2.id } } : null,
+    o
+      ? {
+          edit: "createLink",
+          id,
+          sourceId: o.id,
+          kind: "web",
+          target: { url: `https://docs.example/${n}` },
+          label: "Doc",
+        }
+      : null,
+    link ? { edit: "updateLink", id: link.id, set: { label: pick([`Label ${n}`, null])! } } : null,
+    link ? { edit: "deleteLink", id: link.id } : null,
   ];
   return all.filter((e): e is Edit => e !== null);
 }
@@ -282,7 +316,7 @@ describe("inverses", () => {
       const edits = [options[Math.floor(next() * options.length)]!];
       if (next() < 0.3) edits.push(...candidates(state, next, n + 1000).slice(0, 1)); // some two-edit changes
       const before = snapshot(state);
-      const result = apply(state, edits);
+      const result = apply(state, edits, { metamodel: withDiagramProperty });
       if (!result.ok) {
         expect(snapshot(state)).toEqual(before); // a rejected change leaves no trace
         continue;
@@ -290,10 +324,12 @@ describe("inverses", () => {
       applied++;
       checkInvariants(state);
       // Inverses are stored as JSON in change_log, so round-trip them the way the database will.
-      const undo = applyOk(state, JSON.parse(JSON.stringify(invertLog(result.log))) as Edit[]);
+      const undo = applyOk(state, JSON.parse(JSON.stringify(invertLog(result.log))) as Edit[], {
+        metamodel: withDiagramProperty,
+      });
       expect(snapshot(state), `undo of ${JSON.stringify(edits)}`).toEqual(before);
       // redo (the inverse of the undo) and keep going from there
-      applyOk(state, JSON.parse(JSON.stringify(invertLog(undo.log))) as Edit[]);
+      applyOk(state, JSON.parse(JSON.stringify(invertLog(undo.log))) as Edit[], { metamodel: withDiagramProperty });
       checkInvariants(state);
     }
     expect(applied).toBeGreaterThan(50);
