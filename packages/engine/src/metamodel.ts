@@ -134,6 +134,17 @@ export class Metamodel {
     return typeof own === "string" ? (own as SemanticAbstraction) : this.objectTypes.get(object.type)?.abstraction;
   }
 
+  /** A relationship's abstraction: its own `semantic.abstraction`, or its type's default (slice DOC-2). */
+  relationshipAbstraction(relationship: {
+    type: TypeKey;
+    properties: Record<string, unknown>;
+  }): SemanticAbstraction | undefined {
+    const own = relationship.properties[ABSTRACTION_PROPERTY];
+    return typeof own === "string"
+      ? (own as SemanticAbstraction)
+      : this.relationshipTypes.get(relationship.type)?.abstraction;
+  }
+
   propertyType(key: string): PropertyType | undefined {
     return this.propertyTypes.get(key);
   }
@@ -220,8 +231,10 @@ export class Metamodel {
       if (pt.valueList && !mm.valueLists.has(pt.valueList)) {
         problems.push(`Property type "${pt.key}" uses unknown value list "${pt.valueList}"`);
       }
-      if (pt.many && pt.dataType !== "url")
-        problems.push(`Property type "${pt.key}" is a ${pt.dataType}: only url properties can hold many values`);
+      if (pt.many && pt.dataType !== "url" && pt.dataType !== "objectRef")
+        problems.push(
+          `Property type "${pt.key}" is a ${pt.dataType}: only url and objectRef properties can hold many values`,
+        );
       if (pt.dataType === "calculated" && !pt.formula) problems.push(`Calculated property "${pt.key}" has no formula`);
     }
 
@@ -304,7 +317,11 @@ export class Metamodel {
           rt.distinct ??
           (semantic === "flow" || semantic === "trigger" || semantic === "interaction" ? "pairAndPayload" : "pair"),
       });
-      mm.relationshipProperties.set(rt.key, new Set([...(rt.properties ?? []), ...kind.properties]));
+      // Any relationship may say how concrete it is, as any object may (slice DOC-2).
+      mm.relationshipProperties.set(
+        rt.key,
+        new Set([...(rt.properties ?? []), ...kind.properties, ABSTRACTION_PROPERTY]),
+      );
       for (const p of rt.properties ?? []) {
         if (!mm.propertyTypes.has(p)) problems.push(`Relationship type "${rt.key}" uses unknown property type "${p}"`);
       }
@@ -472,6 +489,17 @@ export function checkSection(
     relTypes(c.add?.types);
     kinds(c.add?.kinds);
     if (c.perRow) ofKind(c.perRow.sequence, "sequence", "has rows open");
+    if (c.expand) {
+      for (const key of [c.expand.property, c.expand.exclude]) {
+        if (key === undefined) continue;
+        const pt = mm.propertyType(key);
+        if (!pt || pt.dataType !== "objectRef" || !pt.many)
+          problems.push(`${at} expands rows by "${key}", which is not an objectRef property with many values`);
+      }
+      for (const t of c.expand.add?.types ?? [])
+        if (!mm.objectType(t)) problems.push(`${at} adds unknown object type "${t}"`);
+      if (c.expand.sequence) ofKind(c.expand.sequence, "sequence", "opens flows in");
+    }
     if (c.source.section !== undefined) {
       const linked = siblings.find((x) => x.key === c.source.section);
       if (linked?.component !== "diagramLink")

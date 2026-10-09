@@ -246,7 +246,7 @@ describe("diagram subjects and documentation links (DOC-1)", () => {
         p.key === "technical.users" ? { ...p, many: true } : p,
       ),
     };
-    expect(() => Metamodel.compile(pkg, essentials.diagramTypes)).toThrow(/only url properties/);
+    expect(() => Metamodel.compile(pkg, essentials.diagramTypes)).toThrow(/only url and objectRef properties/);
   });
 });
 

@@ -148,6 +148,24 @@ export interface RelationTableConfig {
   missing?: boolean;
   /** Per row, a child sequence diagram of this type for the row's interaction, created on demand (§7.2, V4). */
   perRow?: { sequence: TypeKey };
+  /**
+   * build (slice DOC-2): under each row, what its connection stands for (§12): the elements in a reference property
+   * of the connection, and the more concrete flows its ends' scopes imply.
+   */
+  expand?: RelationTableExpand;
+}
+
+export interface RelationTableExpand {
+  /** An objectRef property with `many` on the rows' relationship types, e.g. `integration.informationFlows`. */
+  property: PropertyKey;
+  /** An objectRef property with `many` holding the implied elements a connection does not stand for. */
+  exclude?: PropertyKey;
+  /** "+ Add" under a row creates one of these types and lists it in the property, in one change. */
+  add?: { label?: string; types: TypeKey[] };
+  /** A sequence diagram of this type about each element, created on demand. */
+  sequence?: TypeKey;
+  /** A row is to describe until it stands for at least one element or implied flow. */
+  required?: boolean;
 }
 
 /**

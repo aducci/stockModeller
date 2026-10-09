@@ -265,7 +265,7 @@
         },
         "many": {
           "type": "boolean",
-          "description": "build (slice DOC-1): url properties only. The value is a list of links; each is a web address or diagram:<id>, a link to a diagram or document in the repository"
+          "description": "build (slice DOC-1, DOC-2): url and objectRef properties only. A url value is a list of links, each a web address or diagram:<id> (a diagram or document in the repository); an objectRef value is a list of object ids"
         },
         "required": {
           "type": "boolean"
@@ -556,6 +556,10 @@
         "cascadeDelete": {
           "type": "boolean",
           "description": "composition only: deleting the whole deletes its parts"
+        },
+        "abstraction": {
+          "$ref": "#/$defs/semanticAbstraction",
+          "description": "build (slice DOC-2): default semantic.abstraction of relationships of this type; a relationship may set its own"
         },
         "distinct": {
           "enum": [

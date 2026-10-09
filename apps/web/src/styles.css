@@ -3343,3 +3343,35 @@ button.toggle .badge {
 .diagram-banner {
   margin: 6px 12px 0;
 }
+/* What a connection stands for, under its row (DOC-2): listed flows plain, implied ones in italics. */
+.doc-table tr.doc-flow th {
+  padding-left: 22px;
+  font-weight: normal;
+}
+.doc-table tr.doc-flow td,
+.doc-table tr.doc-flow th {
+  border-bottom-style: dashed;
+}
+.doc-table tr.doc-flow.implied .doc-chip {
+  font-style: italic;
+}
+.doc-implied {
+  color: var(--fg-2);
+  font-size: 12px;
+}
+.doc-flow-sequence {
+  margin-left: 10px;
+}
+.doc-table tr.doc-flow.add th {
+  padding-top: 2px;
+  padding-bottom: 6px;
+}
+.doc-table tr.doc-flow .doc-row-state {
+  white-space: nowrap;
+}
+.doc-table tr.doc-flow .doc-row-state button + button {
+  margin-left: 8px;
+}
+.doc-table tr.doc-flow .doc-chip {
+  white-space: nowrap;
+}

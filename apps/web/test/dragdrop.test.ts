@@ -108,6 +108,7 @@ describe("drop plans", () => {
       "O-INT-1",
       "O-APP-1",
       "O-APP-2",
+      "O-FN-1",
       "O-INT-2",
       "O-APP-3",
       "D-01",
@@ -124,6 +125,7 @@ describe("drop plans", () => {
       "O-APP-1",
       "D-01",
       "O-APP-2",
+      "O-FN-1",
       "O-INT-2",
       "O-APP-3",
     ]);

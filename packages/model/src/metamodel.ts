@@ -7,6 +7,7 @@ import type {
   RelationshipRule,
   RelationshipType,
   RuleFinding,
+  SemanticAbstraction,
   SemanticCategory,
   SymbolStyle,
   TypeKey,
@@ -110,6 +111,8 @@ export interface DiagramType {
    * (views-and-design-artifacts.md §12).
    */
   decomposes?: Decomposition;
+  /** build (slice DOC-2): the abstraction a relationship drawn on a diagram of this type gets (e.g. conceptual). */
+  lineAbstraction?: SemanticAbstraction;
   /** build (slice V-1): a matrix type's default definition; a diagram's own definition overrides it key by key. */
   matrix?: MatrixDefinition;
   /** build (slice V-2): a document template (views-and-design-artifacts.md §7.1). */

@@ -1,7 +1,7 @@
 {
   "key": "hld",
   "name": "High-level design",
-  "description": "A design artifact about one application: summary, key facts, its context diagram and a described row for every integration drawn on it.",
+  "description": "A design artifact about one application: summary, key facts, its context diagram and a described row for every connection drawn on it, with the information flows each stands for.",
   "kind": "document",
   "subject": {
     "linkProperty": "documentation.link"
@@ -46,6 +46,16 @@
         "use": "contextAndIntegrations",
         "with": {
           "perRow": {
+            "sequence": "sequence"
+          },
+          "title": "Information flows",
+          "expand": {
+            "property": "integration.informationFlows",
+            "exclude": "integration.excludedFlows",
+            "add": {
+              "label": "Add flow",
+              "types": ["informationFlow", "applicationFunction"]
+            },
             "sequence": "sequence"
           }
         }

@@ -5,6 +5,7 @@
   "subject": {
     "linkProperty": "documentation.link"
   },
+  "lineAbstraction": "conceptual",
   "objectTypes": [
     "applicationBase",
     "interface",

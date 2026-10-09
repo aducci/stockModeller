@@ -83,7 +83,7 @@ test("the example repository has a view of every kind to start from", async ({ p
   await open("Claims Manager high-level design");
   await expect(page.getByRole("button", { name: /sections complete/ })).toHaveText("5 of 5 sections complete");
   await page
-    .getByRole("region", { name: "Integrations", exact: true })
+    .getByRole("region", { name: "Information flows", exact: true })
     .getByRole("button", { name: "Open the sequence with Payments API" })
     .click();
   await expect(page.getByRole("tab", { name: /Pay a claim/ })).toBeVisible();

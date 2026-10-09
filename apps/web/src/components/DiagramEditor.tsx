@@ -10,7 +10,7 @@ import {
   type KeyboardEvent,
   type PointerEvent,
 } from "react";
-import { RENDITIONS, ulid, type Edit, type Id } from "@connectome/model";
+import { ABSTRACTION_PROPERTY, RENDITIONS, ulid, type Edit, type Id } from "@connectome/model";
 import type { DiagramRow, ObjectOccurrenceRow } from "@connectome/engine";
 import { useModel, useWorkbench } from "../state/workbench";
 import { notationFor } from "../notation";
@@ -405,6 +405,13 @@ export function DiagramEditor({ id }: { id: Id }) {
     setMenu({ from, to, at, choices });
   };
 
+  /** A line drawn on a type that sets `lineAbstraction` (e.g. a conceptual context) gets it, unless that is the default. */
+  const lineAbstraction = (type: string) => {
+    const wanted = metamodel.diagramType(diagram.diagramType)?.definition.lineAbstraction;
+    return wanted && wanted !== metamodel.relationshipType(type)?.abstraction
+      ? { properties: { [ABSTRACTION_PROPERTY]: wanted } }
+      : {};
+  };
   const connect = (choice: ConnectChoice) => {
     if (!menu) return;
     setMenu(null);
@@ -434,6 +441,7 @@ export function DiagramEditor({ id }: { id: Id }) {
               type: choice.type.key,
               sourceId: a.objectId,
               targetId: b.objectId,
+              ...lineAbstraction(choice.type.key),
             },
           ]),
       ...(request

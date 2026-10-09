@@ -236,7 +236,10 @@ const RENAMED_VALUES: Record<string, string> = {
   semanticLevel: "semanticAbstraction",
 };
 
-/** A file read from JSON with the pre-B62 names replaced: keys inside object types, and the property and list keys. */
+/**
+ * A file read from JSON with the pre-B62 names replaced: keys inside object (and relationship) types, and the property
+ * and list keys.
+ */
 function fromLevelNames(json: unknown, inObjectType = false): unknown {
   if (typeof json === "string") return RENAMED_VALUES[json] ?? json;
   if (Array.isArray(json)) return json.map((v) => fromLevelNames(v, inObjectType));
@@ -244,7 +247,7 @@ function fromLevelNames(json: unknown, inObjectType = false): unknown {
   return Object.fromEntries(
     Object.entries(json).map(([k, v]) => [
       (inObjectType && RENAMED_KEYS[k]) || (RENAMED_VALUES[k] ?? k),
-      fromLevelNames(v, k === "objectTypes"),
+      fromLevelNames(v, k === "objectTypes" || k === "relationshipTypes"),
     ]),
   );
 }

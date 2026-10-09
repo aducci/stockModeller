@@ -76,6 +76,15 @@
         }
       }
     },
+    "lineAbstraction": {
+      "enum": [
+        "conceptual",
+        "logical",
+        "physical",
+        "implementation"
+      ],
+      "description": "build (slice DOC-2): the semantic.abstraction a relationship drawn on a diagram of this type gets, when it differs from its type's default"
+    },
     "matrix": {
       "type": "object",
       "required": [
@@ -949,6 +958,50 @@
                   "properties": {
                     "sequence": {
                       "type": "string"
+                    }
+                  }
+                },
+                "expand": {
+                  "type": "object",
+                  "required": [
+                    "property"
+                  ],
+                  "additionalProperties": false,
+                  "description": "build (slice DOC-2): under each row, what its connection stands for: the elements in a reference property, and the more concrete flows its ends' scopes imply (02-model/views-and-design-artifacts.md §12)",
+                  "properties": {
+                    "property": {
+                      "type": "string",
+                      "description": "An objectRef property with many on the rows' relationship types"
+                    },
+                    "exclude": {
+                      "type": "string",
+                      "description": "An objectRef property with many holding the implied elements a connection does not stand for"
+                    },
+                    "add": {
+                      "type": "object",
+                      "required": [
+                        "types"
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "label": {
+                          "type": "string"
+                        },
+                        "types": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "sequence": {
+                      "type": "string",
+                      "description": "A sequence diagram type: one diagram about each element, created on demand"
+                    },
+                    "required": {
+                      "type": "boolean",
+                      "description": "A row is to describe until it stands for at least one element or implied flow"
                     }
                   }
                 }

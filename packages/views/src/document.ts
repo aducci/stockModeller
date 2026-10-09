@@ -30,6 +30,7 @@ import {
   type ObjectRow,
   type RelationshipRow,
 } from "@connectome/engine";
+import { subFlows, type ImpliedFlow } from "@connectome/semantics";
 import { matchesFilter, matchesRelationship } from "./scope";
 import type { CellOption } from "./matrix";
 
@@ -110,6 +111,19 @@ export interface TableRow {
    * With a template's `perRow` sequence: the row's sequence diagram once created, `undefined` before, and `null` when
    * the row is not an interaction (only interactions have messages).
    */
+  sequence: DiagramRow | undefined | null;
+  /** With the config's `expand` (slice DOC-2): the elements the row's connection stands for, listed then implied. */
+  flows?: FlowRow[];
+  /** With `expand`: the more concrete flows and interactions the connection implies. */
+  implied?: ImpliedFlow[];
+}
+export interface FlowRow {
+  object: ObjectRow;
+  /** False when the connection lists it; true when an implied relationship brings it. */
+  implied: boolean;
+  /** The implied relationship that references it. */
+  through?: RelationshipRow;
+  /** With `expand.sequence`: the sequence about the element once made, `undefined` before, `null` without one. */
   sequence: DiagramRow | undefined | null;
 }
 export interface TableColumnModel {
@@ -354,6 +368,16 @@ function projectTable(ctx: Context, section: Section<"relationTable">, scope: Sc
 
   const own = (scope.state ?? {}) as { sequences?: Record<Id, Id>; ignored?: Id[] };
   const sequences = own.sequences ?? {};
+  // A flow's sequence is a sequence diagram about it (DOC-1 subjects), not kept in the section's state.
+  const expand = config.expand;
+  const sequenceAbout = new Map<Id, DiagramRow>();
+  if (expand?.sequence)
+    for (const d of state.diagrams.live()) {
+      const about = d.definition?.[SUBJECT_KEY];
+      if (d.diagramType === expand.sequence && typeof about === "string" && !sequenceAbout.has(about))
+        sequenceAbout.set(about, d);
+    }
+  const expandLabel = expand ? (metamodel.propertyType(expand.property)?.name ?? expand.property) : "";
   const rows: TableRow[] = relationships.map((relationship) => {
     const direction =
       subject?.id === relationship.sourceId ? "out" : subject?.id === relationship.targetId ? "in" : null;
@@ -382,7 +406,20 @@ function projectTable(ctx: Context, section: Section<"relationTable">, scope: Sc
     const interaction = metamodel.relationshipType(relationship.type)?.semantic === "interaction";
     const sequenceId = sequences[relationship.id];
     const sequence = !config.perRow || !interaction ? null : sequenceId ? state.diagrams.get(sequenceId) : undefined;
-    return { relationship, counterpart, direction, cells, toDescribe, sequence };
+    if (!expand) return { relationship, counterpart, direction, cells, toDescribe, sequence };
+    const sub = subFlows(state, metamodel, relationship.id, { property: expand.property, exclude: expand.exclude });
+    const flowSequence = (o: ObjectRow) => (expand.sequence ? sequenceAbout.get(o.id) : null);
+    const flows: FlowRow[] = [
+      ...sub.explicit.map((object) => ({ object, implied: false, sequence: flowSequence(object) })),
+      ...sub.impliedElements.map(({ object, through }) => ({
+        object,
+        implied: true,
+        through,
+        sequence: flowSequence(object),
+      })),
+    ];
+    if (expand.required && flows.length === 0 && sub.implied.length === 0) toDescribe.push(expandLabel);
+    return { relationship, counterpart, direction, cells, toDescribe, sequence, flows, implied: sub.implied };
   });
   rows.sort(
     (a, b) =>
@@ -398,7 +435,11 @@ function projectTable(ctx: Context, section: Section<"relationTable">, scope: Sc
 
   let missing: RelationshipRow[] = [];
   if (config.missing && linkedSection && subject) {
-    const shown = new Set(relationships.map((r) => r.id));
+    // What a drawn connection implies is shown under its row, so it is not missing (DOC-2).
+    const shown = new Set([
+      ...relationships.map((r) => r.id),
+      ...rows.flatMap((r) => (r.implied ?? []).map((i) => i.relationship.id)),
+    ]);
     const ignored = new Set(own.ignored ?? []);
     missing = subjectRelationships(state, subject.id).filter(
       (r) => matchesRelationship(metamodel, r, filter) && !shown.has(r.id) && !ignored.has(r.id),

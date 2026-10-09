@@ -1,6 +1,6 @@
 // A document view (design/02-model/views-and-design-artifacts.md §7–§8): a design artifact about one subject, built
 // from its type's template. Each section is a component; what an author does in it is an ordinary model edit.
-import { useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { Fragment, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import type { DiagramRow, Metamodel, ModelState, ObjectRow } from "@connectome/engine";
 import {
   LAYOUT_KEY,
@@ -44,6 +44,7 @@ import { sequenceForInteractionEdits } from "../sequence";
 import { displayValue, fieldGroups } from "../inspector";
 import { byName } from "../text";
 import { DiagramPicture } from "./DiagramDrawing";
+import { FlowRows } from "./FlowRows";
 import { Glyph } from "./Glyph";
 import { PropertyGroups, type GridContext } from "./Inspector";
 
@@ -985,15 +986,24 @@ function RelationTableSection({ document, section, model, subject }: SectionProp
             </tr>
           )}
           {model.rows.map((row) => (
-            <TableRowView
-              key={row.relationship.id}
-              row={row}
-              model={model}
-              state={state}
-              metamodel={metamodel}
-              onSelect={() => select({ kind: "relationship", id: row.relationship.id })}
-              onSequence={config.perRow ? () => openSequence(row) : undefined}
-            />
+            <Fragment key={row.relationship.id}>
+              <TableRowView
+                row={row}
+                model={model}
+                state={state}
+                metamodel={metamodel}
+                onSelect={() => select({ kind: "relationship", id: row.relationship.id })}
+                onSequence={config.perRow ? () => openSequence(row) : undefined}
+              />
+              {config.expand && (
+                <FlowRows
+                  row={row}
+                  expand={config.expand}
+                  span={model.columns.length + (config.perRow ? 1 : 0)}
+                  near={subject ?? document}
+                />
+              )}
+            </Fragment>
           ))}
         </tbody>
       </table>

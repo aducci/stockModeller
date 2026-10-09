@@ -39,6 +39,14 @@
     "perRow": {
       "description": "A sequence per interaction row, as { \"sequence\": a sequence diagram type }, or null for none.",
       "default": null
+    },
+    "title": {
+      "description": "The table's title, e.g. Information flows.",
+      "default": "Integrations"
+    },
+    "expand": {
+      "description": "What each connector stands for, listed under its row (a relation table's expand), or null for nothing.",
+      "default": null
     }
   },
   "sections": [
@@ -47,7 +55,7 @@
       "title": "Context",
       "component": "diagramLink",
       "required": true,
-      "guidance": "Draw what the subject exchanges with. Every flow or interaction on this diagram is a row under Integrations.",
+      "guidance": "Draw what the subject exchanges with. Every flow or interaction on this diagram is a row of the table below.",
       "config": {
         "diagramType": "$template.diagramType",
         "placeSubject": true
@@ -55,7 +63,7 @@
     },
     {
       "key": "integrations",
-      "title": "Integrations",
+      "title": "$template.title",
       "component": "relationTable",
       "required": true,
       "guidance": "Describe every connector on the context diagram.",
@@ -76,7 +84,8 @@
           "kinds": "$template.kinds"
         },
         "missing": true,
-        "perRow": "$template.perRow"
+        "perRow": "$template.perRow",
+        "expand": "$template.expand"
       }
     }
   ]

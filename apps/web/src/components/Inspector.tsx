@@ -648,7 +648,12 @@ const EDITORS: Record<EditorKind, (p: EditorProps) => ReactNode> = {
       </span>
     );
   },
-  objectRef: ({ id, field, ctx, readOnly }) => <ObjectRefEditor id={id} field={field} ctx={ctx} readOnly={readOnly} />,
+  objectRef: ({ id, field, ctx, readOnly }) =>
+    field.pt.many ? (
+      <RefsEditor id={id} field={field} ctx={ctx} readOnly={readOnly} />
+    ) : (
+      <ObjectRefEditor id={id} field={field} ctx={ctx} readOnly={readOnly} />
+    ),
   calculated: ({ id, field }) => (
     <span className="readonly calculated" id={id}>
       <span aria-hidden="true">ƒ</span> {field.value === null ? "—" : displayValue(field.value, field.list)}
@@ -788,6 +793,69 @@ function LinksEditor({ id, field, ctx, readOnly }: EditorProps) {
           </button>
         ))}
       {links.length === 0 && readOnly && <span className="muted">Empty</span>}
+    </span>
+  );
+}
+
+/** Several references (an objectRef property with `many`, slice DOC-2), e.g. the information flows of a connection. */
+function RefsEditor({ id, field, ctx, readOnly }: EditorProps) {
+  const select = useWorkbench((s) => s.select);
+  const ids = typeof field.value === "string" ? [field.value] : Array.isArray(field.value) ? field.value : [];
+  const commit = (next: string[]) => ctx.commit(field, next.length > 0 ? next : null);
+  const allowed = field.pt.objectTypes ?? [];
+  const choices = [...ctx.state.objects.live()]
+    .filter(
+      (o) =>
+        o.id !== ctx.itemId &&
+        !ids.includes(o.id) &&
+        (allowed.length === 0 || allowed.some((t) => ctx.metamodel.isA(o.type, t))),
+    )
+    .sort(byName);
+  return (
+    <span className="links-value" id={id} role="group" aria-label={field.pt.name}>
+      {ids.map((ref) => {
+        const object = ctx.state.objects.get(ref);
+        return (
+          <span className="link-item" key={ref}>
+            {object ? (
+              <button
+                className="link"
+                title={`Show ${object.name}`}
+                onClick={() => select({ kind: "object", id: object.id })}
+              >
+                {object.name}
+              </button>
+            ) : (
+              <span className="muted">Deleted element</span>
+            )}
+            {!readOnly && (
+              <button
+                className="link remove-link"
+                aria-label={`Remove ${object?.name ?? ref}`}
+                title="Remove"
+                onClick={() => commit(ids.filter((i) => i !== ref))}
+              >
+                ×
+              </button>
+            )}
+          </span>
+        );
+      })}
+      {!readOnly && choices.length > 0 && (
+        <select
+          aria-label={`Add to ${field.pt.name.toLowerCase()}`}
+          value=""
+          onChange={(e) => e.target.value && commit([...ids, e.target.value])}
+        >
+          <option value="">+ Add…</option>
+          {choices.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.name}
+            </option>
+          ))}
+        </select>
+      )}
+      {ids.length === 0 && readOnly && <span className="muted">Empty</span>}
     </span>
   );
 }
