@@ -57,6 +57,7 @@ import {
   renameItem,
   runPlan,
 } from "./commands";
+import { diagramsAbout } from "../subjects";
 
 /** Marks a drag that started in the explorer (folders and diagrams carry nothing else). */
 const DRAG_EXPLORER = "application/x-connectome-explorer";
@@ -273,13 +274,15 @@ function ObjectNode({ id, depth }: { id: Id; depth: number }) {
   const group = isGroup(state, metamodel, id);
   const members = group ? groupMembers(state, id) : [];
   const meaning = explorerGroups(state, metamodel, id, new Set(members.map((m) => m.relationship.id)));
+  // Diagrams and documents about it (DOC-1), listed under it as well as in their folders.
+  const views = diagramsAbout(state, metamodel, id);
   // Structure is open until closed; meaning alone waits to be asked for (workbench.md, "Explorer: a semantic navigator").
   const [chosen, setOpen] = useState<boolean | null>(null);
   const open = chosen ?? contents.length + members.length > 0;
   useReveal(id, setOpen);
   const object = state.objects.get(id);
   if (!object) return null;
-  const hasChildren = contents.length + members.length + meaning.length > 0;
+  const hasChildren = contents.length + members.length + views.length + meaning.length > 0;
   return (
     <li role="treeitem" aria-expanded={hasChildren ? open : undefined}>
       <Row
@@ -307,6 +310,23 @@ function ObjectNode({ id, depth }: { id: Id; depth: number }) {
                 }
                 label={member.name}
                 memberOf={relationship.id}
+              />
+            </li>
+          ))}
+          {views.map((d) => (
+            <li key={d.id} role="treeitem">
+              <Row
+                item={{ kind: "diagram", id: d.id }}
+                depth={depth + 1}
+                icon={
+                  <>
+                    <span className="ref-mark" title={`About ${object.name}`}>
+                      ↗
+                    </span>
+                    <ViewIcon kind={viewKind(state, metamodel, d.id)} />
+                  </>
+                }
+                label={d.name}
               />
             </li>
           ))}
@@ -459,7 +479,7 @@ function Row(props: {
     else if (e.key === "F2" && !memberOf) renameItem(item);
     else if (e.key === "Delete") {
       if (memberOf) runPlan(removeFromGroupPlan(state, memberOf));
-      else deleteItem(state, item);
+      else deleteItem(state, metamodel, item);
     } else if (e.key === "ContextMenu" || (e.key === "F10" && e.shiftKey)) {
       const rect = e.currentTarget.getBoundingClientRect();
       showMenu(rect.left + 24, rect.bottom);

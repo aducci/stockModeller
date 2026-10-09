@@ -42,6 +42,7 @@ export type PropertyEditor =
 export interface PropertyType {
   key: PropertyKey; name: string; group: string; dataType: DataType;
   unit?: string; valueList?: string; objectTypes?: TypeKey[];
+  many?: boolean;                               // build (DOC-1): url only; a list of links, web or diagram:<id>
   required?: boolean; default?: PropertyValue; help?: string;
   validation?: { min?: number; max?: number; pattern?: string; maxLength?: number; decimals?: number };
   formula?: { expression: string; resultType: Exclude<DataType, "calculated" | "richText"> };

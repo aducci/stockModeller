@@ -2,6 +2,9 @@
   "key": "context",
   "name": "Context diagram",
   "description": "An application and what it exchanges with: the systems around it and the flows and interactions between them.",
+  "subject": {
+    "linkProperty": "documentation.link"
+  },
   "objectTypes": [
     "applicationBase",
     "interface",

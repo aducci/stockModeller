@@ -107,7 +107,7 @@ function TopBar() {
       </button>
       <MenuBar
         menus={[
-          { label: "File", entries: () => fileMenu(session.store.state) },
+          { label: "File", entries: () => fileMenu(session.store.state, session.store.metamodel) },
           { label: "Review", entries: reviewMenu },
           { label: "Metamodel", entries: metamodelMenu },
         ]}

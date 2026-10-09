@@ -1,9 +1,10 @@
 // Edits the document view makes (views-and-design-artifacts.md §7): new documents, linked diagrams created from a
 // section, and relationships placed on a linked diagram, each as one change.
 import type { DiagramRow, Metamodel, ModelState, ObjectRow } from "@connectome/engine";
-import { SUBJECT_KEY, ulid, type DiagramType, type Edit, type Id } from "@connectome/model";
+import { ulid, type DiagramType, type Edit, type Id } from "@connectome/model";
 import { canBeSubject } from "@connectome/views";
 import { GRID, snap, symbolFor } from "./diagram";
+import { aboutEdits } from "./subjects";
 
 /** Where the subject sits on a new linked diagram, and how far its counterparts are placed around it. */
 const CENTRE = { x: 480, y: 320 };
@@ -17,8 +18,15 @@ export function templatesFor(metamodel: Metamodel, object: ObjectRow): DiagramTy
     .map((t) => t.definition);
 }
 
-/** A new document about `subject`, in the subject's folder. */
-export function newDocumentPlan(template: DiagramType, subject: ObjectRow, id: Id = ulid()) {
+/** A new document about `subject`, in the subject's folder, linked from the subject's documentation (DOC-1). */
+export function newDocumentPlan(
+  state: ModelState,
+  metamodel: Metamodel,
+  template: DiagramType,
+  subject: ObjectRow,
+  id: Id = ulid(),
+): { label: string; edits: Edit[] } {
+  const about = aboutEdits(state, metamodel, template.key, subject.id, id);
   return {
     label: `New ${template.name} for ${subject.name}`,
     edits: [
@@ -28,14 +36,16 @@ export function newDocumentPlan(template: DiagramType, subject: ObjectRow, id: I
         name: `${subject.name} ${template.name.toLowerCase()}`,
         diagramType: template.key,
         folderId: subject.folderId,
-        definition: { [SUBJECT_KEY]: subject.id },
+        definition: about.definition,
       },
-    ] satisfies Edit[],
+      ...about.edits,
+    ],
   };
 }
 
 /** Creates the diagram a diagramLink section links to, with the subject in the middle, and links it: one change. */
 export function createLinkedDiagramPlan(
+  state: ModelState,
   metamodel: Metamodel,
   document: DiagramRow,
   section: { key: string; title: string; config: { diagramType: string; placeSubject?: boolean } },
@@ -45,8 +55,17 @@ export function createLinkedDiagramPlan(
   const name = subject
     ? `${subject.name} ${section.title.toLowerCase()}`
     : `${document.name} ${section.title.toLowerCase()}`;
+  // The linked diagram is about the document's subject too (DOC-1), so the subject's documentation links it.
+  const about = subject ? aboutEdits(state, metamodel, section.config.diagramType, subject.id, id) : undefined;
   const edits: Edit[] = [
-    { edit: "createDiagram", id, name, diagramType: section.config.diagramType, folderId: document.folderId },
+    {
+      edit: "createDiagram",
+      id,
+      name,
+      diagramType: section.config.diagramType,
+      folderId: document.folderId,
+      ...(about ? { definition: about.definition } : {}),
+    },
   ];
   if (subject && section.config.placeSubject !== false) {
     const diagram = { ...document, id, diagramType: section.config.diagramType };
@@ -63,6 +82,7 @@ export function createLinkedDiagramPlan(
     baseVersion: document.version,
     set: { [section.key]: { diagramId: id } },
   });
+  edits.push(...(about?.edits ?? []));
   return { label: `Create ${name}`, edits };
 }
 

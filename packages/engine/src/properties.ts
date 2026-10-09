@@ -1,5 +1,5 @@
 // Property values are JSONB (ADR-006), so their types are checked here: the change engine is the only writer.
-import type { PropertyType, PropertyValue } from "@connectome/model";
+import { linkedDiagramId, type PropertyType, type PropertyValue } from "@connectome/model";
 import type { Metamodel } from "./metamodel";
 
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -31,6 +31,16 @@ function checkNumber(pt: PropertyType, n: number): string | null {
   return null;
 }
 
+function checkUrl(pt: PropertyType, value: string): string | null {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return "must be an http or https URL";
+  } catch {
+    return "must be a URL";
+  }
+  return checkText(pt, value);
+}
+
 function checkText(pt: PropertyType, s: string): string | null {
   const v = pt.validation;
   if (v?.maxLength !== undefined && s.length > v.maxLength) return `must be at most ${v.maxLength} characters`;
@@ -51,14 +61,20 @@ export function checkValue(pt: PropertyType, value: PropertyValue, ctx: ValueCon
     case "richText":
       return typeof value === "string" ? checkText(pt, value) : "must be text";
     case "url": {
-      if (typeof value !== "string") return "must be a URL";
-      try {
-        const url = new URL(value);
-        if (url.protocol !== "http:" && url.protocol !== "https:") return "must be an http or https URL";
-      } catch {
-        return "must be a URL";
+      if (!pt.many) return typeof value === "string" ? checkUrl(pt, value) : "must be a URL";
+      // A list of links (slice DOC-1); a single link stored before the type allowed many still reads as one.
+      const links = typeof value === "string" ? [value] : value;
+      if (!Array.isArray(links)) return "must be a list of links";
+      if (new Set(links).size !== links.length) return "must not repeat a link";
+      for (const link of links as unknown[]) {
+        if (typeof link !== "string") return "must be a list of links";
+        // A link to a diagram is checked for its form only: it may be stored before the diagram (an import), and
+        // one to a deleted diagram stays, shown as such, so undo can restore both.
+        const diagramId = linkedDiagramId(link);
+        const problem = diagramId !== undefined ? (diagramId ? null : "must name a diagram") : checkUrl(pt, link);
+        if (problem) return problem;
       }
-      return checkText(pt, value);
+      return null;
     }
     case "number":
       return typeof value === "number" ? checkNumber(pt, value) : "must be a number";

@@ -3,6 +3,9 @@
   "name": "Sequence diagram",
   "description": "Lifelines are elements of the model and every arrow is a real message of an interaction, drawn in UML style: requests solid, responses dashed, in step order.",
   "kind": "sequence",
+  "subject": {
+    "linkProperty": "documentation.link"
+  },
   "objectTypes": ["applicationBase", "interface", "service", "organisationUnit", "process"],
   "relationshipTypes": ["calls", "flowsTo"]
 }

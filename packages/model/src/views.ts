@@ -71,8 +71,25 @@ export const REGION_COMPONENT_KEYS: readonly ComponentKey[] = [
   "relationTable",
 ];
 
-/** A document's definition key holding its subject; a template may not name a section after it. */
+/**
+ * A view's definition key holding its subject, the element it is about: a document's, or since slice DOC-1 any
+ * diagram's (views-and-design-artifacts.md §12). A template may not name a section after it.
+ */
 export const SUBJECT_KEY = "subject";
+
+/** build (slice DOC-1): a link in a url property to a diagram or document of the repository is `diagram:<id>`. */
+export const DIAGRAM_LINK = "diagram:";
+
+/** The links a url property holds: none, one (a single value) or a list (`many`). */
+export function linksOf(value: unknown): string[] {
+  if (typeof value === "string") return value ? [value] : [];
+  return Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : [];
+}
+
+/** The diagram a link names, or undefined for a web link. */
+export function linkedDiagramId(link: string): string | undefined {
+  return link.startsWith(DIAGRAM_LINK) ? link.slice(DIAGRAM_LINK.length) : undefined;
+}
 
 /** What authors may change in a section (§8.2): `fixed` nothing but its content, `free` also its title and whether it shows. */
 export type SectionLock = "fixed" | "configurable" | "free";

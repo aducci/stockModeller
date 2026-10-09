@@ -188,7 +188,7 @@ export function newSequenceEdits(
   state: ModelState,
   metamodel: Metamodel,
   objectIds: readonly Id[],
-  diagram: { id?: Id; name: string; diagramType: string; folderId: Id },
+  diagram: { id?: Id; name: string; diagramType: string; folderId: Id; definition?: Record<string, unknown> },
   withMessages = true,
 ): Edit[] {
   const id = diagram.id ?? ulid();
@@ -240,7 +240,14 @@ export function newSequenceEdits(
       })
     : [];
   return [
-    { edit: "createDiagram", id, name: diagram.name, diagramType: diagram.diagramType, folderId: diagram.folderId },
+    {
+      edit: "createDiagram",
+      id,
+      name: diagram.name,
+      diagramType: diagram.diagramType,
+      folderId: diagram.folderId,
+      ...(diagram.definition ? { definition: diagram.definition } : {}),
+    },
     ...lanes.map((occurrence): Edit => ({ edit: "addObjectOccurrence", diagramId: id, occurrence })),
     ...messages,
   ];

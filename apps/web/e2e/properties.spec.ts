@@ -114,9 +114,10 @@ test("shows a shared property set, saves and edits one of my own, and edits a li
   await expect(panel.locator(".prop-row")).toHaveCount(5);
   await expect(panel.locator('[data-property="assessment.businessFit"]')).toHaveCount(0);
 
-  // A link: typed without a scheme, shown as a link, edited with the pencil.
-  await panel.getByLabel("Documentation").fill("wiki.example.com/apps/legacy-crm");
-  await panel.getByLabel("Documentation").press("Enter");
+  // Links (DOC-1): added one at a time, typed without a scheme, shown as links, removed with ×.
+  await panel.getByRole("button", { name: "+ Add link" }).click();
+  await panel.getByLabel("New documentation link").fill("wiki.example.com/apps/legacy-crm");
+  await panel.getByLabel("New documentation link").press("Enter");
   const link = panel.locator(".link-value");
   await expect(link).toHaveAttribute("href", "https://wiki.example.com/apps/legacy-crm");
   await expect(link).toHaveText("wiki.example.com/apps/legacy-crm");
@@ -126,9 +127,7 @@ test("shows a shared property set, saves and edits one of my own, and edits a li
   await select(page, "Legacy CRM");
   await expect(panel.getByLabel("Property set")).toHaveValue(/^my/);
   await expect(panel.locator(".link-value")).toHaveAttribute("href", "https://wiki.example.com/apps/legacy-crm");
-  await panel.getByRole("button", { name: "Edit Documentation" }).click();
-  await panel.getByLabel("Documentation").fill("");
-  await panel.getByLabel("Documentation").press("Enter");
+  await panel.getByRole("button", { name: "Remove https://wiki.example.com/apps/legacy-crm" }).click();
   await expect(panel.locator(".link-value")).toHaveCount(0);
   await saved(page);
 });

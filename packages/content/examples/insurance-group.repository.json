@@ -133,7 +133,8 @@
           "amount": 120000,
           "currency": "EUR"
         },
-        "technical.users": 350
+        "technical.users": 350,
+        "documentation.link": ["https://wiki.example.com/claims-manager", "diagram:D-04", "diagram:D-03"]
       },
       "externalIds": {
         "servicenow": "cmdb_ci_appl_7781"
@@ -193,7 +194,9 @@
       "type": "interface",
       "name": "Payments API",
       "folderId": "F04",
-      "properties": {}
+      "properties": {
+        "documentation.link": ["diagram:D-07", "diagram:D-06"]
+      }
     },
     {
       "id": "O-DAT-1",
@@ -551,6 +554,9 @@
       "name": "Claims Manager context",
       "diagramType": "context",
       "folderId": "F09",
+      "definition": {
+        "subject": "O-APP-1"
+      },
       "objectOccurrences": [
         {
           "id": "OO-31",
@@ -760,6 +766,9 @@
       "name": "Payments API context",
       "diagramType": "context",
       "folderId": "F09",
+      "definition": {
+        "subject": "O-INT-2"
+      },
       "objectOccurrences": [
         {
           "id": "OO-61",

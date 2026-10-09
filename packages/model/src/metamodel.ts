@@ -7,6 +7,7 @@ import type {
   RelationshipRule,
   RelationshipType,
   RuleFinding,
+  SemanticCategory,
   SymbolStyle,
   TypeKey,
   ValueList,
@@ -77,12 +78,25 @@ export interface GenerationRule {
   trigger?: "manual" | "onChange" | "nightly";
 }
 
+/** build (slice DOC-1): which elements a diagram type's diagrams may be about, and where an element links them. */
+export interface DiagramSubject {
+  type?: TypeKey[];
+  category?: SemanticCategory[];
+  /** A url property with `many`: making a diagram of this type about an element adds a link to it there. */
+  linkProperty?: PropertyKey;
+}
+
 export interface DiagramType {
   key: TypeKey;
   name: string;
   description?: string;
   /** build (slice V-1): the view kind (02-model/views-and-design-artifacts.md §2); absent = canvas. */
   kind?: ViewKind;
+  /**
+   * build (slice DOC-1): what this type's diagrams are about (views-and-design-artifacts.md §12). The subject itself is
+   * the diagram's `definition.subject`; a document takes the element types it accepts from `document.subject`.
+   */
+  subject?: DiagramSubject;
   /** build (slice V-1): a matrix type's default definition; a diagram's own definition overrides it key by key. */
   matrix?: MatrixDefinition;
   /** build (slice V-2): a document template (views-and-design-artifacts.md §7.1). */

@@ -34,6 +34,7 @@ import {
 } from "../diagram";
 import { addPayloadPlan, messageType } from "../semantics";
 import { canvasTypesFor, diagramAroundPlan } from "../views";
+import { subjectDiagramFor } from "../subjects";
 import { byName } from "../text";
 
 /** Drag-and-drop payloads: an object type from the palette, or an existing object from the explorer. */
@@ -513,9 +514,14 @@ export function DiagramEditor({ id }: { id: Id }) {
 
   // ---------------------------------------------------------------- drill-down
 
-  /** The live diagram a symbol drills down to, if any. */
+  /**
+   * The live diagram a symbol drills down to: its own child diagram, else one about its element (DOC-1), so every
+   * symbol of an element opens the element's diagram without being linked one by one.
+   */
   const drillTarget = (occ: ObjectOccurrenceRow): Id | null =>
-    occ.drillDownDiagramId && state.diagrams.get(occ.drillDownDiagramId) ? occ.drillDownDiagramId : null;
+    occ.drillDownDiagramId && state.diagrams.get(occ.drillDownDiagramId)
+      ? occ.drillDownDiagramId
+      : (subjectDiagramFor(state, metamodel, occ.objectId, id)?.id ?? null);
   const openDiagram = (diagramId: Id) => {
     select({ kind: "diagram", id: diagramId });
     openTab({ kind: "diagram", id: diagramId });
@@ -530,8 +536,10 @@ export function DiagramEditor({ id }: { id: Id }) {
   const childDiagramMenu = (occ: ObjectOccurrenceRow): MenuEntry => {
     const object = state.objects.get(occ.objectId);
     const name = object?.name ?? "it";
-    const target = drillTarget(occ);
-    if (target) {
+    const own = occ.drillDownDiagramId && state.diagrams.get(occ.drillDownDiagramId) ? occ.drillDownDiagramId : null;
+    const about = own ? null : drillTarget(occ);
+    if (own) {
+      const target = own;
       const child = state.diagrams.get(target)!;
       return {
         label: "Child diagram",
@@ -565,9 +573,15 @@ export function DiagramEditor({ id }: { id: Id }) {
       .filter((d) => d.id !== id)
       .sort((a, b) => near(a) - near(b) || byName(a, b))
       .slice(0, 25);
+    // A diagram about the element opens from every symbol of it; a child diagram of this symbol would override it.
+    const aboutDiagram = about ? state.diagrams.get(about) : undefined;
+    const opens: MenuEntry[] = aboutDiagram
+      ? [{ label: `Open ${aboutDiagram.name}`, run: () => openDiagram(aboutDiagram.id) }, "separator"]
+      : [];
     return {
       label: "Child diagram",
       submenu: [
+        ...opens,
         ...create,
         ...(create.length ? (["separator"] as MenuEntry[]) : []),
         {
@@ -773,7 +787,9 @@ export function DiagramEditor({ id }: { id: Id }) {
                       openDiagram(drillTarget(o)!);
                     }}
                   >
-                    <title>Child diagram: {state.diagrams.get(drillTarget(o)!)?.name}</title>
+                    <title>
+                      {o.drillDownDiagramId ? "Child diagram" : "About it"}: {state.diagrams.get(drillTarget(o)!)?.name}
+                    </title>
                     <rect x={b.x + b.w - 17} y={b.y + b.h - 17} width={14} height={14} rx={3} />
                     <GlyphUse glyph="drill" x={b.x + b.w - 16} y={b.y + b.h - 16} size={12} />
                   </g>

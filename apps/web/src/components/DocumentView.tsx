@@ -768,7 +768,7 @@ function DiagramLinkSection({ document, section, model, subject }: SectionProps<
   if (section.component !== "diagramLink") return null;
   const typeName = metamodel.diagramType(model.diagramType)?.definition.name ?? model.diagramType;
   const create = () => {
-    const plan = createLinkedDiagramPlan(metamodel, document, { ...section, title: model.title }, subject);
+    const plan = createLinkedDiagramPlan(state, metamodel, document, { ...section, title: model.title }, subject);
     edit(plan.label, plan.edits);
   };
   const existing = [...state.diagrams.live()].filter((d) => d.diagramType === model.diagramType).sort(byName);
