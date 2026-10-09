@@ -90,7 +90,7 @@ export function modelRoutes(app: FastifyInstance, { service, principal }: Routes
     });
   });
 
-  // Traces by meaning (design/02-model/semantics.md §9.3): levels, flow, payload and dependency.
+  // Traces by meaning (design/02-model/semantics.md §9.3): abstraction, flow, payload and dependency.
   app.get<ItemParams>("/repositories/:repo/objects/:id/trace", async (req) => {
     const query = traceQuery.parse(req.query);
     return service.read(principal(req), req.params.repo, query.scenario, ({ state, metamodel }) => {
@@ -103,7 +103,7 @@ export function modelRoutes(app: FastifyInstance, { service, principal }: Routes
         ...result,
         steps: result.steps.map((s) => {
           const o = state.objects.get(s.objectId)!;
-          return { ...s, name: o.name, type: o.type, level: metamodel.objectLevel(o) ?? null };
+          return { ...s, name: o.name, type: o.type, abstraction: metamodel.objectAbstraction(o) ?? null };
         }),
       };
     });

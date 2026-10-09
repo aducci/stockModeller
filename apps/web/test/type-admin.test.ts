@@ -29,7 +29,7 @@ describe("types from scratch", () => {
     const team = newObjectType(draft, "Team");
     draft = team.draft;
     const squad = newObjectType(draft, "Squad", team.key);
-    draft = updateObjectType(squad.draft, squad.key, { category: "actor", level: "logical" });
+    draft = updateObjectType(squad.draft, squad.key, { category: "actor", abstraction: "logical" });
     const owns = newRelationshipType(draft, "Owns");
     draft = updateRelationshipType(owns.draft, owns.key, { inverseVerb: "is owned by", semantic: "assignment" });
     draft = {
@@ -49,7 +49,7 @@ describe("types from scratch", () => {
       properties: [],
       extends: "team",
       category: "actor",
-      level: "logical",
+      abstraction: "logical",
     });
     expect(draft.diagramTypes).toEqual([{ key: "teamMap", name: "Team map", kind: "canvas", objectTypes: ["team"] }]);
     const compiled = compileDraft(draft);
@@ -113,6 +113,17 @@ describe("the metamodel as a file", () => {
     expect(readMetamodel(JSON.stringify(pkg)).package.objectTypes).toEqual(published.package.objectTypes);
     const body = { baseVersion: "1.0.0", metamodel: pkg, diagramTypes: published.diagramTypes };
     expect(readMetamodel(JSON.stringify(body)).diagramTypes).toHaveLength(published.diagramTypes.length);
+  });
+
+  it("reads a file exported before level was renamed to abstraction (B62)", () => {
+    const text = JSON.stringify({ package: published.package, diagramTypes: published.diagramTypes })
+      .replaceAll('"abstraction":', '"level":')
+      .replaceAll('"abstractionFixed":', '"levelFixed":')
+      .replaceAll("semantic.abstraction", "semantic.level");
+    expect(text).toContain('"level":"conceptual"');
+    const read = readMetamodel(text);
+    expect(read.package).toEqual(published.package);
+    expect(read.diagramTypes).toEqual(published.diagramTypes);
   });
 
   it("says what is wrong with a file it cannot use", () => {

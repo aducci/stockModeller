@@ -50,7 +50,7 @@ Derived views and artifact sections need queries now, before the M1 query parser
 
 | Field | Meaning |
 |---|---|
-| `from` | `$subject` (the artifact's subject), `$row` (the current row of an enclosing list), `$diagram` (a diagram's members), or a filter (`{ "type": ["application"] }`, `{ "category": [...] }`, `{ "level": [...] }`, `{ "folder": id }`) |
+| `from` | `$subject` (the artifact's subject), `$row` (the current row of an enclosing list), `$diagram` (a diagram's members), or a filter (`{ "type": ["application"] }`, `{ "category": [...] }`, `{ "abstraction": [...] }`, `{ "folder": id }`) |
 | `steps[]` | Each step follows relationships by `type` (a key) or `kind` (a semantic kind, so it survives renamed types), in `dir` `out`, `in` or `either`, optionally `transitive` up to a depth, then filters the objects reached with `to` |
 | `where` | Property filters on the result: `{ "lifecycle.status": { "in": ["active"] } }` |
 | `order` | `rank` (the explorer's order), `name` or a property |
@@ -147,7 +147,7 @@ A template is a diagram type of kind `document`. Its body is a list of **section
       "config": { "guidance": "What changes and why, in five lines.", "mentions": { "create": true } },
       "required": true, "lock": "fixed" },
     { "key": "facts", "title": "Key facts", "component": "facts",
-      "config": { "properties": ["lifecycle.status", "ownership.businessOwner", "semantic.level", "cost.runCost"] },
+      "config": { "properties": ["lifecycle.status", "ownership.businessOwner", "semantic.abstraction", "cost.runCost"] },
       "allow": { "addProperties": true } },
     { "use": "integrationPattern",
       "with": { "diagramType": "context", "flowKinds": ["interaction", "flow"],

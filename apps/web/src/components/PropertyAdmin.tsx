@@ -3,7 +3,13 @@
 // opens on one type. Both edit the metamodel draft; nothing reaches the model until it is published.
 import { useMemo, useState, type ReactNode } from "react";
 import { propertyUsage, type Metamodel } from "@connectome/engine";
-import { LEVEL_PROPERTY, type DataType, type PropertyEditor, type PropertyType, type TypeKey } from "@connectome/model";
+import {
+  ABSTRACTION_PROPERTY,
+  type DataType,
+  type PropertyEditor,
+  type PropertyType,
+  type TypeKey,
+} from "@connectome/model";
 import { useModel, useWorkbench } from "../state/workbench";
 import { groupName } from "../inspector";
 import { typeTree } from "../metamodel-admin";
@@ -581,7 +587,7 @@ export function TypePropertiesPanel(props: {
   if (kind === "object") {
     for (const ancestor of lineageOf(draft.package, type).slice(1))
       for (const key of ancestor.properties ?? []) fixed.push({ key, from: `from ${ancestor.name}` });
-    fixed.push({ key: LEVEL_PROPERTY, from: "built in" });
+    fixed.push({ key: ABSTRACTION_PROPERTY, from: "built in" });
   }
   if (kind === "relationship") {
     const rt = metamodel.relationshipType(type);
@@ -737,10 +743,10 @@ function DuplicatesSettings(props: {
           <label className="check">
             <input
               type="checkbox"
-              checked={!t.uniquePerLevel}
-              onChange={(e) => set("uniquePerLevel", !e.target.checked)}
+              checked={!t.uniquePerAbstraction}
+              onChange={(e) => set("uniquePerAbstraction", !e.target.checked)}
             />
-            Also across levels (conceptual, logical, …)
+            Also across abstractions (conceptual, logical, …)
           </label>
           <label>
             A repeated name is

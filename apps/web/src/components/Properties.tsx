@@ -8,7 +8,7 @@ import {
   type ObjectRow,
   type RelationshipRow,
 } from "@connectome/engine";
-import { LEVEL_PROPERTY, SUBJECT_KEY, type Id, type PropertyValue } from "@connectome/model";
+import { ABSTRACTION_PROPERTY, SUBJECT_KEY, type Id, type PropertyValue } from "@connectome/model";
 import { useModel, useWorkbench } from "../state/workbench";
 import { fieldGroups, mySet, strandedValues, toggleInSet } from "../inspector";
 import {
@@ -79,15 +79,16 @@ export function ObjectProperties({ id, withRelations = false }: { id: Id; withRe
     onEdit: setEditingSet,
     onDelete: (key) => prefs.deleteMySet(object.type, key),
   };
-  const levelList = metamodel.valueList("semanticLevel");
-  const typeLevel = type?.level && levelList?.values.find((v) => v.key === type.level)?.label;
+  const abstractionList = metamodel.valueList("semanticAbstraction");
+  const typeAbstraction = type?.abstraction && abstractionList?.values.find((v) => v.key === type.abstraction)?.label;
   const ctx: GridContext = {
     state,
     metamodel,
     itemId: id,
-    // The level falls back to the type's default, and a type can fix it (semantics.md §4.2).
-    placeholder: (f) => (f.pt.key === LEVEL_PROPERTY && typeLevel ? `${typeLevel} (type default)` : undefined),
-    readOnly: (f) => f.pt.key === LEVEL_PROPERTY && (type?.levelFixed ?? false),
+    // The abstraction falls back to the type's default, and a type can fix it (semantics.md §4.2).
+    placeholder: (f) =>
+      f.pt.key === ABSTRACTION_PROPERTY && typeAbstraction ? `${typeAbstraction} (type default)` : undefined,
+    readOnly: (f) => f.pt.key === ABSTRACTION_PROPERTY && (type?.abstractionFixed ?? false),
     commit: (f, value) =>
       edit(`Set ${f.pt.name} of ${object.name}`, [
         { edit: "setProperties", id, baseVersion: object.version, set: { [f.pt.key]: value } },

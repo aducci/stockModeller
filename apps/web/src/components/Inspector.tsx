@@ -29,6 +29,8 @@ interface PanelPrefs {
   /** The dock's width in pixels, and whether it is minimised to a narrow rail. */
   dockWidth: number;
   dockMinimised: boolean;
+  /** The property columns the object viewer shows, as editing shortcuts (none by default). */
+  viewerColumns: string[];
   setHideEmpty(on: boolean): void;
   toggle(id: string): void;
   setToggled(ids: string[]): void;
@@ -41,6 +43,7 @@ interface PanelPrefs {
   setDockSplit(split: number): void;
   setDockWidth(width: number): void;
   setDockMinimised(minimised: boolean): void;
+  setViewerColumns(keys: string[]): void;
 }
 
 const PREFS_KEY = "connectome.properties";
@@ -55,6 +58,7 @@ const SAVED = [
   "dockSplit",
   "dockWidth",
   "dockMinimised",
+  "viewerColumns",
 ] as const;
 
 function loadPrefs(): Partial<PanelPrefs> {
@@ -86,6 +90,7 @@ export const usePanelPrefs = create<PanelPrefs>((set, get) => {
     dockSplit: 58,
     dockWidth: 320,
     dockMinimised: false,
+    viewerColumns: [],
     ...loadPrefs(),
     setHideEmpty: (hideEmpty) => update(() => ({ hideEmpty })),
     toggle: (id) =>
@@ -115,6 +120,7 @@ export const usePanelPrefs = create<PanelPrefs>((set, get) => {
     setDockSplit: (dockSplit) => update(() => ({ dockSplit: Math.min(85, Math.max(15, dockSplit)) })),
     setDockWidth: (dockWidth) => update(() => ({ dockWidth: Math.round(Math.min(720, Math.max(240, dockWidth))) })),
     setDockMinimised: (dockMinimised) => update(() => ({ dockMinimised })),
+    setViewerColumns: (viewerColumns) => update(() => ({ viewerColumns })),
   };
 });
 

@@ -3,7 +3,7 @@
 // metamodel. Pure, so it can be tested on its own.
 import { Metamodel, MetamodelError } from "@connectome/engine";
 import {
-  LEVEL_PROPERTY,
+  ABSTRACTION_PROPERTY,
   type DataType,
   type DiagramType,
   type MetamodelPackage,
@@ -137,7 +137,7 @@ function pruneSets(pkg: MetamodelPackage): MetamodelPackage {
     ...pkg,
     objectTypes: pkg.objectTypes.map((t) => {
       if (!t.propertySets) return t;
-      const carried = new Set([...lineageOf(pkg, t.key).flatMap((x) => x.properties ?? []), LEVEL_PROPERTY]);
+      const carried = new Set([...lineageOf(pkg, t.key).flatMap((x) => x.properties ?? []), ABSTRACTION_PROPERTY]);
       return {
         ...t,
         propertySets: t.propertySets.map((s) => ({ ...s, properties: s.properties.filter((p) => carried.has(p)) })),

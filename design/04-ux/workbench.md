@@ -152,14 +152,17 @@ In the explorer, F2 renames the focused row in place, Ctrl/⌘+↑ and Ctrl/⌘+
 
 ## Object viewer
 
-Right-click a folder › **Object viewer** opens a centre tab listing the objects stored in the folder and, unless *Include subfolders* is cleared, in its subfolders (with the folder each is in). It is for administering many objects at speed:
+Right-click a folder › **Object viewer** opens a centre tab listing everything under the folder as a tree, the way the explorer shows it: subfolders, the objects stored there, and under each object what it contains (containment, [semantics](../02-model/semantics.md) §3), each row with a ▾/▸ to close and open it. Diagrams are left out. It is for administering many objects at speed:
 
-- the top row adds an object: a type and a name, Enter adds it and keeps the box open for the next one;
-- the name and simple properties (text, number, date, yes/no, list) are edited in their cells; other values are shown and edited in the properties panel;
-- the columns are the properties every listed type carries, the level first, at most eight; a type filter narrows the list (and so widens the columns), and a name filter finds rows;
-- rows are selected with their checkbox and deleted together in one change (one Undo); × on a row deletes one object through the dialog that lists what goes with it.
+- **Quick add goes into the selected row** (B63). Clicking a row, or its **+**, makes it the target, named at the start of the add row (*Add to Processes*, *Add inside Handle Claim*); × beside it goes back to the viewed folder. Type a name and press Enter: the object is created, the box stays open and keeps its target, so a whole level is entered without the mouse.
+  - In a **folder**, any type that can be created is offered (the type filter, when set, is the starting choice).
+  - Inside an **object**, only the types a containment rule allows inside its type are offered, starting with the type most of its contents already have, else its own type when it may contain itself (a capability in a capability). The new object is stored in the container's folder and joined to it with the first containment type whose rules allow the pair. When no rule allows anything, the row says so instead of offering a type.
+- the name (of objects and folders) and the property columns are edited in their cells: text, number, date, yes/no and list values; other values are shown and edited in the properties panel;
+- **there are no property columns until the user picks some**: *Columns* lists the properties any listed type carries, and up to eight are chosen as editing shortcuts. The choice is remembered in the browser (per person, not per folder) until list views store it (V-6). A cell stays empty for an object whose type does not carry the property;
+- a name or type filter turns the tree into a flat list of the matching objects with the folder each is in;
+- objects are selected with their checkbox and deleted together in one change (one Undo); × on a row deletes one object through the dialog that lists what goes with it.
 
-Every edit is an ordinary change. Choosing columns, sorting and saving a list as a view are for the list views of V-6 ([views](../02-model/views-and-design-artifacts.md) §8).
+Every edit is an ordinary change. Sorting and saving a list as a view are for the list views of V-6 ([views](../02-model/views-and-design-artifacts.md) §8).
 
 ## Explorer rows
 

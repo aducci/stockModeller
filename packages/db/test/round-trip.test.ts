@@ -1,5 +1,7 @@
 // The engine and the database together: commit changes, read the scenario back, compare with the engine's state.
 import { afterAll, beforeAll, expect, it } from "vitest";
+import { readFile } from "node:fs/promises";
+import pg from "pg";
 import { essentials } from "@connectome/content";
 import { applyChange, invertLog, type ModelState } from "@connectome/engine";
 import type { Actor, Change, Edit } from "@connectome/model";
@@ -15,6 +17,7 @@ import {
   loadState,
   lockRepository,
   markWritten,
+  MIGRATIONS_DIR,
   withWorkspace,
   type Connection,
 } from "../src";
@@ -170,12 +173,14 @@ describeDb("engine + database", () => {
       id: "C-CONFIRM",
       scenarioId: BASELINE,
       label: "Confirm",
-      edits: [{ edit: "confirmProperties", id: "O-SRV-1", baseVersion: server.version, keys: ["semantic.level"] }],
+      edits: [
+        { edit: "confirmProperties", id: "O-SRV-1", baseVersion: server.version, keys: ["semantic.abstraction"] },
+      ],
     });
     if (!result.ok) throw new Error(JSON.stringify(result.reasons));
     const after = await withWorkspace(t.conn, WS, (tx) => loadState(tx, REPO, BASELINE));
     expect(after.state.objects.get("O-SRV-1")!.confirmations).toEqual({
-      "semantic.level": { by: "U-DANA", at: result.state.objects.get("O-SRV-1")!.updatedAt },
+      "semantic.abstraction": { by: "U-DANA", at: result.state.objects.get("O-SRV-1")!.updatedAt },
     });
     expect(snapshot(after.state)).toEqual(snapshot(result.state));
   });
@@ -275,5 +280,38 @@ describeDb("engine + database", () => {
     );
     const seqs = results.map((r) => (r.ok ? r.committed.seq : -1)).sort((a, b) => a - b);
     expect(seqs).toEqual(Array.from({ length: 8 }, (_, i) => start + i + 1));
+  });
+
+  it("migration 012 renames the stored level to abstraction (B62) and loses nothing", async () => {
+    const before = await withWorkspace(t.conn, WS, (tx) => loadState(tx, REPO, BASELINE));
+    const types = await withWorkspace(t.conn, WS, (tx) => loadMetamodelPackage(tx, REPO));
+    expect(before.state.objects.get("O-SRV-1")!.confirmations).toHaveProperty(["semantic.abstraction"]);
+    // Write the rows back as they were stored before the rename, then run the migration again.
+    const client = new pg.Client({ connectionString: t.url });
+    await client.connect();
+    try {
+      await client.query(`
+        UPDATE object SET properties = replace(properties::text, 'semantic.abstraction', 'semantic.level')::jsonb,
+          field_versions = replace(field_versions::text, 'semantic.abstraction', 'semantic.level')::jsonb,
+          confirmations = replace(confirmations::text, 'semantic.abstraction', 'semantic.level')::jsonb;
+        UPDATE object_type SET definition = (SELECT jsonb_object_agg(CASE key WHEN 'abstraction' THEN 'level'
+          WHEN 'abstractionFixed' THEN 'levelFixed' ELSE key END, value) FROM jsonb_each(definition))
+          WHERE definition ? 'abstraction';
+        UPDATE change_log SET edit = replace(edit::text, 'semantic.abstraction', 'semantic.level')::jsonb;`);
+      const old = await client.query("select count(*)::int as n from object where properties ? 'semantic.level'");
+      expect(old.rows[0].n).toBeGreaterThan(0);
+      await client.query(await readFile(MIGRATIONS_DIR + "012_abstraction_rename.sql", "utf8"));
+      const left = await client.query(
+        "select count(*)::int as n from change_log where edit::text like '%semantic.level%'",
+      );
+      expect(left.rows[0].n).toBe(0);
+    } finally {
+      await client.end();
+    }
+    const after = await withWorkspace(t.conn, WS, (tx) => loadState(tx, REPO, BASELINE));
+    expect(snapshot(after.state)).toEqual(snapshot(before.state));
+    expect(after.state.objects.get("O-SRV-1")).toEqual(before.state.objects.get("O-SRV-1"));
+    const typesAfter = await withWorkspace(t.conn, WS, (tx) => loadMetamodelPackage(tx, REPO));
+    expect(sortByKey(typesAfter.metamodel.objectTypes)).toEqual(sortByKey(types.metamodel.objectTypes));
   });
 });

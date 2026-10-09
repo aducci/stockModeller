@@ -165,10 +165,10 @@ paths:
     get:
       summary: Objects reached from this one by meaning (02-model/semantics.md §9.3)
       parameters:
-        - { name: kind, in: query, required: true, schema: { type: string, enum: [levels, flow, payload, dependency] },
-            description: 'levels: realisation and representation; flow: flows and messages; payload: flows carrying it or its representations; dependency: serving, access, interactions and flows' }
+        - { name: kind, in: query, required: true, schema: { type: string, enum: [abstraction, flow, payload, dependency] },
+            description: 'abstraction: realisation and representation; flow: flows and messages; payload: flows carrying it or its representations; dependency: serving, access, interactions and flows' }
         - { name: direction, in: query, schema: { type: string, enum: [forward, backward], default: forward },
-            description: 'forward: down the levels, downstream, receivers, what it depends on; backward: the opposite' }
+            description: 'forward: down the abstractions, downstream, receivers, what it depends on; backward: the opposite' }
         - { name: depth, in: query, schema: { type: integer, minimum: 1, maximum: 20, default: 6 } }
         - { name: contents, in: query, schema: { type: boolean, default: false }, description: "flow and dependency: a container's relationships count as its contents'" }
       responses:
@@ -489,7 +489,7 @@ components:
       type: object
       required: [kind, direction, startId, steps, truncated]
       properties:
-        kind: { type: string, enum: [levels, flow, payload, dependency] }
+        kind: { type: string, enum: [abstraction, flow, payload, dependency] }
         direction: { type: string, enum: [forward, backward] }
         startId: { type: string }
         truncated: { type: boolean }
@@ -503,7 +503,7 @@ components:
               objectId: { type: string }
               name: { type: string }
               type: { type: string }
-              level: { type: [string, 'null'] }
+              abstraction: { type: [string, 'null'] }
               depth: { type: integer, description: Relationships followed from the start }
               relationshipId: { type: string, description: The relationship that reached it }
               fromId: { type: string, description: 'The object at its other end (payload: the object carried)' }

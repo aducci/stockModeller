@@ -2,7 +2,7 @@
 // and the per-property concurrency rules of design/03-platform/collaboration-and-changes.md §2.
 // Pure: no I/O. The same code runs on the server (inside a database transaction) and in the browser (optimistically).
 import {
-  LEVEL_PROPERTY,
+  ABSTRACTION_PROPERTY,
   isRendition,
   DRAWN_KINDS,
   MAX_EDITS_PER_CHANGE,
@@ -283,12 +283,15 @@ class Transaction {
     const type = this.instantiableType(e.type, "type");
     this.checkName(e.name);
     this.refLive("folders", e.folderId, "folderId");
-    // A new object starts at its type's level unless the change says otherwise (decision B57).
+    // A new object starts at its type's abstraction unless the change says otherwise (decision B57).
     const given = e.properties ?? {};
-    const set = type.level && !(LEVEL_PROPERTY in given) ? { ...given, [LEVEL_PROPERTY]: type.level } : given;
+    const set =
+      type.abstraction && !(ABSTRACTION_PROPERTY in given)
+        ? { ...given, [ABSTRACTION_PROPERTY]: type.abstraction }
+        : given;
     const properties = this.checkProperties(type.properties, {}, set, "properties");
     this.checkUniqueName({ type: e.type, name: e.name, folderId: e.folderId, properties }, e.id);
-    this.checkLevel(type, set);
+    this.checkAbstraction(type, set);
     const key = e.key ?? this.nextKey(e.type, type.keyPattern);
     if (key !== null) this.checkUniqueKey(e.type, key, e.id);
     this.checkUniqueExternalIds("objects", e.externalIds ?? {}, e.id);
@@ -326,9 +329,9 @@ class Transaction {
     const allowed = this.mm.objectType(obj.type)?.properties ?? new Set<string>();
     const properties = this.checkProperties(allowed, obj.properties, e.set, "properties");
     const type = this.mm.objectType(obj.type);
-    if (type) this.checkLevel(type, e.set);
-    // Names may repeat across levels (uniquePerLevel), so moving to another level can clash.
-    if (LEVEL_PROPERTY in e.set) this.checkUniqueName({ ...obj, properties }, obj.id);
+    if (type) this.checkAbstraction(type, e.set);
+    // Names may repeat across abstractions (uniquePerAbstraction), so moving to another one can clash.
+    if (ABSTRACTION_PROPERTY in e.set) this.checkUniqueName({ ...obj, properties }, obj.id);
     const previous = Object.fromEntries(Object.keys(e.set).map((k) => [k, obj.properties[k] ?? null]));
     this.write("objects", { ...obj, properties });
     this.markChanged("objects", obj.id, fields);
@@ -500,8 +503,8 @@ class Transaction {
     const dropped: Record<string, PropertyValue> = {};
     for (const [from, value] of Object.entries(obj.properties)) {
       const to = e.propertyMap?.[from] ?? from;
-      // A fixed level is the type's, never a carried-over value.
-      const fixedLevel = to === LEVEL_PROPERTY && type.levelFixed;
+      // A fixed abstraction is the type's, never a carried-over value.
+      const fixedLevel = to === ABSTRACTION_PROPERTY && type.abstractionFixed;
       if (type.properties.has(to) && !(to in properties) && !fixedLevel) {
         const pt = this.mm.propertyType(to)!;
         const problem = pt.dataType === "calculated" ? null : checkValue(pt, value, this.valueContext());
@@ -1707,7 +1710,7 @@ class Transaction {
       name: object.name,
       folderId: object.folderId,
       containerId,
-      level: this.mm.objectLevel(object),
+      abstraction: this.mm.objectAbstraction(object),
       selfId,
     });
     if (!clash) return;
@@ -1766,11 +1769,11 @@ class Transaction {
     return `${prefix}${String(max + 1).padStart(zeros.length, "0")}${suffix}`;
   }
 
-  /** A type with a fixed level only accepts its own level (design/02-model/semantics.md §4.2). */
-  private checkLevel(type: ResolvedObjectType, set: Record<string, PropertyValue>): void {
-    const value = set[LEVEL_PROPERTY];
-    if (type.levelFixed && value != null && value !== type.level)
-      this.invalid(`properties.${LEVEL_PROPERTY}`, `${type.definition.name} is always ${type.level}`);
+  /** A type with a fixed abstraction only accepts its own (design/02-model/semantics.md §4.2). */
+  private checkAbstraction(type: ResolvedObjectType, set: Record<string, PropertyValue>): void {
+    const value = set[ABSTRACTION_PROPERTY];
+    if (type.abstractionFixed && value != null && value !== type.abstraction)
+      this.invalid(`properties.${ABSTRACTION_PROPERTY}`, `${type.definition.name} is always ${type.abstraction}`);
   }
 
   /** Rule 2: only assigned property types, with values of the right data type. `null` clears a value. */

@@ -1498,7 +1498,7 @@ svg.glyph {
 .trace select {
   width: 100%;
 }
-.trace-level h4 {
+.trace-column h4 {
   margin: 8px 0 2px;
   font-size: 11px;
   font-weight: 600;
@@ -3164,6 +3164,75 @@ button.toggle .badge {
 }
 .ov-table select {
   max-width: 12em;
+}
+.ov-table tr.target td {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+}
+.ov-table tr.target td:first-child {
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.ov-name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ov-name .twisty {
+  width: 14px;
+  padding: 0;
+  color: var(--fg-2);
+  text-decoration: none;
+}
+.ov-name .folder-icon {
+  flex: none;
+  fill: none;
+  stroke: var(--fg-2);
+}
+.ov-actions {
+  text-align: right;
+}
+.ov-actions .link {
+  padding: 0 4px;
+  text-decoration: none;
+}
+.ov-into {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--fg-2);
+}
+.ov-into strong {
+  color: var(--fg);
+}
+.ov-columns {
+  position: relative;
+}
+.ov-columns summary {
+  cursor: pointer;
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  list-style: none;
+}
+.ov-columns fieldset {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 14em;
+  max-height: 22em;
+  overflow: auto;
+  margin: 0;
+  padding: 6px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--pane);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.18);
+}
+.ov-columns fieldset p {
+  margin: 0 0 4px;
 }
 
 /* A symbol's drill-down marker: opens its child diagram (diagrams-and-catalogues.md §2) */

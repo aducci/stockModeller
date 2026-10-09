@@ -1,5 +1,5 @@
 // Slices Sem-1 to Sem-4 (design/02-model/semantics.md §11): relationships read by what they mean, every object has
-// a level, containment is the structure the explorer and diagrams show, interactions carry their messages, and
+// an abstraction, containment is the structure the explorer and diagrams show, interactions carry their messages, and
 // traces follow meaning.
 import { expect, test, type Page } from "@playwright/test";
 
@@ -47,7 +47,7 @@ async function box(page: Page, name: string) {
   return (await symbol(page, name).locator("rect").first().boundingBox())!;
 }
 
-test("groups relationships by kind and keeps a level set on an object", async ({ page }) => {
+test("groups relationships by kind and keeps an abstraction set on an object", async ({ page }) => {
   await signIn(page);
   await select(page, "Payments Hub");
   const relationships = relations(page);
@@ -56,14 +56,14 @@ test("groups relationships by kind and keeps a level set on an object", async ({
   await expect(relationships.locator('.rel-group[data-kind="flow"] h4')).toHaveText("Upstream");
   await expect(relationships.locator('.rel-group[data-kind="flow"]')).toContainText("receives from ← Claims Manager");
 
-  const level = properties(page).getByLabel("Level");
-  await expect(level.locator("option").first()).toHaveText("Implementation (type default)");
-  await level.selectOption({ label: "Logical" });
+  const abstraction = properties(page).getByLabel("Abstraction");
+  await expect(abstraction.locator("option").first()).toHaveText("Implementation (type default)");
+  await abstraction.selectOption({ label: "Logical" });
   await saved(page);
   await page.reload();
   await saved(page);
   await select(page, "Payments Hub");
-  await expect(properties(page).getByLabel("Level")).toHaveValue("logical");
+  await expect(properties(page).getByLabel("Abstraction")).toHaveValue("logical");
 });
 
 test("drawing a containment nests the content; the explorer shows it inside and can take it out", async ({ page }) => {
@@ -174,8 +174,8 @@ test("traces upstream by meaning, highlights the result on the diagram and shows
   await relations(page).getByRole("tab", { name: "Trace" }).click();
   const tracePanel = relations(page).locator(".trace");
   await tracePanel.getByLabel("Trace").selectOption({ label: "Upstream" });
-  await expect(tracePanel.locator('.trace-level[data-level="implementation"]')).toContainText("Claims Manager");
-  await expect(tracePanel.locator('.trace-level[data-level="implementation"]')).toContainText("Legacy CRM");
+  await expect(tracePanel.locator('.trace-column[data-abstraction="implementation"]')).toContainText("Claims Manager");
+  await expect(tracePanel.locator('.trace-column[data-abstraction="implementation"]')).toContainText("Legacy CRM");
   await expect(symbol(page, "Claims Manager").first()).toHaveClass(/traced/);
   await tracePanel.getByLabel("Trace").selectOption({ label: "Choose a trace…" });
   await expect(canvas(page).locator(".occ.traced")).toHaveCount(0);

@@ -118,8 +118,8 @@ test("offers an existing object when a new one is named the same, and selects it
 
 test("refuses an edit that breaks a rule and says why", async ({ page }) => {
   await signIn(page);
-  // Names are unique per type in the repository (at one level): make two, then try to give one the other's name.
-  // Both are new, so an earlier spec's change of level elsewhere cannot make the names legitimately differ.
+  // Names are unique per type in the repository (at one abstraction): make two, then try to give one the other's name.
+  // Both are new, so an earlier spec's change of abstraction elsewhere cannot make the names legitimately differ.
   await selectInExplorer(page, "Payments Hub");
   for (const name of ["Taken Name", "Spare Name"]) {
     await explorer(page).getByRole("button", { name: "+ Object" }).click();

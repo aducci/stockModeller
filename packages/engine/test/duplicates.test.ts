@@ -78,13 +78,13 @@ describe("possibleDuplicates", () => {
     expect(pairOf(state, "A1", "A3")).toBeUndefined();
   });
 
-  it("compares only related types at the same level, and not objects related to each other", () => {
+  it("compares only related types at the same abstraction, and not objects related to each other", () => {
     const state = exampleState();
     applyOk(state, [
       // A capability and an application share a name but are different kinds of thing.
       app("A1", "Claim Intake"),
-      // The same name at another level is a deliberate second view.
-      app("A2", "Claims Manager", { "semantic.level": "logical" }),
+      // The same name at another abstraction is a deliberate second view.
+      app("A2", "Claims Manager", { "semantic.abstraction": "logical" }),
       // A SaaS application is in the application family.
       { edit: "createObject", id: "S1", type: "saasApplication", name: "Payment Hub", folderId: "F04" },
       // Two applications that exchange data are two applications, however alike their names.

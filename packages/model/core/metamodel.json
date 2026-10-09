@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "valueLists": [
     {
-      "key": "semanticLevel",
+      "key": "semanticAbstraction",
       "values": [
         {
           "key": "conceptual",
@@ -84,12 +84,12 @@
   ],
   "propertyTypes": [
     {
-      "key": "semantic.level",
-      "name": "Level",
+      "key": "semantic.abstraction",
+      "name": "Abstraction",
       "group": "semantic",
       "dataType": "list",
-      "valueList": "semanticLevel",
-      "role": "semantic.level",
+      "valueList": "semanticAbstraction",
+      "role": "semantic.abstraction",
       "help": "How concrete this is: conceptual, logical, physical or implementation"
     },
     {

@@ -142,8 +142,8 @@ const OBJECT_FIELDS: (keyof ObjectType)[] = [
   "extends",
   "abstract",
   "category",
-  "level",
-  "levelFixed",
+  "abstraction",
+  "abstractionFixed",
   "symbol",
 ];
 const RELATIONSHIP_FIELDS: (keyof RelationshipType)[] = [
@@ -225,6 +225,30 @@ export function metamodelFileName(name: string, version: string): string {
  * Reads a metamodel file: an exported one, a repository snapshot's `metamodel`, the body of a publish
  * (`metamodel` and `diagramTypes`), or a bare package. Throws an Error that says what is wrong with it.
  */
+/** Older keys for an object type's abstraction (decision B62), so files exported before the rename still import. */
+const RENAMED_KEYS: Record<string, string> = {
+  level: "abstraction",
+  levelFixed: "abstractionFixed",
+  uniquePerLevel: "uniquePerAbstraction",
+};
+const RENAMED_VALUES: Record<string, string> = {
+  "semantic.level": "semantic.abstraction",
+  semanticLevel: "semanticAbstraction",
+};
+
+/** A file read from JSON with the pre-B62 names replaced: keys inside object types, and the property and list keys. */
+function fromLevelNames(json: unknown, inObjectType = false): unknown {
+  if (typeof json === "string") return RENAMED_VALUES[json] ?? json;
+  if (Array.isArray(json)) return json.map((v) => fromLevelNames(v, inObjectType));
+  if (!json || typeof json !== "object") return json;
+  return Object.fromEntries(
+    Object.entries(json).map(([k, v]) => [
+      (inObjectType && RENAMED_KEYS[k]) || (RENAMED_VALUES[k] ?? k),
+      fromLevelNames(v, k === "objectTypes"),
+    ]),
+  );
+}
+
 export function readMetamodel(text: string): MetamodelFile {
   let json: unknown;
   try {
@@ -233,7 +257,7 @@ export function readMetamodel(text: string): MetamodelFile {
     throw new Error("The file is not JSON");
   }
   if (!json || typeof json !== "object" || Array.isArray(json)) throw new Error("The file is not a metamodel");
-  const value = json as Record<string, unknown>;
+  const value = fromLevelNames(json) as Record<string, unknown>;
   const pkg = (value.package ?? value.metamodel ?? (Array.isArray(value.objectTypes) ? value : undefined)) as
     Record<string, unknown> | undefined;
   if (!pkg || typeof pkg !== "object") throw new Error("The file has no metamodel package");

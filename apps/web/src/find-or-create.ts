@@ -22,7 +22,7 @@ export function findOrCreateOptions(
   folderId: Id | null,
 ): FindOrCreateOptions {
   const matches = name.trim() ? findSimilarObjects(state, metamodel, { name, type, limit: 6 }) : [];
-  // The engine's own test: a new object has no container yet, and the type's default level.
+  // The engine's own test: a new object has no container yet, and the type's default abstraction.
   const clash =
     folderId === null
       ? null
@@ -31,7 +31,7 @@ export function findOrCreateOptions(
           name,
           folderId,
           containerId: null,
-          level: metamodel.objectLevel({ type, properties: {} }),
+          abstraction: metamodel.objectAbstraction({ type, properties: {} }),
           selfId: null,
         });
   const refused = clash?.enforcement === "block" ? clash.message : null;

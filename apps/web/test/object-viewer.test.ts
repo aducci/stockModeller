@@ -1,7 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { essentials, insuranceGroup } from "@connectome/content";
 import { applyChange, Metamodel, ModelState } from "@connectome/engine";
-import { objectsUnder, parseCell, viewerColumns } from "../src/object-viewer";
+import {
+  addChoices,
+  addEdits,
+  columnChoices,
+  defaultChildType,
+  objectsUnder,
+  parseCell,
+  targetChain,
+  viewerColumns,
+  viewerTree,
+} from "../src/object-viewer";
 
 const metamodel = Metamodel.compile(essentials.metamodel, essentials.diagramTypes);
 
@@ -20,29 +30,77 @@ function exampleState(): ModelState {
 const state = exampleState();
 
 describe("object viewer", () => {
-  it("lists a folder's objects, and with subfolders their path below it", () => {
-    const top = [...state.folders.live()].find(
-      (f) => f.parentId === null && state.folders.find("byParent", f.id).length,
-    )!;
-    const shallow = objectsUnder(state, top.id, false);
-    const deep = objectsUnder(state, top.id, true);
-    expect(shallow.every((r) => r.path === "" && r.object.folderId === top.id)).toBe(true);
-    expect(deep.length).toBeGreaterThan(shallow.length);
-    const nested = deep.find((r) => r.path !== "")!;
-    expect(state.folders.get(nested.object.folderId)!.name).toBe(nested.path.split(" / ").pop());
-    const names = deep.map((r) => r.object.name);
+  it("shows a folder's subfolders, objects and their contents as the explorer does", () => {
+    const tree = viewerTree(state, metamodel, "F01");
+    const line = (r: (typeof tree)[number]) => `${"  ".repeat(r.depth)}${r.kind === "folder" ? "/" : ""}${r.name}`;
+    expect(tree.map(line)).toEqual(
+      expect.arrayContaining(["/Capabilities", "  Claims Management", "    Claim Intake"]),
+    );
+    const at = (name: string) => tree.findIndex((r) => r.name === name);
+    expect(at("Claims Management")).toBeLessThan(at("Claim Intake"));
+    expect(tree.find((r) => r.name === "Claims Management")).toMatchObject({ hasChildren: true, path: "Capabilities" });
+    // A collapsed row hides what is below it.
+    const closed = viewerTree(state, metamodel, "F01", new Set(["O-CAP-1"]));
+    expect(closed.some((r) => r.name === "Claim Intake")).toBe(false);
+    expect(closed.some((r) => r.name === "Claims Management")).toBe(true);
+  });
+
+  it("lists every object under a folder flat, contents too, with its folder path, by name", () => {
+    const flat = objectsUnder(state, metamodel, "F01");
+    expect(flat.every((r) => r.kind === "object" && r.depth === 0)).toBe(true);
+    expect(flat.find((r) => r.name === "Assess Claim")!.path).toBe("Processes");
+    const names = flat.map((r) => r.name);
     expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
   });
 
-  it("shows the properties every listed type carries", () => {
-    const one = viewerColumns(metamodel, ["application"]).map((p) => p.key);
-    expect(one).toContain("semantic.level");
-    expect(one.length).toBeLessThanOrEqual(8);
-    const mixed = viewerColumns(metamodel, ["application", "capability"]).map((p) => p.key);
-    const carries = (type: string, key: string) => metamodel.objectType(type)!.properties.has(key);
-    expect(mixed.every((k) => carries("application", k) && carries("capability", k))).toBe(true);
-    expect(mixed[0]).toBe("semantic.level");
+  it("adds inside an object only what a containment rule allows, starting with the type its contents have", () => {
+    const process = { kind: "object" as const, id: "O-PRC-1" };
+    const choices = addChoices(state, metamodel, process);
+    expect(choices.map((c) => c.type.definition.key)).toContain("processStep");
+    expect(choices.every((c) => c.relationshipType === "contains")).toBe(true);
+    expect(choices.length).toBeLessThan(addChoices(state, metamodel, { kind: "folder", id: "F03" }).length);
+    expect(defaultChildType(state, metamodel, "O-PRC-1", choices)).toBe("processStep");
+    expect(
+      defaultChildType(state, metamodel, "O-CAP-2", addChoices(state, metamodel, { kind: "object", id: "O-CAP-2" })),
+    ).toBe("capability");
+
+    const plan = addEdits(
+      state,
+      process,
+      choices.find((c) => c.type.definition.key === "processStep")!,
+      "Close Claim",
+    );
+    if ("error" in plan) throw new Error(plan.error);
+    const mine = exampleState();
+    const result = applyChange(
+      mine,
+      { id: "C-ADD", scenarioId: insuranceGroup.baselineScenarioId, label: plan.label, edits: plan.edits },
+      {
+        metamodel,
+        actor: { kind: "user", id: "U-DANA" },
+        scenario: { id: insuranceGroup.baselineScenarioId, isBaseline: true },
+      },
+    );
+    if (!result.ok) throw new Error(JSON.stringify(result.reasons));
+    const after = viewerTree(mine, metamodel, "F03");
+    expect(after.find((r) => r.name === "Close Claim")).toMatchObject({ depth: 1, kind: "object" });
+    expect(targetChain(mine, metamodel, { kind: "object", id: plan.id }, "F01")).toEqual([plan.id, "O-PRC-1", "F03"]);
+  });
+
+  it("shows no property columns until some are chosen, and offers what any listed type carries", () => {
     expect(viewerColumns(metamodel, [])).toEqual([]);
+    expect(viewerColumns(metamodel, ["semantic.abstraction", "nope"]).map((p) => p.key)).toEqual([
+      "semantic.abstraction",
+    ]);
+    const offered = columnChoices(metamodel, ["application", "capability"]).map((p) => p.key);
+    const carried = (t: string) => [...metamodel.objectType(t)!.properties];
+    expect(offered).toEqual(
+      expect.arrayContaining(
+        [...carried("application"), ...carried("capability")].filter(
+          (k) => metamodel.propertyType(k)?.dataType !== "calculated",
+        ),
+      ),
+    );
   });
 
   it("reads typed cells", () => {

@@ -1,13 +1,13 @@
-// A first slice of the query language (design/03-platform/queries.md): `type:`, `folder:`, `category:` and `level:`
+// A first slice of the query language (design/03-platform/queries.md): `type:`, `folder:`, `category:` and `abstraction:`
 // filters joined with AND. The full language (paths, properties, functions) arrives in M1; this grammar is a
 // subset of it, so queries written now keep working.
 import type { Metamodel, ModelState, ObjectRow } from "@connectome/engine";
-import { SEMANTIC_CATEGORIES, SEMANTIC_LEVELS } from "@connectome/model";
+import { SEMANTIC_CATEGORIES, SEMANTIC_ABSTRACTIONS } from "@connectome/model";
 import { invalid } from "./problems";
 
 type Filter = (o: ObjectRow) => boolean;
 
-const TERM = /^(type|folder|category|level):(?:"([^"]*)"|(\S+))$/;
+const TERM = /^(type|folder|category|abstraction):(?:"([^"]*)"|(\S+))$/;
 
 function splitTerms(q: string): string[] {
   const terms: string[] = [];
@@ -46,19 +46,19 @@ export function compileQuery(q: string, state: ModelState, metamodel: Metamodel)
     const m = TERM.exec(part);
     if (!m)
       throw invalid(
-        `Unsupported query term "${part}": until M1, queries support type:<key>, folder:"<path>", category: and level:`,
+        `Unsupported query term "${part}": until M1, queries support type:<key>, folder:"<path>", category: and abstraction:`,
       );
     const value = m[2] ?? m[3]!;
     if (m[1] === "type") {
       if (!metamodel.objectType(value)) throw invalid(`Unknown object type "${value}"`);
       filters.push((o) => metamodel.isA(o.type, value));
     } else if (m[1] === "category") {
-      // Semantic categories and levels (semantics.md §9.4).
+      // Semantic categories and abstractions (semantics.md §9.4).
       if (!SEMANTIC_CATEGORIES.includes(value as never)) throw invalid(`Unknown category "${value}"`);
       filters.push((o) => metamodel.objectType(o.type)?.category === value);
-    } else if (m[1] === "level") {
-      if (!SEMANTIC_LEVELS.includes(value as never)) throw invalid(`Unknown level "${value}"`);
-      filters.push((o) => metamodel.objectLevel(o) === value);
+    } else if (m[1] === "abstraction") {
+      if (!SEMANTIC_ABSTRACTIONS.includes(value as never)) throw invalid(`Unknown abstraction "${value}"`);
+      filters.push((o) => metamodel.objectAbstraction(o) === value);
     } else {
       const folders = folderSubtree(state, value);
       filters.push((o) => folders.has(o.folderId));

@@ -71,7 +71,7 @@ export type SemanticCategory =
   | "actor" | "capability" | "behaviour" | "service" | "interface" | "component"
   | "information" | "technology" | "location" | "motivation" | "other";
 
-export type SemanticLevel = "conceptual" | "logical" | "physical" | "implementation";
+export type SemanticAbstraction = "conceptual" | "logical" | "physical" | "implementation";
 export type PayloadUse = "none" | "optional" | "expected";      // semantics §2.2
 
 /** build: a named, ordered selection of a type's properties (design/04-ux/workbench.md "Properties panel"). */
@@ -88,13 +88,13 @@ export interface ObjectType {
   symbol?: Partial<SymbolStyle>;
   uniqueName?: "repository" | "folder" | "container" | "none"; // 02-model/duplicates-and-identity.md §4
   uniqueAcross?: "type" | "family";             // family: also clashes with parent, child and sibling types
-  uniquePerLevel?: boolean;                     // default true: the same name may exist at another level
+  uniquePerAbstraction?: boolean;                     // default true: the same name may exist at another abstraction
   onClash?: "block" | "warn";                   // default block; warn saves and adds a finding
   keyPattern?: string;                          // "APP-{0000}"
   defaultFolder?: string;                       // folder path
   category?: SemanticCategory;                  // 02-model/semantics.md §4.1; inherited through extends
-  level?: SemanticLevel;                        // default semantic.level of its objects
-  levelFixed?: boolean;                         // objects always have the type's level
+  abstraction?: SemanticAbstraction;                        // default semantic.abstraction of its objects
+  abstractionFixed?: boolean;                         // objects always have the type's abstraction
   /** build: named selections of its properties (properties panel, review pages); inherited, replaced by key. */
   propertySets?: PropertySet[];
 }

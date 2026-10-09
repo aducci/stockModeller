@@ -9,7 +9,7 @@ Ideas asked for but deliberately not built yet, kept here for discussion. Each s
 **Why it waits:** the better shape may be rules that place objects conditionally ("applications owned by Claims go under Claims / Applications"), not one fixed path per type. Building a fixed path first could leave a second mechanism to migrate.
 
 **To settle first:**
-- Placement rules: what a condition may test (type, level, a property, the diagram or folder it was created from, the person), and which rule wins when several match.
+- Placement rules: what a condition may test (type, abstraction, a property, the diagram or folder it was created from, the person), and which rule wins when several match.
 - Context versus default: does drawing on a diagram in folder X beat the type's default, and can a rule say so?
 - What happens to existing objects when a rule changes: nothing (like publishing today) or an offered move.
 - Where it lives: the metamodel package (published with the rest) or repository settings.

@@ -2,7 +2,7 @@
 import {
   COMPONENT_KEYS,
   LAYOUT_KEY,
-  LEVEL_PROPERTY,
+  ABSTRACTION_PROPERTY,
   REGION_COMPONENT_KEYS,
   SEMANTIC_KINDS,
   SUBJECT_KEY,
@@ -24,7 +24,7 @@ import {
   type RelationshipType,
   type SemanticCategory,
   type SemanticKind,
-  type SemanticLevel,
+  type SemanticAbstraction,
   type SymbolStyle,
   type TypeKey,
   type ValueList,
@@ -47,14 +47,14 @@ export interface ResolvedObjectType {
   /** Name uniqueness (design/02-model/duplicates-and-identity.md §4), each field inherited through `extends`. */
   uniqueName: "repository" | "folder" | "container" | "none";
   uniqueAcross: "type" | "family";
-  uniquePerLevel: boolean;
+  uniquePerAbstraction: boolean;
   onClash: "block" | "warn";
   keyPattern: string | undefined;
   symbol: Partial<SymbolStyle>;
-  /** Semantic category and default level (design/02-model/semantics.md §4), inherited through `extends`. */
+  /** Semantic category and default abstraction (design/02-model/semantics.md §4), inherited through `extends`. */
   category: SemanticCategory;
-  level: SemanticLevel | undefined;
-  levelFixed: boolean;
+  abstraction: SemanticAbstraction | undefined;
+  abstractionFixed: boolean;
   /** Its property sets, inherited: the root's first, a subtype's set replacing one with the same key in place. */
   propertySets: PropertySet[];
 }
@@ -128,10 +128,10 @@ export class Metamodel {
     return (end === "source") !== reverse ? "outgoing" : "incoming";
   }
 
-  /** An object's semantic level: its own `semantic.level`, or its type's default. */
-  objectLevel(object: { type: TypeKey; properties: Record<string, unknown> }): SemanticLevel | undefined {
-    const own = object.properties[LEVEL_PROPERTY];
-    return typeof own === "string" ? (own as SemanticLevel) : this.objectTypes.get(object.type)?.level;
+  /** An object's abstraction: its own `semantic.abstraction`, or its type's default. */
+  objectAbstraction(object: { type: TypeKey; properties: Record<string, unknown> }): SemanticAbstraction | undefined {
+    const own = object.properties[ABSTRACTION_PROPERTY];
+    return typeof own === "string" ? (own as SemanticAbstraction) : this.objectTypes.get(object.type)?.abstraction;
   }
 
   propertyType(key: string): PropertyType | undefined {
@@ -244,7 +244,7 @@ export class Metamodel {
         current = parent;
       }
       const chain = lineage.map((k) => definitions.get(k)!).filter(Boolean);
-      const properties = new Set([...chain.flatMap((t) => t.properties ?? []), LEVEL_PROPERTY]);
+      const properties = new Set([...chain.flatMap((t) => t.properties ?? []), ABSTRACTION_PROPERTY]);
       for (const p of ot.properties ?? []) {
         if (!mm.propertyTypes.has(p)) problems.push(`Object type "${ot.key}" uses unknown property type "${p}"`);
       }
@@ -264,17 +264,17 @@ export class Metamodel {
         properties,
         uniqueName: inherited("uniqueName") ?? "none",
         uniqueAcross: inherited("uniqueAcross") ?? "type",
-        uniquePerLevel: inherited("uniquePerLevel") ?? true,
+        uniquePerAbstraction: inherited("uniquePerAbstraction") ?? true,
         onClash: inherited("onClash") ?? "block",
         keyPattern: inherited("keyPattern"),
         symbol: Object.assign({}, ...[...chain].reverse().map((t) => t.symbol ?? {})),
         category: inherited("category") ?? "other",
-        level: inherited("level"),
-        levelFixed: inherited("levelFixed") ?? false,
+        abstraction: inherited("abstraction"),
+        abstractionFixed: inherited("abstractionFixed") ?? false,
         propertySets: [...propertySets.values()],
       });
-      if (inherited("levelFixed") && !inherited("level"))
-        problems.push(`Object type "${ot.key}" fixes its level but names none`);
+      if (inherited("abstractionFixed") && !inherited("abstraction"))
+        problems.push(`Object type "${ot.key}" fixes its abstraction but names none`);
     }
 
     for (const rt of pkg.relationshipTypes) {

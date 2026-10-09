@@ -375,9 +375,9 @@
           "enum": ["type", "family"],
           "description": "family: a name also clashes with objects of parent, child and sibling types"
         },
-        "uniquePerLevel": {
+        "uniquePerAbstraction": {
           "type": "boolean",
-          "description": "Default true: names only clash at the same semantic level"
+          "description": "Default true: names only clash at the same abstraction"
         },
         "onClash": {
           "enum": ["block", "warn"],
@@ -392,13 +392,13 @@
         "category": {
           "$ref": "#/$defs/semanticCategory"
         },
-        "level": {
-          "$ref": "#/$defs/semanticLevel",
-          "description": "Default semantic.level of objects of this type"
+        "abstraction": {
+          "$ref": "#/$defs/semanticAbstraction",
+          "description": "Default semantic.abstraction of objects of this type"
         },
-        "levelFixed": {
+        "abstractionFixed": {
           "type": "boolean",
-          "description": "Objects of this type always have the type's level"
+          "description": "Objects of this type always have the type's abstraction"
         },
         "propertySets": {
           "type": "array",
@@ -613,7 +613,7 @@
       ],
       "description": "What kind of thing an object type is (02-model/semantics.md §4.1)"
     },
-    "semanticLevel": {
+    "semanticAbstraction": {
       "enum": ["conceptual", "logical", "physical", "implementation"],
       "description": "How concrete an object is (02-model/semantics.md §4.2)"
     }
