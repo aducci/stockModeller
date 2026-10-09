@@ -7,6 +7,7 @@ import contextJson from "../essentials/context.diagram-type.json" with { type: "
 import hldJson from "../essentials/hld.diagram-type.json" with { type: "json" };
 import sequenceJson from "../essentials/sequence.diagram-type.json" with { type: "json" };
 import integrationSpecJson from "../essentials/integration-spec.diagram-type.json" with { type: "json" };
+import valueChainJson from "../essentials/value-chain.diagram-type.json" with { type: "json" };
 import contextAndIntegrationsJson from "../essentials/context-and-integrations.pattern.json" with { type: "json" };
 
 export interface ContentPackage {
@@ -15,7 +16,7 @@ export interface ContentPackage {
 }
 
 /** The Essentials package (design/05-structures/example-metamodel.json, example-diagram-type.json, example-matrix-type.json,
- * example-context-type.json, example-sequence-type.json, example-hld-type.json and example-integration-spec-type.json),
+ * example-context-type.json, example-sequence-type.json, example-hld-type.json, example-integration-spec-type.json and example-value-chain-type.json),
  * with its document patterns (example-pattern.json). */
 export const essentials: ContentPackage = {
   metamodel: {
@@ -29,6 +30,7 @@ export const essentials: ContentPackage = {
     sequenceJson as DiagramType,
     hldJson as unknown as DiagramType,
     integrationSpecJson as unknown as DiagramType,
+    valueChainJson as DiagramType,
   ],
 };
 

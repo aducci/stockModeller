@@ -32,7 +32,7 @@ describeDb("metamodel administration", () => {
     });
     expect(res.status).toBe(200);
     expectContract(res.body, schema("RulesResult"));
-    expect(res.body).toMatchObject({ preview: true, version: "1.6.1" });
+    expect(res.body).toMatchObject({ preview: true, version: "1.7.1" });
     const refused = (res.body as { newlyRefused: { relationshipType: string; count: number }[] }).newlyRefused;
     expect(refused.every((c) => c.relationshipType === "flowsTo")).toBe(true);
     expect(refused.reduce((n, c) => n + c.count, 0)).toBe(6); // three flows and three messages
@@ -65,12 +65,12 @@ describeDb("metamodel administration", () => {
       relationshipRules: withoutFlows(before.metamodel.package.relationshipRules!),
     });
     expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ preview: false, version: "1.6.1" });
+    expect(res.body).toMatchObject({ preview: false, version: "1.7.1" });
     await expect.poll(() => messages.some((m) => m.type === "resync")).toBe(true);
     socket.close();
 
     const after = await snapshot();
-    expect(after.metamodel.package.version).toBe("1.6.1");
+    expect(after.metamodel.package.version).toBe("1.7.1");
     expect(after.metamodel.package.relationshipRules!.some((r) => r.relationshipType === "flowsTo")).toBe(false);
     // Existing flows stay; a new one is refused by the published rules.
     expect(after.rows.relationships.filter((r) => r.type === "flowsTo")).toHaveLength(6);

@@ -35,6 +35,7 @@ import {
 import { addPayloadPlan, messageType } from "../semantics";
 import { canvasTypesFor, diagramAroundPlan } from "../views";
 import { subjectDiagramFor } from "../subjects";
+import { IGNORED_PARTS, breadcrumb, decompositionOf, missingParts, partEdits, placePartsEdits } from "../decompose";
 import { byName } from "../text";
 
 /** Drag-and-drop payloads: an object type from the palette, or an existing object from the explorer. */
@@ -79,6 +80,8 @@ export function DiagramEditor({ id }: { id: Id }) {
   const [menu, setMenu] = useState<{ from: Id; to: Id; at: Point; choices: ConnectChoice[] } | null>(null);
   const [flash, setFlash] = useState<ReadonlySet<Id>>(new Set());
   const [occMenu, setOccMenu] = useState<{ x: number; y: number; occId: Id } | null>(null);
+  /** Double-click on a symbol with nowhere to drill: what it could have (a decomposition), or Rename. */
+  const [drillOffer, setDrillOffer] = useState<{ x: number; y: number; occId: Id } | null>(null);
   const [zoom, setZoom] = useState(1);
   const canvas = useRef<HTMLDivElement>(null);
 
@@ -286,11 +289,15 @@ export function DiagramEditor({ id }: { id: Id }) {
   const placeExisting = (object: { id: Id; name: string; type: string }, box: Box, parent: Id | null) => {
     const others = occurrences.filter((o) => o.objectId === object.id).map((o) => o.id);
     const place = placement(object.id, false, object.type, box, parent);
-    const ok = edit(`Add ${object.name} to ${place.inside ?? diagram.name}`, place.edits);
+    const part = place.inside ? { edits: [] } : partEdits(state, metamodel, diagram, object);
+    const label = part.edits.length
+      ? `Add ${object.name} to ${decompositionOf(state, metamodel, diagram)!.subject.name}`
+      : `Add ${object.name} to ${place.inside ?? diagram.name}`;
+    const ok = edit(label, [...place.edits, ...part.edits]);
     if (ok) {
       // A repeat is allowed, but made visible so it is deliberate.
       if (others.length > 0) setFlash(new Set(others));
-      if (place.note) notify(place.note);
+      if (place.note ?? part.note) notify((place.note ?? part.note)!);
       choose(place.occId);
     }
     return ok;
@@ -313,9 +320,17 @@ export function DiagramEditor({ id }: { id: Id }) {
   const createObject = (type: string, box: Box, parent: Id | null, name: string) => {
     const objectId = ulid();
     const place = placement(objectId, true, type, box, parent);
-    const ok = edit(`Create ${name} ${place.inside ? `in ${place.inside}` : `on ${diagram.name}`}`, [
+    // On a decomposition (DOC-1b), what is drawn becomes a part of what the diagram is about.
+    const part = place.inside ? { edits: [] } : partEdits(state, metamodel, diagram, { id: objectId, type });
+    const where = place.inside
+      ? `in ${place.inside}`
+      : part.edits.length
+        ? `in ${decompositionOf(state, metamodel, diagram)!.subject.name}`
+        : `on ${diagram.name}`;
+    const ok = edit(`Create ${name} ${where}`, [
       { edit: "createObject", id: objectId, type, name, folderId: defaultFolderFor(state, metamodel, type, diagram) },
       ...place.edits,
+      ...part.edits,
     ]);
     if (ok) {
       if (place.note) notify(place.note);
@@ -558,8 +573,9 @@ export function DiagramEditor({ id }: { id: Id }) {
           run: () => {
             const plan = diagramAroundPlan(state, metamodel, t, object);
             const childId = (plan.edits[0] as { id: Id }).id;
-            if (edit(`${plan.label} as a child of ${name}`, [...plan.edits, linkEdit(occ, childId)]))
-              openDiagram(childId);
+            // A decomposition opens from every symbol of the element through its subject, so it needs no link.
+            const own = t.definition.decomposes ? [] : [linkEdit(occ, childId)];
+            if (edit(`${plan.label} as a child of ${name}`, [...plan.edits, ...own])) openDiagram(childId);
           },
         }))
       : [];
@@ -596,6 +612,21 @@ export function DiagramEditor({ id }: { id: Id }) {
     };
   };
 
+  /** New decompositions of the symbol's element, e.g. its value chain, opened once made. */
+  const decompositionOffers = (occ: ObjectOccurrenceRow): MenuEntry[] => {
+    const object = state.objects.get(occ.objectId);
+    if (!object) return [];
+    return canvasTypesFor(metamodel, object)
+      .filter((t) => t.definition.decomposes)
+      .map((t) => ({
+        label: `New ${t.definition.name.toLowerCase()} for ${object.name}`,
+        run: () => {
+          const plan = diagramAroundPlan(state, metamodel, t, object);
+          if (edit(plan.label, plan.edits)) openDiagram((plan.edits[0] as { id: Id }).id);
+        },
+      }));
+  };
+
   const occMenuEntries = (occId: Id): MenuEntry[] => {
     const occ = state.objectOccurrences.get(occId);
     if (!occ) return [];
@@ -612,20 +643,48 @@ export function DiagramEditor({ id }: { id: Id }) {
       { label: "Rename", shortcut: "F2", run: () => setRenaming(occId) },
       childDiagramMenu(occ),
       "separator",
-      {
-        label: "Remove from diagram",
-        shortcut: "Del",
-        run: () => {
-          if (
-            edit(`Remove ${nameOf(objectId)} from ${diagram.name}`, [
-              { edit: "removeOccurrence", diagramId: id, occurrenceId: occId },
-            ])
-          )
-            choose(null);
-        },
-      },
+      { label: "Remove from diagram", shortcut: "Del", run: () => removeFromDiagram(occId) },
       { label: "Delete object…", shortcut: "⇧Del", danger: true, run: () => askDeleteObject(objectId) },
     ];
+  };
+
+  /**
+   * Takes a symbol off the diagram; the object stays in the model. On a decomposition (DOC-1b), a part's last symbol
+   * is also no longer offered as missing, and the toast offers to take it out of the subject as well.
+   */
+  const removeFromDiagram = (occId: Id, otherwise?: Parameters<typeof edit>[2]) => {
+    const occ = state.objectOccurrences.get(occId);
+    if (!occ) return;
+    const objectId = occ.objectId;
+    const d = decompositionOf(state, metamodel, diagram);
+    const last = occurrences.filter((o) => o.objectId === objectId).length === 1;
+    const link =
+      d && last
+        ? state.relationships
+            .find("byTarget", objectId)
+            .find((r) => r.type === d.relationship && r.sourceId === d.subject.id)
+        : undefined;
+    const edits: Edit[] = [{ edit: "removeOccurrence", diagramId: id, occurrenceId: occId }];
+    if (d && link) {
+      const ignored = ((diagram.definition?.[IGNORED_PARTS] as Id[] | undefined) ?? []).filter((p) => p !== objectId);
+      edits.push({
+        edit: "setViewDefinition",
+        diagramId: id,
+        baseVersion: diagram.version,
+        set: { [IGNORED_PARTS]: [...ignored, objectId] },
+      });
+    }
+    const action =
+      d && link
+        ? {
+            label: `Also remove from ${d.subject.name}`,
+            run: () =>
+              edit(`Remove ${nameOf(objectId)} from ${d.subject.name}`, [
+                { edit: "deleteRelationship", id: link.id, baseVersion: link.version },
+              ]),
+          }
+        : otherwise;
+    if (edit(`Remove ${nameOf(objectId)} from ${diagram.name}`, edits, action)) choose(null);
   };
 
   // ---------------------------------------------------------------- keyboard
@@ -664,12 +723,7 @@ export function DiagramEditor({ id }: { id: Id }) {
       e.preventDefault();
       const objectId = selectedOcc.objectId;
       if (e.shiftKey) return askDeleteObject(objectId);
-      const ok = edit(
-        `Remove ${nameOf(objectId)} from ${diagram.name}`,
-        [{ edit: "removeOccurrence", diagramId: id, occurrenceId: selectedOcc.id }],
-        { label: "Delete object", run: () => askDeleteObject(objectId) },
-      );
-      if (ok) choose(null);
+      removeFromDiagram(selectedOcc.id, { label: "Delete object", run: () => askDeleteObject(objectId) });
     }
   };
 
@@ -683,10 +737,55 @@ export function DiagramEditor({ id }: { id: Id }) {
   const handleBox = selectedOcc && gesture?.kind !== "move" ? boxes.get(selectedOcc.id) : undefined;
   const connecting = gesture?.kind === "connect" ? gesture : null;
   const connectFrom = connecting ? boxes.get(connecting.occId) : undefined;
+  // A decomposition (DOC-1b): the way up, and the subject's parts not drawn yet. Both stay quiet when empty.
+  const decomposing = decompositionOf(state, metamodel, diagram);
+  const crumbs = breadcrumb(state, metamodel, diagram);
+  const missing = missingParts(state, metamodel, diagram);
+  const addMissing = () =>
+    edit(`Add ${missing.length} to ${diagram.name}`, placePartsEdits(state, metamodel, diagram, missing));
+  const ignoreMissing = () => {
+    const ignored = (diagram.definition?.[IGNORED_PARTS] as Id[] | undefined) ?? [];
+    edit(`Ignore ${missing.length} on ${diagram.name}`, [
+      {
+        edit: "setViewDefinition",
+        diagramId: id,
+        baseVersion: diagram.version,
+        set: { [IGNORED_PARTS]: [...ignored, ...missing.map((p) => p.id)] },
+      },
+    ]);
+  };
 
   return (
     <div className="diagram-editor">
       <Palette diagram={diagram} zoom={zoom} onZoom={(z) => setZoom(clampZoom(z))} onAdd={addInView} />
+      {crumbs.length > 0 && (
+        <nav className="crumbs" aria-label="Decomposition">
+          {crumbs.map((c, i) => (
+            <span key={c.object.id}>
+              {i > 0 && <span className="crumb-sep">›</span>}
+              {c.diagramId && i < crumbs.length - 1 ? (
+                <button className="link" onClick={() => openDiagram(c.diagramId!)}>
+                  {c.object.name}
+                </button>
+              ) : (
+                <span aria-current={i === crumbs.length - 1 ? "page" : undefined}>{c.object.name}</span>
+              )}
+            </span>
+          ))}
+        </nav>
+      )}
+      {decomposing && missing.length > 0 && (
+        <div className="doc-banner diagram-banner" role="status">
+          <span>
+            {missing.length === 1 ? "1 part" : `${missing.length} parts`} of {decomposing.subject.name}{" "}
+            {missing.length === 1 ? "is" : "are"} not on this diagram: {missing.map((p) => p.name).join(", ")}
+          </span>
+          <button onClick={addMissing}>Add to diagram</button>
+          <button className="link" onClick={ignoreMissing}>
+            Ignore
+          </button>
+        </div>
+      )}
       <div
         ref={canvas}
         className="canvas"
@@ -762,10 +861,12 @@ export function DiagramEditor({ id }: { id: Id }) {
                 style={{ "--occ-ink": ink } as CSSProperties}
                 className={classes.join(" ")}
                 onPointerDown={(e) => onOccPointerDown(e, o.id)}
-                onDoubleClick={() => {
-                  // Double-click drills down when the symbol has a child diagram; F2 always renames.
+                onDoubleClick={(e) => {
+                  // Double-click drills down when the symbol has a child diagram; F2 always renames. With none, an
+                  // element that could have a decomposition (DOC-1b) is offered one before renaming.
                   const target = drillTarget(o);
                   if (target) openDiagram(target);
+                  else if (decompositionOffers(o).length) setDrillOffer({ x: e.clientX, y: e.clientY, occId: o.id });
                   else setRenaming(o.id);
                 }}
                 onContextMenu={(e) => {
@@ -897,6 +998,23 @@ export function DiagramEditor({ id }: { id: Id }) {
           </ul>
         )}
       </div>
+      {drillOffer && (
+        <ContextMenu
+          x={drillOffer.x}
+          y={drillOffer.y}
+          label="Nothing to open yet"
+          entries={(() => {
+            const occ = state.objectOccurrences.get(drillOffer.occId);
+            if (!occ) return [];
+            return [
+              ...decompositionOffers(occ),
+              "separator",
+              { label: "Rename", shortcut: "F2", run: () => setRenaming(occ.id) },
+            ] as MenuEntry[];
+          })()}
+          onClose={() => setDrillOffer(null)}
+        />
+      )}
       {occMenu && (
         <ContextMenu
           x={occMenu.x}

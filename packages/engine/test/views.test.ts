@@ -249,3 +249,17 @@ describe("diagram subjects and documentation links (DOC-1)", () => {
     expect(() => Metamodel.compile(pkg, essentials.diagramTypes)).toThrow(/only url properties/);
   });
 });
+
+describe("decomposition diagram types (DOC-1b)", () => {
+  it("refuses a decomposition through an unknown relationship type or onto unknown element types", () => {
+    const withDecomposes = (decomposes: { relationship: string; childTypes?: string[] }) =>
+      essentials.diagramTypes.map((t) => (t.key === "context" ? { ...t, decomposes } : t));
+    expect(() => Metamodel.compile(essentials.metamodel, withDecomposes({ relationship: "composedOf" }))).not.toThrow();
+    expect(() => Metamodel.compile(essentials.metamodel, withDecomposes({ relationship: "nope" }))).toThrow(
+      /decomposes through unknown relationship type "nope"/,
+    );
+    expect(() =>
+      Metamodel.compile(essentials.metamodel, withDecomposes({ relationship: "composedOf", childTypes: ["nope"] })),
+    ).toThrow(/unknown object type "nope"/);
+  });
+});

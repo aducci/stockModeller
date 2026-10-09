@@ -16,7 +16,7 @@ describe("property usage", () => {
 
   it("counts the items holding a value for each property", () => {
     const usage = propertyUsage(state);
-    expect(usage.get("lifecycle.status")).toEqual({ objects: 5, relationships: 0, diagrams: 0 });
+    expect(usage.get("lifecycle.status")).toEqual({ objects: 6, relationships: 0, diagrams: 0 });
     expect(strandedValues(state, metamodel).size).toBe(0);
   });
 

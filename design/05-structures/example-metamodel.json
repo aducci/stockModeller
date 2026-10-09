@@ -1,6 +1,6 @@
 {
   "name": "Essentials",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "layers": [
     {
       "key": "strategy",
@@ -699,6 +699,11 @@
       "relationshipType": "composedOf",
       "sourceType": "applicationBase",
       "targetType": "interface"
+    },
+    {
+      "relationshipType": "composedOf",
+      "sourceType": "process",
+      "targetType": "process"
     },
     {
       "relationshipType": "composedOf",

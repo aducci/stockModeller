@@ -55,6 +55,27 @@
         }
       }
     },
+    "decomposes": {
+      "type": "object",
+      "required": [
+        "relationship"
+      ],
+      "additionalProperties": false,
+      "description": "build (slice DOC-1b): diagrams of this type decompose their subject through a relationship type: what is drawn on one becomes a part of its subject, parts missing from it are offered, and a breadcrumb leads back up. See 02-model/views-and-design-artifacts.md §12.",
+      "properties": {
+        "relationship": {
+          "type": "string",
+          "description": "The relationship type from the subject to each part, e.g. composedOf"
+        },
+        "childTypes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Element types (and their subtypes) that become parts when drawn; absent = any the rules allow"
+        }
+      }
+    },
     "matrix": {
       "type": "object",
       "required": [
