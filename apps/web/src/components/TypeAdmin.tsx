@@ -2,7 +2,7 @@
 // of object and relationship types (name, parent, meaning), removing unused ones, and the metamodel as a file.
 import { useState, type FormEvent, type ReactNode } from "react";
 import type { Metamodel } from "@connectome/engine";
-import { SEMANTIC_CATEGORIES, SEMANTIC_KINDS, SEMANTIC_LEVELS, type TypeKey } from "@connectome/model";
+import { SEMANTIC_CATEGORIES, SEMANTIC_KINDS, SEMANTIC_ABSTRACTIONS, type TypeKey } from "@connectome/model";
 import type { Draft } from "../property-admin";
 import { setRule, typeLabel, typeTree, type Rule } from "../metamodel-admin";
 import {
@@ -84,17 +84,18 @@ export function HelpTip({ about, children }: { about: string; children: ReactNod
   );
 }
 
-const LEVEL_HELP =
+const ABSTRACTION_HELP =
   "How concrete the type's objects are. Conceptual: what, in business terms (Payment service). Logical: how, " +
   "independent of technology (Payment API). Physical: the concrete technical form (GET /payments/{id}). " +
-  "Implementation: the deployed, running thing (payments-service in production). New objects start at this level; " +
-  "names may repeat across levels, and the trace view orders by level. Nothing is refused because of a level.";
+  "Implementation: the deployed, running thing (payments-service in production). New objects start at this " +
+  "abstraction; names may repeat across abstractions, and the trace view orders by abstraction. Nothing is refused " +
+  "because of an abstraction.";
 const ABSTRACT_HELP =
   "An abstract type only groups its subtypes: nobody can create an object of it, but rules, properties and " +
   "diagram types set on it apply to every subtype. Use it for a family such as Application, with Business " +
   "application and Integration platform below it.";
 
-/** Name, parent, meaning and level of an object type; removing it while nothing uses it. */
+/** Name, parent, meaning and abstraction of an object type; removing it while nothing uses it. */
 export function ObjectTypeGeneral(props: {
   type: TypeKey;
   draft: Draft;
@@ -159,17 +160,17 @@ export function ObjectTypeGeneral(props: {
       </label>
       <label className="field">
         <span>
-          Level <HelpTip about="levels">{LEVEL_HELP}</HelpTip>
+          Abstraction <HelpTip about="abstraction">{ABSTRACTION_HELP}</HelpTip>
         </span>
         <select
-          aria-label="Level"
-          value={definition.level ?? ""}
-          onChange={(e) => set({ level: (e.target.value || undefined) as never })}
+          aria-label="Abstraction"
+          value={definition.abstraction ?? ""}
+          onChange={(e) => set({ abstraction: (e.target.value || undefined) as never })}
         >
           <option value="">
-            {definition.extends && resolved?.level ? `As its parent (${resolved.level})` : "None"}
+            {definition.extends && resolved?.abstraction ? `As its parent (${resolved.abstraction})` : "None"}
           </option>
-          {SEMANTIC_LEVELS.map((l) => (
+          {SEMANTIC_ABSTRACTIONS.map((l) => (
             <option key={l} value={l}>
               {capital(l)}
             </option>

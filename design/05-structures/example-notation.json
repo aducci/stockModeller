@@ -467,10 +467,10 @@
       "tone": "accent"
     },
     {
-      "key": "level",
-      "name": "Semantic level",
-      "when": "exists(semantic.level)",
-      "pips": "semantic.level",
+      "key": "abstraction",
+      "name": "Semantic abstraction",
+      "when": "exists(semantic.abstraction)",
+      "pips": "semantic.abstraction",
       "slot": "bottomLeft",
       "tone": "muted"
     }

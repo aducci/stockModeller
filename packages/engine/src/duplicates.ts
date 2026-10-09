@@ -41,7 +41,7 @@ export function judgedDistinct(a: ObjectRow, b: ObjectRow): boolean {
 
 /**
  * Pairs of live objects that may be one thing entered twice, best first. Only objects of related types (the same
- * type, a parent, a child or a sibling) at the same semantic level are compared, and only when they share a name key
+ * type, a parent, a child or a sibling) at the same abstraction are compared, and only when they share a name key
  * or a neighbour. Signals: their names and other names (spelling, word order, acronyms), the related objects they
  * share, and the same folder or container. Pairs judged *not duplicates* under their current names, and pairs related
  * to each other directly, are left out.
@@ -108,7 +108,7 @@ export function possibleDuplicates(
     const a = state.objects.get(idA)!;
     const b = state.objects.get(idB)!;
     if (kinshipOf(metamodel, a.type, b.type) === "other") continue;
-    if (metamodel.objectLevel(a) !== metamodel.objectLevel(b)) continue;
+    if (metamodel.objectAbstraction(a) !== metamodel.objectAbstraction(b)) continue;
     if (judgedDistinct(a, b)) continue;
 
     const reasons: { weight: number; text: string }[] = [];

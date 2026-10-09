@@ -268,7 +268,7 @@ What the request called "annotations based on conditions" are **markers**: small
 | `slot` | `topLeft`, `top`, `topRight`, `right`, `bottomRight`, `bottom`, `bottomLeft`, `left`. Several markers in one slot stack outward |
 | `tone` | `muted`, `accent`, `info`, `warning`, `error`, `ok`: theme colours, never type colours, so a marker never looks like data |
 | `text` | Up to 8 characters after formatting (`{count(findings)}`, a date, a score) |
-| `pips` | Instead of a glyph: a list property drawn as filled pips. The built-in **level marker** draws `semantic.level` as 1–4 pips, conceptual to implementation, so a reader sees concreteness at a glance without colour |
+| `pips` | Instead of a glyph: a list property drawn as filled pips. The built-in **abstraction marker** draws `semantic.abstraction` as 1–4 pips, conceptual to implementation, so a reader sees concreteness at a glance without colour |
 | `tooltip`, `link` | Hover text; a click target (the property, a finding, a drill-down diagram) |
 
 Built-in markers the engine provides without configuration, each switchable per diagram type: **×N** repeats (already designed), **findings** from validation ([semantics §8](semantics.md#8-validation-from-semantics)), **drill-down** link, **restricted** (folder permissions), and **scenario difference** (added, changed, removed). Markers are listed in the legend with their counts ("3 retiring soon"), and the legend entry selects them.
@@ -283,7 +283,7 @@ A marker says *something is true*. A **decoration** shows *what a property's val
 |---|---|---|
 | `swatch` | A filled square or a tinted band along one edge | List properties (status, criticality) |
 | `dot` | A filled circle in the value's colour; `dot.outline` when the value is "none" | Any list property; the compact form for dense diagrams |
-| `pips` | n of m filled pips | Short ordered scales: level, fit 1–5 |
+| `pips` | n of m filled pips | Short ordered scales: abstraction, fit 1–5 |
 | `gauge` | A horizontal bar, filled to the value, over a track | Percentages, scores, budget used |
 | `ring` | A circular gauge, filled clockwise; the value in the middle when there is room | Percentages where a bar does not fit (glyph and chip renditions) |
 | `icon` | A glyph chosen by the value, from the **value list's icon map** | States with established symbols (cloud, lock, warning) |
@@ -370,7 +370,7 @@ A sandbox panel: pick (or drag in) two types and see exactly what a modeller wil
 | Addition | Example | Why |
 |---|---|---|
 | **Category endpoints** | `category:component` *accesses* `category:information` | One rule covers every current and future type in the category; packages combine without listing each other's types |
-| **Level conditions** | *realises* only from a more concrete level to a less concrete one (`level: "towardAbstract"`) | Turns the semantic finding into a rule a model owner can tighten to `block` |
+| **Abstraction conditions** | *realises* only from a more concrete abstraction to a less concrete one (`abstraction: "towardAbstract"`) | Turns the semantic finding into a rule a model owner can tighten to `block` |
 | **Learn from data** | "142 relationships use 9 combinations not in the rules" → accept all, accept some, or flag | Brings a messy imported repository under rules without a week of setup (Ardoq surfaces undefined combinations similarly) |
 | **Rule presets per kind** | Choosing kind `access` for a new type offers "toward `category:information`" | Good defaults at the moment of creation |
 
@@ -382,7 +382,7 @@ Rule endpoints therefore become: a type key, `*`, an abstract type (inherited th
 - **Draft:** every edit changes a draft of the relationship rules kept in the browser; a bar says "n changes not published" with *Discard* and *Review and publish…*. The review lists the rules added, removed and changed, and the combinations in use that the new rules would refuse (they stay and are flagged; nothing is deleted).
 - **Matrix:** rows and columns are every object type in tree order (an abstract parent such as *Application (any)* above its subtypes). A rule on a parent or on `*` shows as a lighter, inherited dot that can only be changed where it is written. Dots are coloured by kind family: structure (containment, composition, aggregation, specialisation), dependency (realisation, representation, serving, assignment, access, association), behaviour and flow (flow, trigger, interaction), influence; hollow means warn only.
 - **Publishing:** `PUT /repositories/{repo}/metamodel/relationship-rules` with the version the draft was edited from (409 if someone published meanwhile; `?preview=true` reports without publishing). It replaces the `relationship` rows of the `rule` table, sets the next patch version and notifies `connectome_metamodel`; every server instance drops its compiled metamodel and asks its open sessions to reload (`resync`).
-- **Not yet:** the map, learning from data, category and level endpoints (A-2); editing properties (A-1b, built: §10.6b) and types (A-1c); cardinality is kept but not shown.
+- **Not yet:** the map, learning from data, category and abstraction endpoints (A-2); editing properties (A-1b, built: §10.6b) and types (A-1c); cardinality is kept but not shown.
 
 ### 10.6b Built in slice A-1b: properties
 
@@ -406,7 +406,7 @@ Rule endpoints therefore become: a type key, `*`, an abstract type (inherited th
 - **The Metamodel menu holds the draft and the file:** *Review and publish…* (when there are unpublished changes), *Discard unpublished changes*, *Export metamodel* (the draft when there is one, else the published version) and *Import metamodel…* (as unpublished changes). The Export and Import buttons left the tab's header to save space; the draft bar keeps *Discard* and *Review and publish…*.
 - **A relationship type's rules are edited in its panel** (Types view): the rules naming it, from type to type, with *blocks*/*warns* and *Remove*, and a row to add one (*Any type* is `*`). The matrix and the rule sentences edit the same rules.
 - **Matrix:** a note names the relationship types that have no rule yet (each one filters the matrix to it), since a new type has no dot anywhere until it is allowed somewhere. A cell's editor has *Cancel* (puts the cell's rules back as they were when it opened; Esc does the same), *Remove all* (the rules ticked for that pair) and *Done*.
-- **Help:** *Level* and *Abstract* have a ? that explains them on hover and, clicked, under the setting. New objects start at their type's level (B57).
+- **Help:** *Abstraction* and *Abstract* have a ? that explains them on hover and, clicked, under the setting. New objects start at their type's abstraction (B57).
 
 ### 10.7 Notation studio
 
@@ -450,7 +450,7 @@ What the comparison shows:
 | `sourceAnchor`, `targetAnchor` on a relationship occurrence | Occurrence row, set only when the user pinned one | `updateOccurrence` with its inverse |
 | A compartment row the user typed | The related object and its relationship | Ordinary `createObject` + `createRelationship` in one change |
 | Zone placement | The zone is an annotation; the effect is `setProperties` in the same change | One change, one undo step |
-| Category and level rule endpoints | Relationship `rules` | Metamodel edits |
+| Category and abstraction rule endpoints | Relationship `rules` | Metamodel edits |
 
 The engine stays pure: style rules, markers, decorations, compartment queries and routing are evaluated in the web app (and by export), never by the server. Validation and rule checks stay in the engine.
 
@@ -469,8 +469,8 @@ The engine stays pure: style rules, markers, decorations, compartment queries an
 | **N-7** | Ports: anchors bound to objects by a path, `side: auto`, connecting straight to a port | N-2a, N-2b |
 | **A-1** ✅ | Metamodel menu and tab: types (read-only), connection matrix, rule sentences, try a connection, over one draft of the relationship rules; review with the effect on existing relationships; publish as the next version, picked up by every open session | Nothing new: the rules are rows of the `rule` table |
 | **A-1b** ✅ | Properties: property types and value lists, which object, relationship and diagram types carry them, editable relationship and diagram properties, publishing the whole metamodel with an impact check (§10.6b) | A-1 |
-| **A-1c** | Editing types: new object and relationship types, rename, parent, category, level; breaking edits with a migration preview ([metamodel §7](metamodel.md#7-versions-and-packages)) | A-1 |
-| **A-2** | Metamodel map; learn from data; category and level rule endpoints | A-1 |
+| **A-1c** | Editing types: new object and relationship types, rename, parent, category, abstraction; breaking edits with a migration preview ([metamodel §7](metamodel.md#7-versions-and-packages)) | A-1 |
+| **A-2** | Metamodel map; learn from data; category and abstraction rule endpoints | A-1 |
 | **A-3** | Notation studio (glyph editor, rendition and rule previews) | N-3, A-1 |
 
 N-2a is the one to build early despite its place in the list: anchors decide how every line on every diagram looks, and retrofitting routing later means redrawing customers' diagrams. N-1 and A-1 are otherwise the highest value per effort: every diagram and the explorer get a recognisable language at once, and model owners can see and change the rules without editing JSON.

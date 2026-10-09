@@ -1,4 +1,4 @@
-// Semantic kinds, categories and levels (design/02-model/semantics.md §2–§4) in the compiled metamodel and the engine.
+// Semantic kinds, categories and abstractions (design/02-model/semantics.md §2–§4) in the compiled metamodel and the engine.
 import { describe, expect, it } from "vitest";
 import { SEMANTIC_KINDS, type Edit, type MetamodelPackage } from "@connectome/model";
 import { essentials } from "@connectome/content";
@@ -74,19 +74,22 @@ describe("semantic metamodel", () => {
 
   it("reserves the core package's keys", () => {
     expect(
-      problems({ propertyTypes: [{ key: "semantic.level", name: "Mine", group: "semantic", dataType: "text" }] }),
+      problems({ propertyTypes: [{ key: "semantic.abstraction", name: "Mine", group: "semantic", dataType: "text" }] }),
     ).toContain("reserved by the core package");
   });
 
-  it("refuses a fixed level without a level", () => {
-    expect(problems({ objectTypes: [{ key: "thing", name: "Thing", properties: [], levelFixed: true }] })).toContain(
-      "fixes its level but names none",
-    );
+  it("refuses a fixed abstraction without an abstraction", () => {
+    expect(
+      problems({ objectTypes: [{ key: "thing", name: "Thing", properties: [], abstractionFixed: true }] }),
+    ).toContain("fixes its abstraction but names none");
   });
 
-  it("gives every object type the level property and inherits category and level", () => {
-    expect(metamodel.objectType("saasApplication")).toMatchObject({ category: "component", level: "implementation" });
-    expect(metamodel.objectType("location")!.properties.has("semantic.level")).toBe(true);
+  it("gives every object type the abstraction property and inherits category and abstraction", () => {
+    expect(metamodel.objectType("saasApplication")).toMatchObject({
+      category: "component",
+      abstraction: "implementation",
+    });
+    expect(metamodel.objectType("location")!.properties.has("semantic.abstraction")).toBe(true);
     expect(metamodel.relationshipTypeProperties("accesses").has("access.mode")).toBe(true);
     expect(metamodel.relationshipTypeProperties("calls").has("interaction.protocol")).toBe(true);
     expect(metamodel.relationshipTypeProperties("serves").has("access.mode")).toBe(false);
@@ -94,34 +97,36 @@ describe("semantic metamodel", () => {
 });
 
 describe("semantic properties in the engine", () => {
-  it("lets any object override its type's default level, and reads the default otherwise", () => {
+  it("lets any object override its type's default abstraction, and reads the default otherwise", () => {
     const state = exampleState();
-    expect(metamodel.objectLevel(state.objects.get("O-APP-1")!)).toBe("implementation");
-    applyOk(state, [{ edit: "setProperties", id: "O-APP-1", baseVersion: 1, set: { "semantic.level": "logical" } }]);
-    expect(metamodel.objectLevel(state.objects.get("O-APP-1")!)).toBe("logical");
+    expect(metamodel.objectAbstraction(state.objects.get("O-APP-1")!)).toBe("implementation");
+    applyOk(state, [
+      { edit: "setProperties", id: "O-APP-1", baseVersion: 1, set: { "semantic.abstraction": "logical" } },
+    ]);
+    expect(metamodel.objectAbstraction(state.objects.get("O-APP-1")!)).toBe("logical");
     const bad = apply(state, [
-      { edit: "setProperties", id: "O-APP-1", baseVersion: 2, set: { "semantic.level": "x" } },
+      { edit: "setProperties", id: "O-APP-1", baseVersion: 2, set: { "semantic.abstraction": "x" } },
     ]);
     expect(bad.ok).toBe(false);
   });
 
-  it("keeps a fixed level", () => {
+  it("keeps a fixed abstraction", () => {
     const mm = Metamodel.compile({
       ...base,
-      objectTypes: [{ key: "thing", name: "Thing", properties: [], level: "physical", levelFixed: true }],
+      objectTypes: [{ key: "thing", name: "Thing", properties: [], abstraction: "physical", abstractionFixed: true }],
     });
     const state = exampleState();
-    const create = (level: string): Edit => ({
+    const create = (abstraction: string): Edit => ({
       edit: "createObject",
-      id: `N-${level}`,
+      id: `N-${abstraction}`,
       type: "thing",
-      name: level,
+      name: abstraction,
       folderId: "F04",
-      properties: { "semantic.level": level },
+      properties: { "semantic.abstraction": abstraction },
     });
     expect(apply(state, [create("logical")], { metamodel: mm })).toMatchObject({
       ok: false,
-      reasons: [expect.objectContaining({ property: "properties.semantic.level" })],
+      reasons: [expect.objectContaining({ property: "properties.semantic.abstraction" })],
     });
     expect(apply(state, [create("physical")], { metamodel: mm }).ok).toBe(true);
   });

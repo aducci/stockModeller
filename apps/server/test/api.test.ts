@@ -179,7 +179,7 @@ describeDb("API", () => {
     ]);
   });
 
-  it("traces by meaning and filters objects by category and level", async () => {
+  it("traces by meaning and filters objects by category and abstraction", async () => {
     const upstream = await api.get(`/repositories/${REPO}/objects/O-APP-3/trace?kind=flow&direction=backward`);
     expect(upstream.status).toBe(200);
     expectContract(upstream.body, schema("Trace"));
@@ -188,9 +188,9 @@ describeDb("API", () => {
       { name: "Legacy CRM", depth: 2, relationshipId: "R-09" },
       { name: "Payments API", depth: 2, relationshipId: "R-18" }, // the response of its call is a flow too
     ]);
-    const down = await api.get(`/repositories/${REPO}/objects/O-CAP-2/trace?kind=levels&depth=1`);
-    expect((down.body as { steps: { objectId: string; level: string }[] }).steps).toEqual([
-      expect.objectContaining({ objectId: "O-APP-1", level: "implementation" }),
+    const down = await api.get(`/repositories/${REPO}/objects/O-CAP-2/trace?kind=abstraction&depth=1`);
+    expect((down.body as { steps: { objectId: string; abstraction: string }[] }).steps).toEqual([
+      expect.objectContaining({ objectId: "O-APP-1", abstraction: "implementation" }),
     ]);
     expect((await api.get(`/repositories/${REPO}/objects/O-APP-3/trace?kind=sideways`)).status).toBe(422);
     expect((await api.get(`/repositories/${REPO}/objects/NOPE/trace?kind=flow`)).status).toBe(404);
@@ -202,7 +202,7 @@ describeDb("API", () => {
       "O-APP-3",
     ]);
     const conceptual = await api.get(
-      `/repositories/${REPO}/objects?q=${encodeURIComponent("level:conceptual AND type:process")}`,
+      `/repositories/${REPO}/objects?q=${encodeURIComponent("abstraction:conceptual AND type:process")}`,
     );
     expect((conceptual.body as { items: { id: string }[] }).items.map((o) => o.id)).toEqual(["O-PRC-1"]);
   });

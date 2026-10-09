@@ -2,7 +2,7 @@
 // whatever the repository's own types are called.
 import corePackageJson from "../core/metamodel.json" with { type: "json" };
 import type { MetamodelPackage } from "./metamodel";
-import type { SemanticCategory, SemanticKind, SemanticLevel } from "./model";
+import type { SemanticCategory, SemanticKind, SemanticAbstraction } from "./model";
 
 /** What a kind means and allows (semantics.md §2). */
 export interface SemanticKindInfo {
@@ -64,10 +64,15 @@ export const SEMANTIC_CATEGORIES: readonly SemanticCategory[] = [
 ];
 
 /** From the most abstract to the most concrete. */
-export const SEMANTIC_LEVELS: readonly SemanticLevel[] = ["conceptual", "logical", "physical", "implementation"];
+export const SEMANTIC_ABSTRACTIONS: readonly SemanticAbstraction[] = [
+  "conceptual",
+  "logical",
+  "physical",
+  "implementation",
+];
 
-/** The property that holds an object's level (§4.2). Every object type has it. */
-export const LEVEL_PROPERTY = "semantic.level";
+/** The property that holds an object's abstraction (§4.2). Every object type has it. */
+export const ABSTRACTION_PROPERTY = "semantic.abstraction";
 
 /**
  * The core package (design/05-structures/core-metamodel.json): property types and value lists every repository has.

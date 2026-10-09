@@ -36,12 +36,12 @@ describe("object viewer", () => {
 
   it("shows the properties every listed type carries", () => {
     const one = viewerColumns(metamodel, ["application"]).map((p) => p.key);
-    expect(one).toContain("semantic.level");
+    expect(one).toContain("semantic.abstraction");
     expect(one.length).toBeLessThanOrEqual(8);
     const mixed = viewerColumns(metamodel, ["application", "capability"]).map((p) => p.key);
     const carries = (type: string, key: string) => metamodel.objectType(type)!.properties.has(key);
     expect(mixed.every((k) => carries("application", k) && carries("capability", k))).toBe(true);
-    expect(mixed[0]).toBe("semantic.level");
+    expect(mixed[0]).toBe("semantic.abstraction");
     expect(viewerColumns(metamodel, [])).toEqual([]);
   });
 

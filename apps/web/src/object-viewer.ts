@@ -1,7 +1,7 @@
 // The object viewer (design/04-ux/workbench.md "Object viewer"): everything stored in a folder and its subfolders as
 // one editable list. Which rows and columns it shows is worked out here, without React.
 import type { Metamodel, ModelState, ObjectRow } from "@connectome/engine";
-import { LEVEL_PROPERTY, type Id, type PropertyType } from "@connectome/model";
+import { ABSTRACTION_PROPERTY, type Id, type PropertyType } from "@connectome/model";
 import { byName } from "./text";
 
 /** At most this many property columns, so the list stays readable. */
@@ -33,7 +33,7 @@ export function objectsUnder(state: ModelState, folderId: Id, deep: boolean): Vi
 }
 
 /**
- * The property columns: those every shown object's type carries (so each cell can hold a value), the level first
+ * The property columns: those every shown object's type carries (so each cell can hold a value), the abstraction first
  * and then in the order of the first type's properties, calculated values left out.
  */
 export function viewerColumns(metamodel: Metamodel, types: Iterable<string>): PropertyType[] {
@@ -41,7 +41,7 @@ export function viewerColumns(metamodel: Metamodel, types: Iterable<string>): Pr
   if (carried.length === 0) return [];
   const [first, ...rest] = carried;
   return [...first!]
-    .sort((a, b) => Number(b === LEVEL_PROPERTY) - Number(a === LEVEL_PROPERTY))
+    .sort((a, b) => Number(b === ABSTRACTION_PROPERTY) - Number(a === ABSTRACTION_PROPERTY))
     .filter((key) => rest.every((p) => p.has(key)))
     .map((key) => metamodel.propertyType(key))
     .filter((pt): pt is PropertyType => !!pt && pt.dataType !== "calculated")

@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from "react";
 import type { ModelState, ObjectRow, Metamodel, RelationshipRow } from "@connectome/engine";
 import { ulid } from "@connectome/model";
-import { trace, traceByLevel, type TraceDirection, type TraceKind } from "@connectome/semantics";
+import { trace, traceByAbstraction, type TraceDirection, type TraceKind } from "@connectome/semantics";
 import { useModel, useWorkbench } from "../state/workbench";
 import { messagesOf, payloadText, type RelationshipGroup } from "../semantics";
 import {
@@ -252,8 +252,8 @@ function ReachView(props: ViewProps & { kind: "flow" | "dependency"; depth: numb
 
 /** The traces offered for an object (semantics.md §9.3), in the words of the framework's questions. */
 const TRACES: { key: string; label: string; kind: TraceKind; direction: TraceDirection; contents?: boolean }[] = [
-  { key: "down", label: "Implementations (down the levels)", kind: "levels", direction: "forward" },
-  { key: "up", label: "What this implements (up the levels)", kind: "levels", direction: "backward" },
+  { key: "down", label: "Implementations (down the abstractions)", kind: "abstraction", direction: "forward" },
+  { key: "up", label: "What this implements (up the abstractions)", kind: "abstraction", direction: "backward" },
   { key: "downstream", label: "Downstream", kind: "flow", direction: "forward", contents: true },
   { key: "upstream", label: "Upstream", kind: "flow", direction: "backward", contents: true },
   { key: "receivers", label: "Who receives this information", kind: "payload", direction: "forward" },
@@ -262,7 +262,7 @@ const TRACES: { key: string; label: string; kind: TraceKind; direction: TraceDir
   { key: "usedBy", label: "What depends on this", kind: "dependency", direction: "backward" },
 ];
 
-/** Trace ▸: follows relationships by meaning, lays the result out by level and highlights it on diagrams. */
+/** Trace ▸: follows relationships by meaning, lays the result out by abstraction and highlights it on diagrams. */
 function TraceView({ object, state, metamodel }: ViewProps) {
   const select = useWorkbench((s) => s.select);
   const current = useWorkbench((s) => s.trace);
@@ -275,9 +275,9 @@ function TraceView({ object, state, metamodel }: ViewProps) {
   const result = option
     ? trace(state, metamodel, object.id, option.kind, option.direction, { contents: option.contents ?? false })
     : undefined;
-  const levels = metamodel.valueList("semanticLevel");
-  const levelName = (level: string | null) =>
-    level ? (levels?.values.find((v) => v.key === level)?.label ?? level) : "No level";
+  const abstractions = metamodel.valueList("semanticAbstraction");
+  const abstractionName = (abstraction: string | null) =>
+    abstraction ? (abstractions?.values.find((v) => v.key === abstraction)?.label ?? abstraction) : "No abstraction";
   const choose = (key: string) => {
     setChosen(key);
     const next = TRACES.find((t) => t.key === key);
@@ -302,9 +302,13 @@ function TraceView({ object, state, metamodel }: ViewProps) {
       <div className="rel-list">
         {result && result.steps.length === 0 && <p className="muted">Nothing found.</p>}
         {result &&
-          traceByLevel(state, metamodel, result).map((column) => (
-            <div key={column.level ?? "none"} className="trace-level" data-level={column.level ?? "none"}>
-              <h4>{levelName(column.level)}</h4>
+          traceByAbstraction(state, metamodel, result).map((column) => (
+            <div
+              key={column.abstraction ?? "none"}
+              className="trace-column"
+              data-abstraction={column.abstraction ?? "none"}
+            >
+              <h4>{abstractionName(column.abstraction)}</h4>
               <ul className="plain">
                 {column.objectIds.map((id) => (
                   <li key={id}>

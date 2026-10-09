@@ -56,7 +56,7 @@ Extend the object type's `uniqueName` into an **identity policy**. Existing valu
 |---|---|---|---|
 | `uniqueName` | `none`, `folder`, `container`, `repository` | `none` | **New: `container`**: unique among objects with the same container (process steps within a process, attributes within a class). Fits Sem-2, where containment is the structure |
 | `uniqueAcross` | `type`, `family` | `type` | `family` = this type, its parents, its subtypes and its siblings under the same parent. *Salesforce* the `application` and *Salesforce* the `saasApplication` clash. Revisits B8, which stays the default |
-| `uniquePerLevel` | boolean | `true` | Names only clash within one semantic level, so *Payment* (conceptual) and *Payment* (logical) are not duplicates (`semantics.md §4`) |
+| `uniquePerAbstraction` | boolean | `true` | Names only clash within one semantic abstraction, so *Payment* (conceptual) and *Payment* (logical) are not duplicates (`semantics.md §4`) |
 | `onClash` | `block`, `warn` | `block` | `warn` saves and raises a finding. `block` is today's behaviour |
 | `matchOn` *(proposed, D-5)* | property keys | `[]` | Extra identifying properties for detection and import matching, e.g. `server: [hostname]`, `application: [vendor, product]`. Like ServiceNow's identification rules, ranked |
 
@@ -66,7 +66,7 @@ Every field is inherited through `extends`. `container` scope only applies insid
 
 | Kind of type | Policy | Why |
 |---|---|---|
-| Reference things: Capability, Application, Organisation unit, Data object, Technology, Location | `repository`, `family`, per level, `block` | One thing, many views. A second copy is almost always a mistake |
+| Reference things: Capability, Application, Organisation unit, Data object, Technology, Location | `repository`, `family`, per abstraction, `block` | One thing, many views. A second copy is almost always a mistake |
 | Structural parts: Process step, Attribute, Operation, Message | `container` | *Validate* can exist in every process; twice in one process is a mistake |
 | Narrative items: Requirement, Risk, Note, Decision, Principle | `none`, detection only | Similar wording is normal; flag, never refuse |
 | Groups | `folder` | |
@@ -117,7 +117,7 @@ A pure matcher module (no I/O, so it can live beside the engine and run in the b
 
 **Normalise** a name: Unicode NFKC, case-fold, strip accents and punctuation, collapse spaces, drop a configurable list of noise words per type (`ltd`, `inc`, `system`, `application`, `app`, `the`).
 
-**Blocking** (what gets compared at all): the same type family and the same level; plus anything sharing a key, external id or `matchOn` value. Keeps it fast at 100k objects.
+**Blocking** (what gets compared at all): the same type family and the same abstraction; plus anything sharing a key, external id or `matchOn` value. Keeps it fast at 100k objects.
 
 **Signals**, each giving a score and a sentence for the explanation:
 
@@ -141,7 +141,7 @@ A pure matcher module (no I/O, so it can live beside the engine and run in the b
 
 **As built in slice D-3** (B54):
 - `possibleDuplicates(state, metamodel, { objectId?, minScore = 0.75 })` in the engine. It runs where the model is loaded, which today is the browser, so the report is current after every change. The server-side `pg_trgm` pass waits until a repository outgrows it: 20,000 objects take about 2.5 s for the whole report and under 0.1 s for one object.
-- **Blocking**: only related types (`kinshipOf` is *same* or *family*) at the same semantic level are compared, and only pairs that share a name key or a neighbour. Name keys are each word's first four letters, the initials and the sorted word set. A bucket of more than 300 objects is skipped, because a word or hub that common says nothing.
+- **Blocking**: only related types (`kinshipOf` is *same* or *family*) at the same semantic abstraction are compared, and only pairs that share a name key or a neighbour. Name keys are each word's first four letters, the initials and the sorted word set. A bucket of more than 300 objects is skipped, because a word or hub that common says nothing.
 - **Score**: `1 − (1 − name) × (1 − 0.8 × overlap)`.
   - *name* is the best `nameSimilarity` over both objects' names and other names. One name starting the other earns nothing here, unlike in the add box.
   - *overlap* is the Jaccard share of neighbours in common, where a neighbour is a relationship type, a direction and the other end. It needs two shared neighbours to count and counts in full from four.
@@ -157,7 +157,7 @@ A pure matcher module (no I/O, so it can live beside the engine and run in the b
 
 Opened from a finding, from multi-select *Compare*, or from the add box's "already exists".
 
-- **Side by side**: name, key, type, level, folder, container, every property (differences highlighted), tags, external ids, description.
+- **Side by side**: name, key, type, abstraction, folder, container, every property (differences highlighted), tags, external ids, description.
 - **Relationships**: the union, grouped by kind, each row marked *both*, *only A*, *only B*. Overlap is the strongest evidence.
 - **Where used**: diagrams and catalogues each appears on, open change requests and scenarios that touch it, last edited by whom.
 - **A small graph** of both and their neighbours.
@@ -200,7 +200,7 @@ A client-side `mergePlan(state, metamodel, survivorId, mergedIds, choices)` buil
 | Slice | What | Size |
 |---|---|---|
 | **D-1 Find or create** | ✅ Built: name normaliser and matcher (`packages/engine/src/similar.ts`); the find-or-create box on the canvas and in the explorer, exact-match reuse; external-id uniqueness in the engine. Still to do: the payload picker and document mentions | S–M |
-| **D-2 Type policy** | ✅ Built: `container` scope, `uniqueAcross: family`, `uniquePerLevel`, `onClash`; relationship `distinct` with kind-based defaults; *Duplicates* in the metamodel type panel; findings shown in toasts; Essentials 1.5.0. Not yet: `matchOn` | M |
+| **D-2 Type policy** | ✅ Built: `container` scope, `uniqueAcross: family`, `uniquePerAbstraction`, `onClash`; relationship `distinct` with kind-based defaults; *Duplicates* in the metamodel type panel; findings shown in toasts; Essentials 1.5.0. Not yet: `matchOn` | M |
 | **D-3 Possible duplicates** | ✅ Built: `possibleDuplicates` (`packages/engine/src/duplicates.ts`) with scores and reasons and the shared-neighbour signal; the *Possible duplicates* tab and properties section; *not duplicates* judgements stored on both objects; `aliases` (*Also known as*) with `setAliases` and `setNotDuplicates`. Not yet: noise words per type, `matchOn`, the server-side pass | M |
 | **D-4 Compare and merge** | Compare view; `mergePlan`; new edits (`retargetObjectOccurrence`, `setExternalIds`, `addRedirect`; `setAliases` exists from D-3); redirects table; inverse tests; API endpoints | L |
 | **D-5 Import matching** | Match order and probable-match preview in import | M |
@@ -213,7 +213,7 @@ A client-side `mergePlan(state, metamodel, survivorId, mergedIds, choices)` buil
 | # | Question | Recommendation |
 |---|---|---|
 | 1 | Should name clashes across a type family (`application` vs `saasApplication`) count? This revisits B8 | Yes for detection always; for blocking, opt-in per type (`uniqueAcross: family`), on for Applications in Essentials |
-| 2 | Should a name be allowed to repeat across levels? | Yes (already implied by `semantics.md §4`); `uniquePerLevel` defaults on |
+| 2 | Should a name be allowed to repeat across abstractions? | Yes (already implied by `semantics.md §4`); `uniquePerAbstraction` defaults on |
 | 3 | Default for an exact clash on a "reference" type: refuse or warn? | Refuse (today's behaviour), with the add box offering the existing one, so refusing is never a dead end |
 | 4 | Keep merged objects as redirects forever? | Yes. They are tiny and every old link keeps working |
 | 5 | Auto-merge on import when key or external id matches? | That's an update, not a merge, so yes. Fuzzy matches: never automatic |

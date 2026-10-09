@@ -278,7 +278,7 @@ function TypesView(props: {
                 <th>Type</th>
                 <th>Key</th>
                 <th>Category</th>
-                <th>Level</th>
+                <th>Abstraction</th>
                 <th className="num">Properties</th>
                 <th className="num">Objects</th>
               </tr>
@@ -297,7 +297,7 @@ function TypesView(props: {
                     </td>
                     <td className="muted mono">{t.definition.key}</td>
                     <td>{t.category}</td>
-                    <td>{t.level ?? <span className="muted">—</span>}</td>
+                    <td>{t.abstraction ?? <span className="muted">—</span>}</td>
                     <td className="num">{t.properties.size}</td>
                     <td className="num">{objectsByType.get(t.definition.key) ?? 0}</td>
                   </tr>

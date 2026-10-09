@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { essentials, insuranceGroup } from "@connectome/content";
 import { applyChange, Metamodel, ModelState } from "@connectome/engine";
 import type { Edit } from "@connectome/model";
-import { trace, traceByLevel, type Trace } from "../src";
+import { trace, traceByAbstraction, type Trace } from "../src";
 
 const metamodel = Metamodel.compile(essentials.metamodel, essentials.diagramTypes);
 const context = {
@@ -22,7 +22,7 @@ const run = (edits: Edit[]) => {
   if (!result.ok) throw new Error(JSON.stringify(result.reasons));
 };
 run(insuranceGroup.baselineChange().edits);
-const level = (l: string) => ({ "semantic.level": l });
+const abstraction = (l: string) => ({ "semantic.abstraction": l });
 run([
   // Payment Information and its representation chain (§6).
   {
@@ -31,7 +31,7 @@ run([
     type: "dataObject",
     name: "Payment Information",
     folderId: "F04",
-    properties: level("conceptual"),
+    properties: abstraction("conceptual"),
   },
   {
     edit: "createObject",
@@ -39,7 +39,7 @@ run([
     type: "dataObject",
     name: "Payment Logical Model",
     folderId: "F04",
-    properties: level("logical"),
+    properties: abstraction("logical"),
   },
   {
     edit: "createObject",
@@ -47,7 +47,7 @@ run([
     type: "dataObject",
     name: "Payment JSON",
     folderId: "F04",
-    properties: level("physical"),
+    properties: abstraction("physical"),
   },
   {
     edit: "createObject",
@@ -55,7 +55,7 @@ run([
     type: "dataObject",
     name: "Payment DB Record",
     folderId: "F04",
-    properties: level("physical"),
+    properties: abstraction("physical"),
   },
   { edit: "createRelationship", id: "X-1", type: "represents", sourceId: "D-PLM", targetId: "D-PI" },
   { edit: "createRelationship", id: "X-2", type: "represents", sourceId: "D-JSON", targetId: "D-PLM" },
@@ -69,9 +69,9 @@ run([
     type: "service",
     name: "Payment Service",
     folderId: "F04",
-    properties: level("logical"),
+    properties: abstraction("logical"),
   },
-  { edit: "setProperties", id: "O-INT-2", baseVersion: 1, set: level("physical") },
+  { edit: "setProperties", id: "O-INT-2", baseVersion: 1, set: abstraction("physical") },
   { edit: "createRelationship", id: "X-4", type: "realizes", sourceId: "O-INT-2", targetId: "S-PAY" },
   { edit: "createRelationship", id: "X-6", type: "serves", sourceId: "S-PAY", targetId: "O-PRC-1" },
 ]);
@@ -98,21 +98,21 @@ describe("traces (semantics.md §9.3)", () => {
     expect(names(trace(state, metamodel, "D-PI", "payload", "backward"))).toEqual(["Claims Manager"]);
   });
 
-  it("what physical interfaces implement this logical service? (down the levels, in columns)", () => {
-    const down = trace(state, metamodel, "S-PAY", "levels", "forward");
-    expect(traceByLevel(state, metamodel, down).map((c) => [c.level, c.objectIds])).toEqual([
+  it("what physical interfaces implement this logical service? (down the abstractions, in columns)", () => {
+    const down = trace(state, metamodel, "S-PAY", "abstraction", "forward");
+    expect(traceByAbstraction(state, metamodel, down).map((c) => [c.abstraction, c.objectIds])).toEqual([
       ["physical", ["O-INT-2"]],
       ["implementation", ["O-APP-3"]],
     ]);
   });
 
   it("traces information to its representations and back", () => {
-    expect(names(trace(state, metamodel, "D-PI", "levels", "forward"))).toEqual([
+    expect(names(trace(state, metamodel, "D-PI", "abstraction", "forward"))).toEqual([
       "Payment Logical Model",
       "Payment JSON",
       "Payment DB Record",
     ]);
-    expect(names(trace(state, metamodel, "D-JSON", "levels", "backward"))).toEqual([
+    expect(names(trace(state, metamodel, "D-JSON", "abstraction", "backward"))).toEqual([
       "Payment Logical Model",
       "Payment Information",
     ]);
@@ -172,7 +172,7 @@ describe("traces (semantics.md §9.3)", () => {
       },
       { ...context, metamodel: mm },
     );
-    expect(trace(local, mm, "A", "levels", "forward").steps.map((s) => s.objectId)).toEqual(["C"]);
-    expect(trace(local, mm, "C", "levels", "backward").steps.map((s) => s.objectId)).toEqual(["A"]);
+    expect(trace(local, mm, "A", "abstraction", "forward").steps.map((s) => s.objectId)).toEqual(["C"]);
+    expect(trace(local, mm, "C", "abstraction", "backward").steps.map((s) => s.objectId)).toEqual(["A"]);
   });
 });

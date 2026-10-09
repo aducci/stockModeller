@@ -1498,7 +1498,7 @@ svg.glyph {
 .trace select {
   width: 100%;
 }
-.trace-level h4 {
+.trace-column h4 {
   margin: 8px 0 2px;
   font-size: 11px;
   font-weight: 600;

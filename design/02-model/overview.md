@@ -51,7 +51,7 @@ flowchart LR
 | **Nesting relationship** | A relationship whose type is marked *nesting* (e.g. *contains*, *composed of*). It forms hierarchies, and on diagrams it can be shown by placing one symbol inside another |
 | **Semantic kind** | What the engine understands a relationship type to mean: one of 14 built-in kinds (containment, composition, flow, realisation, interaction…). Custom types keep their names and map onto a kind ([semantics](semantics.md)) |
 | **Containment** | The semantic kind that is the repository's structure: an object has at most one container and lives in its container's folder. Distinct from **composition** (an intrinsic part) |
-| **Category, level** | What kind of thing an object type is (service, information, component…), and how concrete an object is (conceptual, logical, physical, implementation) |
+| **Category, abstraction** | What kind of thing an object type is (service, information, component…), and how concrete an object is (conceptual, logical, physical, implementation) |
 | **Payload** | The objects a flow carries, e.g. *Payment Information* |
 | **Interaction** | A communication exchange between two objects; its request and response **messages** are flows inside it |
 | **Property type** | A kind of value, e.g. Owner (person), Status (list), Run cost (money) |

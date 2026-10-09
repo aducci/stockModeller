@@ -4,7 +4,7 @@ import { containerOf, nameClash, type Metamodel, type ModelState } from "@connec
 import type { ObjectType, RelationshipType, TypeKey } from "@connectome/model";
 import type { Draft } from "./property-admin";
 
-export type ObjectIdentityField = "uniqueName" | "uniqueAcross" | "uniquePerLevel" | "onClash";
+export type ObjectIdentityField = "uniqueName" | "uniqueAcross" | "uniquePerAbstraction" | "onClash";
 export type IdentityField = ObjectIdentityField | "distinct";
 
 export const UNIQUE_NAME_LABEL: Record<NonNullable<ObjectType["uniqueName"]>, string> = {
@@ -75,7 +75,7 @@ export function objectIdentityWords(metamodel: Metamodel, type: TypeKey): string
   return [
     UNIQUE_NAME_LABEL[t.uniqueName],
     t.uniqueAcross === "family" ? "with related types" : null,
-    t.uniquePerLevel ? null : "across levels",
+    t.uniquePerAbstraction ? null : "across abstractions",
     t.onClash === "warn" ? "warned" : "refused",
   ]
     .filter(Boolean)
@@ -94,7 +94,7 @@ export function existingRepeats(state: ModelState, metamodel: Metamodel, type: T
       name: o.name,
       folderId: o.folderId,
       containerId: containerOf(state, metamodel, o.id),
-      level: metamodel.objectLevel(o),
+      abstraction: metamodel.objectAbstraction(o),
       selfId: o.id,
     });
     if (clash) count++;

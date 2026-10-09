@@ -247,7 +247,7 @@
       "plural": "Capabilities",
       "layer": "strategy",
       "category": "capability",
-      "level": "conceptual",
+      "abstraction": "conceptual",
       "uniqueName": "folder",
       "defaultFolder": "Business/Capabilities",
       "properties": ["assessment.criticality", "cost.totalCost", "cost.applicationCount"],
@@ -263,7 +263,7 @@
       "plural": "Processes",
       "layer": "business",
       "category": "behaviour",
-      "level": "conceptual",
+      "abstraction": "conceptual",
       "defaultFolder": "Business/Processes",
       "properties": ["ownership.businessOwner", "lifecycle.status"],
       "symbol": {
@@ -277,7 +277,7 @@
       "name": "Process step",
       "layer": "business",
       "category": "behaviour",
-      "level": "logical",
+      "abstraction": "logical",
       "uniqueName": "container",
       "defaultFolder": "Business/Processes",
       "symbol": {
@@ -292,7 +292,7 @@
       "plural": "Services",
       "layer": "business",
       "category": "service",
-      "level": "conceptual",
+      "abstraction": "conceptual",
       "defaultFolder": "Business/Services",
       "properties": ["lifecycle.status", "ownership.businessOwner"],
       "symbol": {
@@ -320,7 +320,7 @@
       "abstract": true,
       "layer": "application",
       "category": "component",
-      "level": "implementation",
+      "abstraction": "implementation",
       "uniqueName": "repository",
       "uniqueAcross": "family",
       "properties": [
@@ -394,7 +394,7 @@
       "plural": "Interfaces",
       "layer": "application",
       "category": "interface",
-      "level": "logical",
+      "abstraction": "logical",
       "defaultFolder": "Applications/Interfaces",
       "properties": ["lifecycle.status", "ownership.technicalOwner"],
       "symbol": {
@@ -409,7 +409,7 @@
       "name": "Data object",
       "layer": "data",
       "category": "information",
-      "level": "logical",
+      "abstraction": "logical",
       "uniqueName": "repository",
       "onClash": "warn",
       "defaultFolder": "Data",
@@ -423,7 +423,7 @@
       "name": "Server",
       "layer": "technology",
       "category": "technology",
-      "level": "implementation",
+      "abstraction": "implementation",
       "defaultFolder": "Technology/Servers",
       "properties": ["lifecycle.status", "cost.runCost"],
       "symbol": {

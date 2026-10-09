@@ -78,8 +78,8 @@ describe("uniqueAcross: family", () => {
   });
 });
 
-describe("uniquePerLevel", () => {
-  it("allows the same name at another level, and checks a change of level", () => {
+describe("uniquePerAbstraction", () => {
+  it("allows the same name at another abstraction, and checks a change of abstraction", () => {
     const state = exampleState();
     applyOk(state, [
       {
@@ -88,13 +88,13 @@ describe("uniquePerLevel", () => {
         type: "application",
         name: "Claims Manager",
         folderId: "F04",
-        properties: { "semantic.level": "logical" },
+        properties: { "semantic.abstraction": "logical" },
       },
     ]);
     const n1 = state.objects.get("N1")!;
     expect(
       rejection(state, [
-        { edit: "setProperties", id: "N1", baseVersion: n1.version, set: { "semantic.level": "implementation" } },
+        { edit: "setProperties", id: "N1", baseVersion: n1.version, set: { "semantic.abstraction": "implementation" } },
       ]),
     ).toMatchObject({ property: "name" });
   });
@@ -120,12 +120,18 @@ describe("onClash: warn", () => {
 describe("nameClash", () => {
   it("answers for an object about to be created", () => {
     const state = exampleState();
-    const place = { type: "application", folderId: "F04", containerId: null, level: "implementation", selfId: null };
+    const place = {
+      type: "application",
+      folderId: "F04",
+      containerId: null,
+      abstraction: "implementation",
+      selfId: null,
+    };
     expect(nameClash(state, metamodel, { ...place, name: " claims MANAGER " })).toMatchObject({
       enforcement: "block",
       object: { id: "O-APP-1" },
     });
-    expect(nameClash(state, metamodel, { ...place, name: "Claims Manager", level: "logical" })).toBeNull();
+    expect(nameClash(state, metamodel, { ...place, name: "Claims Manager", abstraction: "logical" })).toBeNull();
     expect(nameClash(state, metamodel, { ...place, name: "Fraud Check" })).toBeNull();
   });
 });

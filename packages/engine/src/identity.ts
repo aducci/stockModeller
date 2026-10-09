@@ -16,8 +16,8 @@ export interface NamedPlace {
   folderId: Id;
   /** The object that contains it, if any (for `uniqueName: container`). */
   containerId: Id | null;
-  /** Its semantic level (for `uniquePerLevel`). */
-  level: string | undefined;
+  /** Its abstraction (for `uniquePerAbstraction`). */
+  abstraction: string | undefined;
   /** The object itself, so it never clashes with its own name. */
   selfId: Id | null;
 }
@@ -51,7 +51,7 @@ export function nameClash(state: ModelState, metamodel: Metamodel, place: NamedP
     (o) =>
       o.id !== place.selfId &&
       sameName(o.name, place.name) &&
-      (!policy.uniquePerLevel || metamodel.objectLevel(o) === place.level) &&
+      (!policy.uniquePerAbstraction || metamodel.objectAbstraction(o) === place.abstraction) &&
       (policy.uniqueName === "repository" ||
         (policy.uniqueName === "folder" && o.folderId === place.folderId) ||
         (policy.uniqueName === "container" && containerOf(state, metamodel, o.id) === place.containerId)),

@@ -13,13 +13,13 @@ Status: **accepted** (see [ADR-010](../06-decisions/ADR-010-semantic-base-types.
 | **Terminology** | The repository's metamodel (users, packages) | *Calls*, *Publishes*, *Implements*, *Payment Service* | Names, verbs, symbols, rules, properties |
 | **Semantics** | Connectome itself (a fixed, small vocabulary) | *interaction*, *flow*, *realisation*, *service* | Explorer structure, nesting, moves, deletes, tracing, impact, validation |
 
-Every relationship type maps to one **semantic kind**. Every object type may map to one **semantic category** and a default **semantic level**. Custom types keep their own words; behaviour comes from the mapping.
+Every relationship type maps to one **semantic kind**. Every object type may map to one **semantic category** and a default **semantic abstraction** (called *level* before decision B62). Custom types keep their own words; behaviour comes from the mapping.
 
 ```text
 Relationship type "Calls"       → kind: interaction
 Relationship type "Publishes"   → kind: flow
 Relationship type "Implements"  → kind: realisation
-Object type "Payment Service"   → category: service, level: conceptual
+Object type "Payment Service"   → category: service, abstraction: conceptual
 ```
 
 ## 2. Semantic kinds (relationship types)
@@ -101,7 +101,7 @@ Composition and aggregation **do not** place anything in the explorer's structur
 
 The Essentials `contains` type becomes `containment`. Every Essentials nesting rule (capability in capability, process step in process, server in location…) is therefore structural: a server placed in a location lives in that location's folder.
 
-## 4. Semantic categories and levels (object types and objects)
+## 4. Semantic categories and abstractions (object types and objects)
 
 ### 4.1 Categories
 
@@ -112,7 +112,7 @@ A category says what kind of thing an object type is, so the engine can check ki
 | `actor` | People, roles, organisation units | Organisation unit |
 | `capability` | Abilities of the organisation | Capability |
 | `behaviour` | Processes, functions, steps, events | Process, Process step |
-| `service` | Behaviour offered to others, at any level | Service *(new, §10)* |
+| `service` | Behaviour offered to others, at any abstraction | Service *(new, §10)* |
 | `interface` | Access points: APIs, endpoints, operations, UIs | Interface *(new, §10)* |
 | `component` | Systems doing the work: applications, components | Application (any) |
 | `information` | Information, data, messages, representations | Data object |
@@ -123,18 +123,19 @@ A category says what kind of thing an object type is, so the engine can check ki
 
 `category` is a field on the object type and is inherited through `extends`.
 
-### 4.2 Levels
+### 4.2 Abstractions
 
-| Level | Meaning | Example |
+| Abstraction | Meaning | Example |
 |---|---|---|
 | `conceptual` | What, in business terms | Payment Service, Payment Information |
 | `logical` | How, independent of technology | Payment API, Payment Logical Model |
 | `physical` | Concrete technical form | `GET /orders/{id}`, Payment JSON |
 | `implementation` | Deployed, running thing | Orders Service, Payment DB Record |
 
-- The level is a property of the object: the system property type `semantic.level` (a list property, §4.3). Names do not need to be unique across levels: *Payment* can exist at every level.
-- An object type sets a default with `level`, and can fix it with `levelFixed: true` (the property then cannot be changed on its objects). Default for open question S2: types give a default, objects may override.
-- Levels order the trace view (§9.3) and feed the level checks (§8). They are metadata, not layers: nothing is refused because of a level.
+- The abstraction is a property of the object: the system property type `semantic.abstraction` (a list property, §4.3). Names do not need to be unique across abstractions: *Payment* can exist at every abstraction.
+- It was called *level* until decision B62, which renamed it everywhere so that *level* stays free for a custom property. Stored objects, types and exported metamodel files were migrated or are read with the old names.
+- An object type sets a default with `abstraction`, and can fix it with `abstractionFixed: true` (the property then cannot be changed on its objects). Default for open question S2: types give a default, objects may override.
+- Abstractions order the trace view (§9.3) and feed the abstraction checks (§8). They are metadata, not layers: nothing is refused because of an abstraction.
 
 ### 4.3 The core package
 
@@ -142,14 +143,14 @@ Semantic behaviour needs a few standard properties. They come from a **core pack
 
 | Property type | Data type | On | Values |
 |---|---|---|---|
-| `semantic.level` | list | objects | conceptual, logical, physical, implementation |
+| `semantic.abstraction` | list | objects | conceptual, logical, physical, implementation |
 | `access.mode` | list | `access` relationships | read, write, readWrite |
 | `influence.effect` | list | `influence` relationships | positive, negative, neutral |
 | `interaction.pattern` | list | `interaction` relationships | synchronous, asynchronous, fireAndForget |
 | `interaction.protocol` | text | `interaction` relationships | REST, gRPC, SOAP, AMQP… |
 | `interaction.operation` | text | `interaction` relationships | `GET /orders/{id}` |
 
-The engine assigns them to the types of the matching kind (and `semantic.level` to every object type), so packages do not have to list them. They are ordinary properties: catalogues, queries, colour rules and the properties panel use them unchanged.
+The engine assigns them to the types of the matching kind (and `semantic.abstraction` to every object type), so packages do not have to list them. They are ordinary properties: catalogues, queries, colour rules and the properties panel use them unchanged.
 
 ## 5. Relationships carry meaning: payloads
 
@@ -261,17 +262,17 @@ See [diagram editor §8](../04-ux/diagram-editor.md#8-semantic-gestures). In sho
 
 | Trace | Follows | Example question |
 |---|---|---|
-| **Down the levels** | realisation and representation, toward the more concrete | *What physical interfaces implement this logical service?* |
-| **Up the levels** | the same, toward the more abstract | *What does this API implement?* |
+| **Down the abstractions** | realisation and representation, toward the more concrete | *What physical interfaces implement this logical service?* |
+| **Up the abstractions** | the same, toward the more abstract | *What does this API implement?* |
 | **Downstream / upstream** | flow and interaction messages, directed; optionally across containment (a container's flows include its contents') | *What flows into this application?* |
 | **Payload** | flows whose payload is X, or a representation or realisation of X | *What systems consume this information?* · *What flows are affected if this information changes?* |
 | **Dependency** | serving, access, and flow/interaction toward providers | *What does this depend on?* · *What uses this service?* |
 
-The trace view lays results out in columns by level (conceptual → logical → physical → implementation), and the same chains reverse. Impact analysis ([rules and calculations §5](rules-and-calculations.md#5-impact-analysis)) gets these traces as presets.
+The trace view lays results out in columns by abstraction (conceptual → logical → physical → implementation), and the same chains reverse. Impact analysis ([rules and calculations §5](rules-and-calculations.md#5-impact-analysis)) gets these traces as presets.
 
 ### 9.4 Queries
 
-The [query language](../03-platform/queries.md#5-semantic-paths) gains paths by kind (`-@flow->`, `<-@realisation-`), relationship filters in paths (`-@access[access.mode = write]->`, `<-@flow[payload: id:01J…]-`) and the filters `category:` and `level:`. Paths by kind work for any custom type mapped to that kind, so rules and catalogues written against kinds keep working when a repository renames its types.
+The [query language](../03-platform/queries.md#5-semantic-paths) gains paths by kind (`-@flow->`, `<-@realisation-`), relationship filters in paths (`-@access[access.mode = write]->`, `<-@flow[payload: id:01J…]-`) and the filters `category:` and `abstraction:`. Paths by kind work for any custom type mapped to that kind, so rules and catalogues written against kinds keep working when a repository renames its types.
 
 ## 10. Essentials 1.1.0
 
@@ -292,8 +293,8 @@ The kinds Essentials would map, and the types it would add so the framework's ex
 | *new* `calls` | interaction | Application or interface → interface |
 | *new* `triggers` | trigger | Process → process, step → step |
 | *new* `specialises` | specialisation | `*` → same type |
-| *new* object type `service` | category service | Default level conceptual |
-| *new* object type `interface` | category interface | Default level logical |
+| *new* object type `service` | category service | Default abstraction conceptual |
+| *new* object type `interface` | category interface | Default abstraction logical |
 | `flowsTo` rules | | Also application ↔ interface and interface → interface, so an interaction's messages can run both ways. The application landscape diagram type shows interfaces and `calls` |
 
 Exchange mappings can fall back on kinds: an ArchiMate *Composition*, *Aggregation*, *Triggering*, *Influence* or *Specialization* with no type mapping is imported with the package's type of that kind (the first in package order). ArchiMate has no containment relationship; its nested elements in views import as containment only when a nesting rule allows the pair, otherwise as composition.
@@ -302,11 +303,11 @@ Exchange mappings can fall back on kinds: an ArchiMate *Composition*, *Aggregati
 
 | Area | Change |
 |---|---|
-| `05-structures` / `packages/model` | `SemanticKind`, `SemanticCategory`, `SemanticLevel`; relationship-type fields (§2.2); object-type `category`, `level`, `levelFixed`; relationship `payload`, `parentId`, `rank`; the edits below |
+| `05-structures` / `packages/model` | `SemanticKind`, `SemanticCategory`, `SemanticAbstraction`; relationship-type fields (§2.2); object-type `category`, `abstraction`, `abstractionFixed`; relationship `payload`, `parentId`, `rank`; the edits below |
 | Edits ([changes.ts](../05-structures/changes.ts)) | New `changeRelationshipType { id, baseVersion, type, propertyMap?, set? }` (`set` restores values the change dropped, so its inverse is exact) (like `changeObjectType`; the explorer and diagrams change a connector's type with it). New `setPayload { id, baseVersion, payload }`. `createRelationship` gains `payload?`, `parentId?`, `rank?`. `deleteObject` gains `contents?`. `moveToFolder` gains `rank?` (from the explorer slice) and is refused for a contained object moving folders |
 | `packages/engine` | Kind-aware rule 5 (§2, §3); folder-follows-container cascades; interaction cascades; payload clean-up on delete; containment-aware delete; core package always installed. Every cascade records exact inverses (the inverse property test covers the new edits) |
-| `packages/semantics` *(new, pure)* | Kind lookup with direction normalised, traces (`levels`, `flow`, `payload`, `dependency`). Depends on `model` and `engine` (it reads the engine's rows and compiled metamodel; both are pure) |
-| `packages/db` | Migration: `relationship_type.semantic`; `relationship.payload text[]` with a GIN index, `relationship.parent_id` with an index, `relationship.rank`; object-type `category`/`level` in `definition` |
+| `packages/semantics` *(new, pure)* | Kind lookup with direction normalised, traces (`abstraction`, `flow`, `payload`, `dependency`). Depends on `model` and `engine` (it reads the engine's rows and compiled metamodel; both are pure) |
+| `packages/db` | Migration: `relationship_type.semantic`; `relationship.payload text[]` with a GIN index, `relationship.parent_id` with an index, `relationship.rank`; object-type `category`/`abstraction` in `definition` |
 | `apps/server` | Relationship fields in reads and the snapshot; `GET …/objects/{id}/trace?kind=…&direction=…&depth=` ; everything added to `openapi.yaml` |
 | `apps/web` | Explorer structure and semantic groups; drag-and-drop containment; properties panel grouped by kind, payload picker, messages; diagram gestures in §9.2 |
 
@@ -314,7 +315,7 @@ Slices, after the explorer slice and before or alongside M1's metamodel stream:
 
 | Slice | Scope | Done when |
 |---|---|---|
-| **Sem-1 Semantic metamodel** | Kinds, categories, levels, the core package, Essentials 1.1.0, metamodel checks; properties panel groups relationships by kind | Essentials loads with every type classified; the panel shows *Implementations*, *Consumers*… for Claims Manager |
+| **Sem-1 Semantic metamodel** | Kinds, categories, abstractions, the core package, Essentials 1.1.0, metamodel checks; properties panel groups relationships by kind | Essentials loads with every type classified; the panel shows *Implementations*, *Consumers*… for Claims Manager |
 | **Sem-2 Containment** | One container, folder follows container, re-parenting, containment-aware delete, `changeRelationshipType`; explorer shows contents and accepts drops onto objects; drawing a containment line nests on diagrams | Playwright: drag an object onto another in the explorer, it shows inside it in both browsers and on a diagram; delete the container keeping its contents; undo each |
 | **Sem-3 Flows and interactions** | Payloads, interactions and messages, parallel lines, the payload picker | An interaction with a request and a response is created on a diagram, both messages carry payloads, and deleting the interaction is undone in one step |
 | **Sem-4 Navigation and trace** | `packages/semantics` traces, explorer semantic groups, Trace ▸, trace endpoint, query paths by kind (with M1's parser) | The framework's examples (§6 and §14 there) answer correctly in a test fixture |

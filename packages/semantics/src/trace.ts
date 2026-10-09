@@ -1,9 +1,9 @@
 // Traces (design/02-model/semantics.md §9.3): follow relationships by what they mean, whatever the types are called.
 import type { Metamodel, ModelState, RelationshipRow } from "@connectome/engine";
-import type { Id, SemanticKind, SemanticLevel } from "@connectome/model";
+import type { Id, SemanticKind, SemanticAbstraction } from "@connectome/model";
 
 /**
- * - `levels`: realisation and representation. Forward goes down the levels (what implements or represents this),
+ * - `abstraction`: realisation and representation. Forward goes down the abstractions (what implements or represents this),
  *   backward up (what this implements or represents).
  * - `flow`: flows, interaction messages included. Forward is downstream, backward upstream.
  * - `payload`: flows that carry this object, or something that realises or represents it. Forward finds the objects
@@ -11,9 +11,9 @@ import type { Id, SemanticKind, SemanticLevel } from "@connectome/model";
  * - `dependency`: serving, access, interactions and flows. Forward finds what this depends on (its providers, the
  *   information it uses, what it calls, what feeds it), backward what depends on it.
  */
-export type TraceKind = "levels" | "flow" | "payload" | "dependency";
+export type TraceKind = "abstraction" | "flow" | "payload" | "dependency";
 export type TraceDirection = "forward" | "backward";
-export const TRACE_KINDS: readonly TraceKind[] = ["levels", "flow", "payload", "dependency"];
+export const TRACE_KINDS: readonly TraceKind[] = ["abstraction", "flow", "payload", "dependency"];
 
 export interface TraceOptions {
   /** How many relationships deep to follow (default 6). `payload` is always one step. */
@@ -63,8 +63,8 @@ function edge(metamodel: Metamodel, relationship: RelationshipRow): Edge {
 
 /** Which way each kind is followed from an object, for a trace kind going forward. */
 const FORWARD: Record<Exclude<TraceKind, "payload">, Partial<Record<SemanticKind, "out" | "in">>> = {
-  // A realiser is the source of a realisation, so going down the levels follows realisations backwards.
-  levels: { realisation: "in", representation: "in" },
+  // A realiser is the source of a realisation, so going down the abstractions follows realisations backwards.
+  abstraction: { realisation: "in", representation: "in" },
   flow: { flow: "out" },
   dependency: { serving: "in", access: "out", interaction: "out", flow: "in" },
 };
@@ -142,7 +142,7 @@ function payloadTrace(state: ModelState, metamodel: Metamodel, result: Trace, li
   // What it is carried as: itself, and whatever realises or represents it, at any depth (§9.3).
   const carried = [
     result.startId,
-    ...trace(state, metamodel, result.startId, "levels", "forward", { limit }).steps.map((s) => s.objectId),
+    ...trace(state, metamodel, result.startId, "abstraction", "forward", { limit }).steps.map((s) => s.objectId),
   ];
   const seen = new Set<Id>([result.startId]);
   for (const payloadId of carried) {
@@ -165,18 +165,20 @@ function payloadTrace(state: ModelState, metamodel: Metamodel, result: Trace, li
   return result;
 }
 
-/** A trace's objects in columns by level, conceptual first (the trace view, §9.3); objects without a level last. */
-export function traceByLevel(
+/** A trace's objects in columns by abstraction, conceptual first (the trace view, §9.3); objects without one last. */
+export function traceByAbstraction(
   state: ModelState,
   metamodel: Metamodel,
   result: Trace,
-): { level: SemanticLevel | null; objectIds: Id[] }[] {
-  const order: (SemanticLevel | null)[] = ["conceptual", "logical", "physical", "implementation", null];
-  const columns = new Map<SemanticLevel | null, Id[]>(order.map((l) => [l, []]));
+): { abstraction: SemanticAbstraction | null; objectIds: Id[] }[] {
+  const order: (SemanticAbstraction | null)[] = ["conceptual", "logical", "physical", "implementation", null];
+  const columns = new Map<SemanticAbstraction | null, Id[]>(order.map((l) => [l, []]));
   for (const step of result.steps) {
     const object = state.objects.get(step.objectId);
     if (!object) continue;
-    columns.get(metamodel.objectLevel(object) ?? null)!.push(step.objectId);
+    columns.get(metamodel.objectAbstraction(object) ?? null)!.push(step.objectId);
   }
-  return order.map((level) => ({ level, objectIds: columns.get(level)! })).filter((c) => c.objectIds.length > 0);
+  return order
+    .map((abstraction) => ({ abstraction, objectIds: columns.get(abstraction)! }))
+    .filter((c) => c.objectIds.length > 0);
 }
