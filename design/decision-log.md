@@ -103,6 +103,19 @@ From [views and design artifacts](02-model/views-and-design-artifacts.md). **Pro
 | V15 | How much can authors change a template? | Three levels (component, template/pattern, artifact) with `lock` (`fixed`, `configurable`, `free`), `allow` and palette regions; pattern bindings cannot be overridden | Templates fully fixed, or fully editable per document |
 | V16 | Can packages define new component types? | No: components are product code (a registry); packages compose them with templates and patterns. Extension-supplied components wait for extension panels (ADR-007) | Declarative custom components in packages |
 
+## CXN Builder decisions
+
+From [views §14](02-model/views-and-design-artifacts.md#14-cxn-builder-linking-sets-of-elements-at-speed). **Proposed** 2026-10-09; each row is the default the build uses until the product owner decides otherwise.
+
+| # | Question | Proposed default | Alternative |
+|---|---|---|---|
+| C1 | What is it called? | **Decided by the product owner (2026-10-09): CXN Builder**, view kind `cxn` | Link builder (clashes with links, §13) |
+| C2 | Are a pane's filters saved on their own, as in stock modeller? | Per view in CXN-1 (*Save view*); reusable saved pane queries in CXN-3, as saved queries in the explorer's *Queries* tab once M1's query language lands | Shared saved queries from the start |
+| C3 | May the picker offer relationship types the rules refuse, with *Allow this and link* for admins? | No: refused types are shown greyed with the reason; *Related to* links cover anything to anything | An admin shortcut that adds the rule through the metamodel draft and publish |
+| C4 | Do framework perspectives (Zachman rows, BIDAT) need their own structure? | No: they are list properties, filtered with counts like any other | A nested value tree per framework (row › column) |
+| C5 | Which way does a relationship run? | Left to right; ⇄ swaps the panes. For a type allowed only the other way, the picker says *(right to left)* and creates it that way | Always ask |
+| C6 | How big may one *Link* be? | One change, at most 10,000 edits (the change limit); above that the preview says to narrow the panes | Split into several changes |
+
 ## Found while building (M0)
 
 Questions the build raised. Each has a provisional answer in the code; change the code if the product owner decides otherwise.
