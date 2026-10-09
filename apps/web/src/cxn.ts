@@ -1,4 +1,4 @@
-// The CXN Builder in the workbench (design/02-model/views-and-design-artifacts.md §14): opening an unsaved one from
+// The CXN Builder in the workbench (design/02-model/views-and-design-artifacts.md §15): opening an unsaved one from
 // the menus, and turning it into a saved view.
 import type { Metamodel, ModelState, ObjectRow, ResolvedDiagramType } from "@connectome/engine";
 import { ulid, type CxnDefinition, type Edit, type Id, type TypeKey } from "@connectome/model";

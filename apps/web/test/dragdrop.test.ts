@@ -92,11 +92,11 @@ describe("ranks", () => {
 describe("drop plans", () => {
   it("reorders top-level folders, and the order holds for everyone (ranks are stored)", () => {
     const state = exampleState();
-    expect(ids(state, { kind: "root" })).toEqual(["F04", "F01", "F07", "F06", "F08", "F05"]);
+    expect(ids(state, { kind: "root" })).toEqual(["F04", "F01", "F07", "F06", "F08", "F10", "F05"]);
     run(state, ok(dropPlan(state, metamodel, { items: [folder("F05")] }, folder("F04"), "before")));
-    expect(ids(state, { kind: "root" })).toEqual(["F05", "F04", "F01", "F07", "F06", "F08"]);
+    expect(ids(state, { kind: "root" })).toEqual(["F05", "F04", "F01", "F07", "F06", "F08", "F10"]);
     run(state, ok(dropPlan(state, metamodel, { items: [folder("F04")] }, folder("F06"), "after")));
-    expect(ids(state, { kind: "root" })).toEqual(["F05", "F01", "F07", "F06", "F04", "F08"]);
+    expect(ids(state, { kind: "root" })).toEqual(["F05", "F01", "F07", "F06", "F04", "F08", "F10"]);
   });
 
   it("moves a folder, a diagram and an object into a folder, each at the end", () => {

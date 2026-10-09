@@ -1,4 +1,4 @@
-// The CXN Builder (design/02-model/views-and-design-artifacts.md §14): two filtered panes and one connection type.
+// The CXN Builder (design/02-model/views-and-design-artifacts.md §15): two filtered panes and one connection type.
 // Select rows on both sides (or drag one onto the other) and press Link; ticks and counts show what is connected.
 // A saved one is a diagram of kind `cxn`; an unsaved one lives in its tab until *Save view*.
 import { useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent, type MouseEvent } from "react";
@@ -27,7 +27,7 @@ import { targetFolder } from "../explorer";
 import { Glyph } from "./Glyph";
 import { SearchPicker } from "./SearchPicker";
 
-/** Above this many pairs, *Link* shows what it will do first (§14.1). */
+/** Above this many pairs, *Link* shows what it will do first (§15.1). */
 export const PREVIEW_ABOVE = 25;
 
 type Selection = { left: Set<Id>; right: Set<Id> };

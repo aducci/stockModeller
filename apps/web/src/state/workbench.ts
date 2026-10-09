@@ -20,7 +20,7 @@ export interface Tab {
   id: Id;
   /** The object viewer's folder (kind "objects"). */
   folderId?: Id;
-  /** An unsaved CXN Builder's definition (kind "cxn", views §14); *Save view* turns it into a diagram. */
+  /** An unsaved CXN Builder's definition (kind "cxn", views §15); *Save view* turns it into a diagram. */
   definition?: Record<string, unknown>;
   /** Objects a CXN Builder opens with selected in its left pane. */
   selectLeft?: Id[];

@@ -15,12 +15,14 @@ import {
   type ProseInline,
   type ProseState,
   type RegionDefinition,
+  type RegisterConfig,
   type RelationTableConfig,
   type RepeaterState,
   type ResolvedSection,
   type ResolvedTemplate,
   type SectionDefinition,
   type SectionLayout,
+  type TypeKey,
 } from "@connectome/model";
 import {
   checkSection,
@@ -45,6 +47,8 @@ interface Context {
   sections: readonly ResolvedSection[];
   /** Projected tables, for the repeaters that read them. */
   tables: Map<string, RelationTableModel>;
+  /** What the other sections mention and show, for the registers (projected last). */
+  scope?: DocumentScope;
 }
 
 /** Where one section instance is: its state, its layout, and inside a repeater the row it is about. */
@@ -158,6 +162,28 @@ export interface RepeaterModel {
   rows: RepeaterRowModel[];
 }
 
+export interface RegisterRow {
+  object: ObjectRow;
+  /** Why it is listed: "mentioned", then "about <element>" for each element it concerns in the document. */
+  reasons: string[];
+  cells: Record<string, TableCell>;
+  /** Labels of the columns a check asks this row to fill. */
+  toFill: string[];
+}
+export interface RegisterGroup {
+  /** The rows' type when grouped by type. */
+  type: TypeKey | null;
+  name: string;
+  rows: RegisterRow[];
+}
+export interface RegisterModel {
+  component: "register";
+  config: RegisterConfig;
+  columns: TableColumnModel[];
+  groups: RegisterGroup[];
+  count: number;
+}
+
 /** What the author may change in a section (§8.2), given its lock and `allow`. */
 export interface SectionFreedoms {
   hide: boolean;
@@ -179,7 +205,14 @@ export type SectionModel = {
   /** The region the author added it in. */
   region?: string;
 } & (
-  HeadingModel | ProseModel | FactsModel | DiagramLinkModel | RelationTableModel | RepeaterModel | SequenceLinkModel
+  | HeadingModel
+  | ProseModel
+  | FactsModel
+  | DiagramLinkModel
+  | RelationTableModel
+  | RepeaterModel
+  | SequenceLinkModel
+  | RegisterModel
 );
 
 type Projection = SectionModel extends infer M
@@ -270,6 +303,14 @@ export const COMPONENTS: { [C in ComponentKey]: Component<C> } = {
     description: "For each row of a table, a block of sections about that row.",
     counts: true,
     project: (ctx, section, scope, title) => projectRepeater(ctx, section, scope, title),
+  },
+  register: {
+    key: "register",
+    name: "Register",
+    description:
+      "Elements of chosen types (RAID items, decisions) that the document mentions or that concern what it shows.",
+    counts: true,
+    project: (ctx, section, _scope, title) => projectRegister(ctx, section, title),
   },
   sequenceLink: {
     key: "sequenceLink",
@@ -490,6 +531,109 @@ function projectRepeater(ctx: Context, section: Section<"repeater">, scope: Scop
   return { component: "repeater", source: section.config.source.section, rows, findings };
 }
 
+/**
+ * The document scope (slice DOC-3): the elements a document's prose mentions, and those it shows other than its
+ * subject (on its linked diagrams, as table rows and as the flows under them). Hidden sections are left out.
+ */
+export interface DocumentScope {
+  mentioned: Set<Id>;
+  /** By id, in the order the document shows them. */
+  members: Map<Id, ObjectRow>;
+}
+
+export function documentScope(state: ModelState, sections: readonly SectionModel[], subjectId?: Id): DocumentScope {
+  const mentioned = new Set<Id>();
+  const members = new Map<Id, ObjectRow>();
+  const show = (o: ObjectRow | undefined) => {
+    if (o && o.id !== subjectId && !members.has(o.id)) members.set(o.id, o);
+  };
+  const visit = (s: SectionModel) => {
+    if (s.hidden) return;
+    if (s.component === "prose")
+      for (const p of s.prose.paragraphs) for (const x of p) if (typeof x !== "string") mentioned.add(x.mention);
+    if (s.component === "diagramLink" && s.diagram)
+      for (const o of state.objectOccurrences.find("byDiagram", s.diagram.id)) show(state.objects.get(o.objectId));
+    if (s.component === "relationTable")
+      for (const row of s.rows) {
+        show(row.counterpart);
+        for (const f of row.flows ?? []) show(f.object);
+      }
+    if (s.component === "repeater") for (const row of s.rows) row.sections.forEach(visit);
+  };
+  sections.forEach(visit);
+  return { mentioned, members };
+}
+
+function projectRegister(ctx: Context, section: Section<"register">, title: string): Projection {
+  const { state, metamodel, subject } = ctx;
+  const config = section.config;
+  const scope = ctx.scope ?? { mentioned: new Set<Id>(), members: new Map<Id, ObjectRow>() };
+  const isItem = (o: ObjectRow | undefined): o is ObjectRow =>
+    !!o && !o.deleted && config.types.some((t) => metamodel.isA(o.type, t));
+  const reasons = new Map<Id, { object: ObjectRow; reasons: string[] }>();
+  const add = (o: ObjectRow, reason: string) => {
+    const entry = reasons.get(o.id) ?? { object: o, reasons: [] };
+    if (!entry.reasons.includes(reason)) entry.reasons.push(reason);
+    reasons.set(o.id, entry);
+  };
+  const via = { type: config.via.types, kind: config.via.kinds };
+  const concerning = (target: ObjectRow) => {
+    for (const r of state.relationships.find("byTarget", target.id)) {
+      const item = state.objects.get(r.sourceId);
+      if (!r.deleted && isItem(item) && matchesRelationship(metamodel, r, via)) add(item, `about ${target.name}`);
+    }
+  };
+  if (config.from.includes("mentions"))
+    for (const id of scope.mentioned) {
+      const o = state.objects.get(id);
+      if (isItem(o)) add(o, "mentioned");
+    }
+  if (config.from.includes("subject") && subject) concerning(subject);
+  if (config.from.includes("members")) for (const m of scope.members.values()) concerning(m);
+
+  const columns = config.columns.map((key) => ({
+    key,
+    label: metamodel.propertyType(key)?.name ?? key,
+    properties: [key],
+  }));
+  const label = (key: string) => metamodel.propertyType(key)?.name ?? key;
+  const rows: RegisterRow[] = [...reasons.values()].map(({ object, reasons }) => {
+    const own = metamodel.objectType(object.type)?.properties;
+    const cells: Record<string, TableCell> = {};
+    for (const c of columns)
+      cells[c.key] = { field: c.key, value: object.properties[c.key], applicable: own?.has(c.key) ?? false };
+    const toFill = (config.checks ?? [])
+      .filter(
+        (check) =>
+          own?.has(check.column) &&
+          Object.entries(check.where ?? {}).every(([k, v]) => object.properties[k] === v) &&
+          isEmpty(object.properties[check.column]),
+      )
+      .map((check) => label(check.column));
+    return { object, reasons, cells, toFill };
+  });
+  rows.sort((a, b) => a.object.name.localeCompare(b.object.name) || a.object.id.localeCompare(b.object.id));
+
+  let groups: RegisterGroup[];
+  if (config.groupBy === "type") {
+    const order = config.add?.types ?? [];
+    const byType = new Map<TypeKey, RegisterRow[]>();
+    for (const row of rows) byType.set(row.object.type, [...(byType.get(row.object.type) ?? []), row]);
+    const rank = (t: TypeKey) => (order.includes(t) ? order.indexOf(t) : order.length);
+    const typeName = (t: TypeKey) => {
+      const d = metamodel.objectType(t)?.definition;
+      return d?.plural ?? d?.name ?? t;
+    };
+    groups = [...byType.entries()]
+      .map(([type, rows]) => ({ type, name: typeName(type), rows }))
+      .sort((a, b) => rank(a.type) - rank(b.type) || a.name.localeCompare(b.name));
+  } else groups = rows.length > 0 ? [{ type: null, name: title, rows }] : [];
+
+  const findings = rows.flatMap((r) => r.toFill.map((l) => `${title}: ${r.object.name} has no ${l.toLowerCase()}`));
+  if (section.required && rows.length === 0) findings.push(`${title}: none yet`);
+  return { component: "register", config, columns, groups, count: rows.length, findings };
+}
+
 function projectSection(ctx: Context, section: ResolvedSection, scope: Scope, path: string[], region?: string) {
   const may: SectionFreedoms = {
     hide: path.length === 1 && sectionMay(section, "hide"),
@@ -604,15 +748,18 @@ export function projectDocument(
       [p.section.key],
       p.region,
     );
-  // Tables first, so the repeaters that read them see their rows.
+  // Tables first, so the repeaters that read them see their rows; registers last, over what the rest shows.
   const models = new Map<string, SectionModel>();
+  const last = (p: (typeof placed)[number]) => p.section.component === "repeater" || p.section.component === "register";
   for (const p of placed)
-    if (p.section.component !== "repeater") {
+    if (!last(p)) {
       const m = project(p);
       models.set(p.section.key, m);
       if (m.component === "relationTable" && !m.hidden) ctx.tables.set(p.section.key, m);
     }
   for (const p of placed) if (p.section.component === "repeater") models.set(p.section.key, project(p));
+  ctx.scope = documentScope(state, [...models.values()], subject?.id);
+  for (const p of placed) if (p.section.component === "register") models.set(p.section.key, project(p));
   const sections = placed.map((p) => models.get(p.section.key)!);
 
   const blocks: DocumentBlock[] = [];

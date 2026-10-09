@@ -2303,6 +2303,47 @@ button.toggle .badge {
   align-items: center;
   margin-top: 8px;
 }
+/* A register (slice DOC-3): one table per type, a swatch for a coloured value. */
+.doc-register table + table {
+  margin-top: 12px;
+}
+/* Fixed columns, so the tables of each type line up. */
+.doc-register table {
+  table-layout: fixed;
+}
+.doc-register th:first-child {
+  width: 28%;
+}
+.doc-register th:last-child {
+  width: 16%;
+}
+.doc-register td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.doc-register td:last-child {
+  white-space: normal;
+  font-size: 12px;
+}
+.doc-register td.missing {
+  box-shadow: inset 0 -2px 0 var(--amber-ink);
+}
+.doc-swatch {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+.doc-make-item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 6px;
+}
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -3454,6 +3495,9 @@ button.toggle .badge {
 .link-add-actions {
   display: inline-flex;
   gap: 6px;
+}
+.doc-register td select {
+  max-width: calc(100% - 14px);
 }
 
 /* CXN Builder (design/02-model/views-and-design-artifacts.md §14): two panes over a link strip. */

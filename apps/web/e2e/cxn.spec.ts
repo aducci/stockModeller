@@ -1,4 +1,4 @@
-// The CXN Builder, slice CXN-1 (design/02-model/views-and-design-artifacts.md §14): opened from the Tools menu,
+// The CXN Builder, slice CXN-1 (design/02-model/views-and-design-artifacts.md §15): opened from the Tools menu,
 // each pane filtered by a property value or by what it is related to, two rows linked at once and undone, hide
 // connected, a drag that links, and the view saved with its filters. It removes the connections it makes.
 import { expect, test, type Page } from "@playwright/test";

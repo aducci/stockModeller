@@ -142,13 +142,36 @@ describe("documents", () => {
         ],
       }),
     ).toThrow(/not a linked diagram[\s\S]*unknown property "nope"[\s\S]*not one of its columns/);
+    expect(
+      compile({
+        ...hld.document,
+        sections: [
+          ...sections,
+          {
+            key: "x",
+            title: "X",
+            component: "register",
+            config: {
+              types: ["risk"],
+              from: ["subject"],
+              via: { types: ["concerns"] },
+              columns: ["raid.nope"],
+              add: { types: ["raidItem", "application"], relationship: "concerns" },
+              checks: [{ rule: "notEmpty", column: "raid.owner", where: { "raid.state": "open" } }],
+            },
+          },
+        ],
+      }),
+    ).toThrow(
+      /unknown property "raid.nope"[\s\S]*"raidItem", which is abstract[\s\S]*"application", which it does not list[\s\S]*unknown property "raid.state"/,
+    );
   });
 
   it("resolve patterns and regions, and check what they add", () => {
     const mm = Metamodel.compile(essentials.metamodel, essentials.diagramTypes);
     const keys = (t: string) =>
       mm.diagramType(t)!.template!.entries.map((e) => ("region" in e ? `[${e.region}]` : e.key));
-    expect(keys("hld")).toEqual(["summary", "facts", "context", "integrations", "risks", "[additional]"]);
+    expect(keys("hld")).toEqual(["summary", "facts", "context", "integrations", "raid", "risks", "[additional]"]);
     expect(keys("integrationSpec")).toEqual(["purpose", "context", "integrations", "details", "[additional]"]);
     const sections = hld.document!.sections;
     expect(compile({ ...hld.document, sections: [...sections, { use: "contextAndIntegrations" }] })).toThrow(

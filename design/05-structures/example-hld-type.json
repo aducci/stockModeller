@@ -1,7 +1,7 @@
 {
   "key": "hld",
   "name": "High-level design",
-  "description": "A design artifact about one application: summary, key facts, its context diagram and a described row for every connection drawn on it, with the information flows each stands for.",
+  "description": "A design artifact about one application: summary, key facts, its context diagram and a described row for every connection drawn on it, with the information flows each stands for, and its RAID register.",
   "kind": "document",
   "subject": {
     "linkKind": "document"
@@ -70,13 +70,61 @@
         }
       },
       {
+        "key": "raid",
+        "title": "RAID",
+        "component": "register",
+        "guidance": "Risks, assumptions, issues and dependencies: those this design mentions, those about its subject, and those about what its context shows.",
+        "config": {
+          "types": [
+            "raidItem"
+          ],
+          "from": [
+            "mentions",
+            "subject",
+            "members"
+          ],
+          "via": {
+            "types": [
+              "concerns"
+            ]
+          },
+          "groupBy": "type",
+          "columns": [
+            "raid.status",
+            "raid.owner",
+            "raid.dueDate",
+            "raid.impact",
+            "raid.likelihood"
+          ],
+          "add": {
+            "label": "Add RAID item",
+            "types": [
+              "risk",
+              "assumption",
+              "issue",
+              "dependency"
+            ],
+            "relationship": "concerns"
+          },
+          "checks": [
+            {
+              "rule": "notEmpty",
+              "column": "raid.owner",
+              "where": {
+                "raid.status": "open"
+              }
+            }
+          ]
+        }
+      },
+      {
         "key": "risks",
-        "title": "Risks and open points",
+        "title": "Notes",
         "component": "prose",
         "allow": {
           "hide": true
         },
-        "guidance": "What could go wrong, and what is still to decide."
+        "guidance": "Anything else about what could go wrong or is still to decide. Select a sentence and choose Make RAID item to track it in the register."
       },
       {
         "region": "additional",

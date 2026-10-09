@@ -1182,6 +1182,150 @@
               }
             }
           }
+        },
+        {
+          "type": "object",
+          "required": [
+            "key",
+            "title",
+            "component",
+            "config"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "key": {
+              "type": "string",
+              "pattern": "^[a-z][a-zA-Z0-9]*$"
+            },
+            "title": {
+              "type": "string"
+            },
+            "guidance": {
+              "type": "string"
+            },
+            "required": {
+              "type": "boolean"
+            },
+            "lock": {
+              "enum": [
+                "fixed",
+                "configurable",
+                "free"
+              ],
+              "description": "What authors may change (views-and-design-artifacts.md §8.2); default configurable"
+            },
+            "allow": {
+              "$ref": "#/$defs/sectionAllow"
+            },
+            "after": {
+              "type": "string",
+              "description": "In a template that extends another: insert after this section of the base"
+            },
+            "component": {
+              "const": "register"
+            },
+            "config": {
+              "type": "object",
+              "required": [
+                "types",
+                "from",
+                "via",
+                "columns"
+              ],
+              "additionalProperties": false,
+              "description": "Build (slice DOC-3): a register of elements of chosen types, gathered from the document (views-and-design-artifacts.md §14)",
+              "properties": {
+                "types": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "The object types listed, each with its subtypes"
+                },
+                "from": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "enum": [
+                      "mentions",
+                      "subject",
+                      "members"
+                    ]
+                  },
+                  "description": "mentions: mentioned in the document's prose; subject: tied to the subject; members: tied to an element the document shows"
+                },
+                "via": {
+                  "$ref": "#/$defs/relationshipFilter",
+                  "description": "The relationships from an item to what it concerns"
+                },
+                "groupBy": {
+                  "enum": [
+                    "type"
+                  ]
+                },
+                "columns": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Property keys shown after the name"
+                },
+                "add": {
+                  "type": "object",
+                  "required": [
+                    "types",
+                    "relationship"
+                  ],
+                  "additionalProperties": false,
+                  "description": "+ Add creates one of these types tied to the subject by this relationship type",
+                  "properties": {
+                    "label": {
+                      "type": "string"
+                    },
+                    "types": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "relationship": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "checks": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "rule",
+                      "column"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "rule": {
+                        "enum": [
+                          "notEmpty"
+                        ]
+                      },
+                      "column": {
+                        "type": "string"
+                      },
+                      "where": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "description": "Only rows whose properties have these values"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       ]
     },

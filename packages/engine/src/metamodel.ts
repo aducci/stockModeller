@@ -537,6 +537,26 @@ export function checkSection(
     for (const r of c.required ?? [])
       if (!columnKeys.has(r)) problems.push(`${at} requires "${r}", which is not one of its columns`);
   }
+  if (section.component === "register") {
+    const c = section.config;
+    for (const t of c.types) if (!mm.objectType(t)) problems.push(`${at} lists unknown object type "${t}"`);
+    relTypes(c.via.types);
+    kinds(c.via.kinds);
+    for (const p of c.columns) if (!mm.propertyType(p)) problems.push(`${at} uses unknown property "${p}"`);
+    if (c.add) {
+      for (const t of c.add.types) {
+        const ot = mm.objectType(t);
+        if (!ot) problems.push(`${at} adds unknown object type "${t}"`);
+        else if (ot.definition.abstract) problems.push(`${at} adds "${t}", which is abstract`);
+        else if (!c.types.some((listed) => mm.isA(t, listed)))
+          problems.push(`${at} adds "${t}", which it does not list`);
+      }
+      relTypes([c.add.relationship]);
+    }
+    for (const check of c.checks ?? [])
+      for (const p of [check.column, ...Object.keys(check.where ?? {})])
+        if (!mm.propertyType(p)) problems.push(`${at} checks unknown property "${p}"`);
+  }
   if (section.component === "repeater") {
     const source = siblings.find((x) => x.key === section.config.source.section);
     if (source?.component !== "relationTable")

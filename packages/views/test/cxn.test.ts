@@ -1,4 +1,4 @@
-// The CXN Builder projection (views-and-design-artifacts.md §14) over the example repository.
+// The CXN Builder projection (views-and-design-artifacts.md §15) over the example repository.
 import { describe, expect, it } from "vitest";
 import { essentials, insuranceGroup } from "@connectome/content";
 import { applyChange, Metamodel, ModelState } from "@connectome/engine";
@@ -56,6 +56,7 @@ describe("scope filters", () => {
       "Claims department",
       "Handle Claim",
       "Legacy CRM",
+      "Payment confirmations as events or polling",
       "Payments API",
       "Payments Hub",
       "SRV-APP-01",

@@ -303,7 +303,20 @@ describe("rule 7: deleting an object deletes its relationships and occurrences",
     const result = applyOk(state, [{ edit: "deleteObject", id: "O-APP-1", baseVersion: v(state, "O-APP-1") }]);
     expect(state.objects.get("O-APP-1")).toBeUndefined();
     // Its own relationships, and the messages of its interaction with Payments API.
-    const relationships = ["R-05", "R-07", "R-08", "R-09", "R-10", "R-13", "R-14", "R-16", "R-17", "R-18", "R-21"];
+    const relationships = [
+      "R-05",
+      "R-07",
+      "R-08",
+      "R-09",
+      "R-10",
+      "R-13",
+      "R-14",
+      "R-16",
+      "R-17",
+      "R-18",
+      "R-21",
+      "R-30",
+    ];
     for (const r of relationships) expect(state.relationships.get(r)).toBeUndefined();
     expect(state.objectOccurrences.find("byObject", "O-APP-1")).toEqual([]);
     expect(state.relationshipOccurrences.get("RO-3")).toBeUndefined();

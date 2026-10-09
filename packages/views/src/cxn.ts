@@ -1,4 +1,4 @@
-// The CXN Builder (views-and-design-artifacts.md §14): two panes of objects, each a scope, and one connection type
+// The CXN Builder (views-and-design-artifacts.md §15): two panes of objects, each a scope, and one connection type
 // (a relationship type or a link kind) to link the left pane's selection with the right pane's, in bulk.
 import {
   ABSTRACTION_PROPERTY,
