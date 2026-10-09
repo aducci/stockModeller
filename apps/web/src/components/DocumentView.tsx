@@ -46,6 +46,7 @@ import { byName } from "../text";
 import { DiagramPicture } from "./DiagramDrawing";
 import { FlowRows } from "./FlowRows";
 import { Glyph } from "./Glyph";
+import { PickField, SearchPicker } from "./SearchPicker";
 import { PropertyGroups, type GridContext } from "./Inspector";
 
 interface SectionProps<M> {
@@ -68,11 +69,8 @@ export function DocumentView({ id }: { id: Id }) {
     edit(`About ${state.objects.get(subjectId)?.name ?? "?"}`, [
       { edit: "setViewDefinition", diagramId: id, baseVersion: document.version, set: { [SUBJECT_KEY]: subjectId } },
     ]);
-  const candidates = [...state.objects.live()]
-    .filter((o) =>
-      doc.template!.subject.type?.length ? doc.template!.subject.type.some((t) => metamodel.isA(o.type, t)) : true,
-    )
-    .sort(byName);
+  const candidate = (o: ObjectRow) =>
+    doc.template!.subject.type?.length ? doc.template!.subject.type.some((t) => metamodel.isA(o.type, t)) : true;
 
   return (
     <div className="document-view">
@@ -87,14 +85,12 @@ export function DocumentView({ id }: { id: Id }) {
             ) : (
               <>
                 {doc.subjectId && <span className="doc-warning">The subject was deleted.</span>}
-                <select aria-label="Subject" value="" onChange={(e) => e.target.value && chooseSubject(e.target.value)}>
-                  <option value="">Choose a subject…</option>
-                  {candidates.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.name}
-                    </option>
-                  ))}
-                </select>
+                <SearchPicker
+                  label="Subject"
+                  placeholder="Search for the subject…"
+                  scope={{ objects: candidate, nearFolderId: document.folderId }}
+                  onPick={(f) => chooseSubject(f.id)}
+                />
               </>
             )}
             <button
@@ -772,7 +768,6 @@ function DiagramLinkSection({ document, section, model, subject }: SectionProps<
     const plan = createLinkedDiagramPlan(state, metamodel, document, { ...section, title: model.title }, subject);
     edit(plan.label, plan.edits);
   };
-  const existing = [...state.diagrams.live()].filter((d) => d.diagramType === model.diagramType).sort(byName);
   if (model.diagram)
     return (
       <div className="doc-diagram">
@@ -808,23 +803,12 @@ function DiagramLinkSection({ document, section, model, subject }: SectionProps<
       <button className="primary" onClick={create}>
         Create {model.title.toLowerCase()} diagram
       </button>
-      {existing.length > 0 && (
-        <select
-          aria-label={`Link an existing ${typeName}`}
-          value=""
-          onChange={(e) =>
-            e.target.value &&
-            edit(`Link ${model.title}`, [setSection(document, section.key, { diagramId: e.target.value })])
-          }
-        >
-          <option value="">or link an existing {typeName.toLowerCase()}…</option>
-          {existing.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.name}
-            </option>
-          ))}
-        </select>
-      )}
+      <SearchPicker
+        label={`Link an existing ${typeName}`}
+        placeholder={`or link an existing ${typeName.toLowerCase()}…`}
+        scope={{ diagrams: (d) => d.diagramType === model.diagramType, nearFolderId: document.folderId }}
+        onPick={(f) => edit(`Link ${model.title}`, [setSection(document, section.key, { diagramId: f.id })])}
+      />
     </div>
   );
 }
@@ -847,17 +831,14 @@ function RelationTableSection({ document, section, model, subject }: SectionProp
       </p>
     );
 
-  const counterparts =
-    subject && adding !== null
-      ? [...state.objects.live()]
-          .filter((o) => o.id !== subject.id)
-          .filter((o) => {
-            const dt = linkedDiagram && metamodel.diagramType(linkedDiagram.diagramType);
-            return !dt || metamodel.diagramAllowsObjectType(dt, o.type);
-          })
-          .filter((o) => tableAddOptions(metamodel, config, subject, o).length > 0)
-          .sort(byName)
-      : [];
+  const isCounterpart = (o: ObjectRow) => {
+    if (!subject || o.id === subject.id) return false;
+    const dt = linkedDiagram && metamodel.diagramType(linkedDiagram.diagramType);
+    return (
+      (!dt || metamodel.diagramAllowsObjectType(dt, o.type)) &&
+      tableAddOptions(metamodel, config, subject, o).length > 0
+    );
+  };
   const counterpart = adding ? state.objects.get(adding) : undefined;
   const options = subject && counterpart ? tableAddOptions(metamodel, config, subject, counterpart) : [];
   const add = (o: (typeof options)[number]) => {
@@ -1048,14 +1029,13 @@ function RelationTableSection({ document, section, model, subject }: SectionProp
       )}
       {subject && adding !== null && (
         <div className="doc-add-form">
-          <select aria-label="Counterpart" value={adding} onChange={(e) => setAdding(e.target.value)}>
-            <option value="">With which element?</option>
-            {counterparts.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name}
-              </option>
-            ))}
-          </select>
+          <PickField
+            label="Counterpart"
+            value={adding}
+            placeholder="With which element?"
+            scope={{ objects: isCounterpart, nearFolderId: subject.folderId }}
+            onChange={setAdding}
+          />
           {options.map((o) => (
             <button key={`${o.type}:${o.sourceId}`} onClick={() => add(o)}>
               {name(o.sourceId)} {o.name} {name(o.targetId)}

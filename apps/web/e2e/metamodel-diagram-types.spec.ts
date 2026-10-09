@@ -45,6 +45,23 @@ test("duplicates a diagram type, gives it its own notation, and publishes it for
   await context.getByRole("checkbox", { name: "Data object", exact: true }).check();
   await expect(pending(page)).toHaveCount(0);
 
+  // A document type only says what it describes (views §13): no canvas settings.
+  await list(page)
+    .getByRole("button", { name: /^High-level design/ })
+    .click();
+  const hld = editor(page, "High-level design");
+  const describes = hld.getByRole("group", { name: "Describes" });
+  await expect(describes.getByRole("checkbox", { name: "Application (any)", exact: true })).toBeChecked();
+  await expect(hld.getByRole("group", { name: "Elements it can show" })).toHaveCount(0);
+  await expect(hld.getByRole("group", { name: "About an element" })).toHaveCount(0);
+  await describes.getByRole("checkbox", { name: "Interface", exact: true }).check();
+  await expect(pending(page)).toHaveCount(1);
+  await describes.getByRole("checkbox", { name: "Interface", exact: true }).uncheck();
+  await expect(pending(page)).toHaveCount(0);
+  await list(page)
+    .getByRole("button", { name: /^Context diagram/ })
+    .click();
+
   // A copy with its own name and notation.
   await context.getByRole("button", { name: "Duplicate" }).click();
   const copy = editor(page, "Context diagram copy");

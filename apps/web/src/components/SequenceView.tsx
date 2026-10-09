@@ -7,9 +7,9 @@ import { interactionsBetween, projectSequence, undrawnMessages, type SequenceMes
 import { useModel, useWorkbench } from "../state/workbench";
 import { notationFor } from "../notation";
 import { messageType } from "../semantics";
-import { byName } from "../text";
 import { addLifelineEdit, atEnd, insertAfter, moveMessageEdits, placeMessagesEdits } from "../sequence";
 import { Glyph } from "./Glyph";
+import { SearchPicker } from "./SearchPicker";
 
 const LANE = 200;
 const LEFT = 30;
@@ -45,10 +45,8 @@ export function SequenceView({ id }: { id: Id }) {
   const height = rowY(seq.messages.length) + 8;
   const width = LEFT * 2 + Math.max(1, lanes.length) * LANE;
 
-  const candidates = [...state.objects.live()]
-    .filter((o) => !type || metamodel.diagramAllowsObjectType(type, o.type))
-    .filter((o) => !lanes.some((l) => l.occurrence.objectId === o.id))
-    .sort(byName);
+  const candidate = (o: ObjectRow) =>
+    (!type || metamodel.diagramAllowsObjectType(type, o.type)) && !lanes.some((l) => l.occurrence.objectId === o.id);
   const undrawn = undrawnMessages(
     state,
     id,
@@ -119,24 +117,15 @@ export function SequenceView({ id }: { id: Id }) {
   return (
     <div className="sequence-view">
       <div className="mm-filters sequence-toolbar">
-        <label>
+        <span className="sequence-add">
           Add lifeline
-          <select
-            aria-label="Add lifeline"
-            value=""
-            onChange={(e) => {
-              const o = state.objects.get(e.target.value);
-              if (o) addLifeline(o);
-            }}
-          >
-            <option value="">Choose an element…</option>
-            {candidates.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name}
-              </option>
-            ))}
-          </select>
-        </label>
+          <SearchPicker
+            label="Add lifeline"
+            placeholder="Search for an element…"
+            scope={{ objects: candidate, nearFolderId: diagram.folderId }}
+            onPick={(f) => f.kind === "object" && addLifeline(f.object)}
+          />
+        </span>
         <button disabled={lanes.length < 2} onClick={() => setDraft({ from: 0, to: 1 })}>
           Add message
         </button>

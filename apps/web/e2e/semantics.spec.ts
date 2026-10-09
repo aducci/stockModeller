@@ -141,8 +141,10 @@ test("an interaction holds its request and response with their payloads, and del
 
   const request = messages.locator('li[data-role="request"]');
   const response = messages.locator('li[data-role="response"]');
-  await request.getByLabel("Add to payload").selectOption({ label: "Claim Intake" });
-  await response.getByLabel("Add to payload").selectOption({ label: "Handle Claim" });
+  await request.getByRole("combobox", { name: "Add to payload" }).fill("Claim Intake");
+  await page.getByRole("option", { name: /^Claim Intake/ }).click();
+  await response.getByRole("combobox", { name: "Add to payload" }).fill("Handle Claim");
+  await page.getByRole("option", { name: /^Handle Claim/ }).click();
   await saved(page);
   await expect(request.locator(".chip")).toHaveText(["Claim Intake×"]);
   await expect(response.locator(".chip")).toHaveText(["Handle Claim×"]);

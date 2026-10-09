@@ -3375,3 +3375,19 @@ button.toggle .badge {
 .doc-table tr.doc-flow .doc-chip {
   white-space: nowrap;
 }
+
+/* Search instead of lists (design/02-model/views-and-design-artifacts.md §13) */
+.search-picker {
+  min-width: 180px;
+}
+.picked {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+.picked-name {
+  font-weight: 500;
+}

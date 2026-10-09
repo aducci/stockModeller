@@ -24,6 +24,7 @@ import {
   duplicateDiagramType,
   kindOf,
   removeDiagramType,
+  setDescribes,
   setKind,
   setSymbol,
   updateDiagramType,
@@ -245,21 +246,66 @@ function GeneralTab({ type, draft, metamodel, update, onChange, inUse }: TabProp
           ))}
         </select>
       </label>
-      <ObjectTypesField
-        label={kind === "sequence" ? "Lifelines can be" : "Elements it can show"}
-        type={type}
-        metamodel={metamodel}
-        update={update}
-      />
-      <RelationshipTypesField
-        label={kind === "sequence" ? "Messages and interactions" : "Relationships it can show"}
-        type={type}
-        metamodel={metamodel}
-        update={update}
-      />
-      <SubjectField type={type} metamodel={metamodel} update={update} />
+      {kind === "document" ? (
+        <DescribesField
+          type={type}
+          metamodel={metamodel}
+          onChange={(types) => onChange(setDescribes(draft, type.key, types))}
+        />
+      ) : (
+        <>
+          <ObjectTypesField
+            label={kind === "sequence" ? "Lifelines can be" : "Elements it can show"}
+            type={type}
+            metamodel={metamodel}
+            update={update}
+          />
+          <RelationshipTypesField
+            label={kind === "sequence" ? "Messages and interactions" : "Relationships it can show"}
+            type={type}
+            metamodel={metamodel}
+            update={update}
+          />
+          <SubjectField type={type} metamodel={metamodel} update={update} />
+        </>
+      )}
       <TypePropertiesPanel kind="diagram" type={type.key} draft={draft} metamodel={metamodel} onChange={onChange} />
     </div>
+  );
+}
+
+/**
+ * What a document type describes (views-and-design-artifacts.md §13): the element types, with their subtypes, that its
+ * documents can be about. Each document is about one of them; what it shows is up to its sections.
+ */
+function DescribesField(props: { type: DiagramType; metamodel: Metamodel; onChange(types: TypeKey[]): void }) {
+  const { type, metamodel, onChange } = props;
+  const chosen =
+    type.document?.subject?.type ?? metamodel.diagramType(type.key)?.template?.subject.type ?? type.objectTypes;
+  return (
+    <fieldset className="dt-choices">
+      <legend>Describes</legend>
+      <p className="muted small">
+        A document of this type is about one element of these types (a type includes its subtypes). Its sections decide
+        what it shows.
+      </p>
+      {typeTree(metamodel).map(({ type: t, depth }) => {
+        const key = t.definition.key;
+        const on = chosen.includes(key);
+        return (
+          <label key={key} style={{ paddingLeft: depth * 16 }}>
+            <input
+              type="checkbox"
+              checked={on}
+              disabled={on && chosen.length === 1}
+              title={on && chosen.length === 1 ? "A document describes at least one type of element" : undefined}
+              onChange={(e) => onChange(toggled(chosen, key, e.target.checked))}
+            />
+            {t.definition.name}
+          </label>
+        );
+      })}
+    </fieldset>
   );
 }
 
@@ -277,35 +323,27 @@ function SubjectField(props: { type: DiagramType; metamodel: Metamodel; update(p
       <p className="muted small">
         A diagram made from an element is about it: it is listed under the element and opens from its symbols.
       </p>
-      {kindOf(type) === "document" ? (
-        <p className="muted small">The template decides which elements a document can be about.</p>
-      ) : (
-        <>
-          <label>
+      <label>
+        <input
+          type="checkbox"
+          checked={chosen === undefined}
+          onChange={(e) => update(withSubject(type, { type: e.target.checked ? undefined : [...type.objectTypes] }))}
+        />
+        Any element
+      </label>
+      {chosen !== undefined &&
+        typeTree(metamodel).map(({ type: t, depth }) => (
+          <label key={t.definition.key} style={{ paddingLeft: depth * 16 }}>
             <input
               type="checkbox"
-              checked={chosen === undefined}
+              checked={chosen.includes(t.definition.key)}
               onChange={(e) =>
-                update(withSubject(type, { type: e.target.checked ? undefined : [...type.objectTypes] }))
+                update(withSubject(type, { type: toggled(chosen, t.definition.key, e.target.checked) ?? [] }))
               }
             />
-            Any element
+            {t.definition.name}
           </label>
-          {chosen !== undefined &&
-            typeTree(metamodel).map(({ type: t, depth }) => (
-              <label key={t.definition.key} style={{ paddingLeft: depth * 16 }}>
-                <input
-                  type="checkbox"
-                  checked={chosen.includes(t.definition.key)}
-                  onChange={(e) =>
-                    update(withSubject(type, { type: toggled(chosen, t.definition.key, e.target.checked) ?? [] }))
-                  }
-                />
-                {t.definition.name}
-              </label>
-            ))}
-        </>
-      )}
+        ))}
       <label className="field">
         <span>Link it from</span>
         <select

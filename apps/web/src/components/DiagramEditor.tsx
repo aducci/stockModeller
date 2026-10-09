@@ -11,7 +11,7 @@ import {
   type PointerEvent,
 } from "react";
 import { ABSTRACTION_PROPERTY, RENDITIONS, ulid, type Edit, type Id } from "@connectome/model";
-import type { DiagramRow, ObjectOccurrenceRow } from "@connectome/engine";
+import type { DiagramRow, ModelState, ObjectOccurrenceRow } from "@connectome/engine";
 import { useModel, useWorkbench } from "../state/workbench";
 import { notationFor } from "../notation";
 import { FindOrCreate } from "./FindOrCreate";
@@ -36,7 +36,7 @@ import { addPayloadPlan, messageType } from "../semantics";
 import { canvasTypesFor, diagramAroundPlan } from "../views";
 import { subjectDiagramFor } from "../subjects";
 import { IGNORED_PARTS, breadcrumb, decompositionOf, missingParts, partEdits, placePartsEdits } from "../decompose";
-import { byName } from "../text";
+import { SearchPicker } from "./SearchPicker";
 
 /** Drag-and-drop payloads: an object type from the palette, or an existing object from the explorer. */
 export const DRAG_TYPE = "application/x-connectome-type";
@@ -82,6 +82,8 @@ export function DiagramEditor({ id }: { id: Id }) {
   const [occMenu, setOccMenu] = useState<{ x: number; y: number; occId: Id } | null>(null);
   /** Double-click on a symbol with nowhere to drill: what it could have (a decomposition), or Rename. */
   const [drillOffer, setDrillOffer] = useState<{ x: number; y: number; occId: Id } | null>(null);
+  /** The symbol whose child diagram is being chosen by search ("Link to existing…"). */
+  const [linking, setLinking] = useState<Id | null>(null);
   const [zoom, setZoom] = useState(1);
   const canvas = useRef<HTMLDivElement>(null);
 
@@ -587,16 +589,6 @@ export function DiagramEditor({ id }: { id: Id }) {
           },
         }))
       : [];
-    // Views named after the object, or stored beside it, come first.
-    const near = (d: DiagramRow) =>
-      (object && d.name.toLocaleLowerCase().includes(object.name.toLocaleLowerCase())) ||
-      d.folderId === object?.folderId
-        ? 0
-        : 1;
-    const existing = [...state.diagrams.live()]
-      .filter((d) => d.id !== id)
-      .sort((a, b) => near(a) - near(b) || byName(a, b))
-      .slice(0, 25);
     // A diagram about the element opens from every symbol of it; a child diagram of this symbol would override it.
     const aboutDiagram = about ? state.diagrams.get(about) : undefined;
     const opens: MenuEntry[] = aboutDiagram
@@ -609,12 +601,9 @@ export function DiagramEditor({ id }: { id: Id }) {
         ...create,
         ...(create.length ? (["separator"] as MenuEntry[]) : []),
         {
-          label: "Link to existing",
-          disabled: existing.length ? null : "There is no other diagram yet",
-          submenu: existing.map((d) => ({
-            label: d.name,
-            run: () => edit(`Link ${d.name} as the child of ${name}`, [linkEdit(occ, d.id)]),
-          })),
+          label: "Link to existing…",
+          disabled: hasOtherDiagram(state, id) ? null : "There is no other diagram yet",
+          run: () => setLinking(occ.id),
         },
       ],
     };
@@ -1006,6 +995,19 @@ export function DiagramEditor({ id }: { id: Id }) {
           </ul>
         )}
       </div>
+      {linking && (
+        <LinkChildDialog
+          occurrenceId={linking}
+          diagramId={id}
+          onLink={(occ, d) => {
+            setLinking(null);
+            edit(`Link ${d.name} as the child of ${state.objects.get(occ.objectId)?.name ?? "it"}`, [
+              linkEdit(occ, d.id),
+            ]);
+          }}
+          onDone={() => setLinking(null)}
+        />
+      )}
       {drillOffer && (
         <ContextMenu
           x={drillOffer.x}
@@ -1143,3 +1145,48 @@ function RenameBox({ occurrence, box, onDone }: { occurrence: ObjectOccurrenceRo
     />
   );
 }
+
+/** "Child diagram ▸ Link to existing…": the diagram is found by search, not chosen from a list of every diagram. */
+function LinkChildDialog(props: {
+  occurrenceId: Id;
+  diagramId: Id;
+  onLink(occ: ObjectOccurrenceRow, diagram: DiagramRow): void;
+  onDone(): void;
+}) {
+  const { occurrenceId, diagramId, onLink, onDone } = props;
+  const { state } = useModel();
+  const occ = state.objectOccurrences.get(occurrenceId);
+  const object = occ ? state.objects.get(occ.objectId) : undefined;
+  if (!occ) return null;
+  return (
+    <div className="backdrop" onClick={onDone}>
+      <div
+        className="dialog link-child"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Link a child diagram"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2>Link a child diagram to {object?.name ?? "this symbol"}</h2>
+        <SearchPicker
+          label="Child diagram"
+          placeholder="Search for a diagram by name…"
+          autoFocus
+          scope={{ diagrams: (d) => d.id !== diagramId, nearFolderId: object?.folderId ?? null }}
+          onPick={(f) => f.kind === "diagram" && onLink(occ, f.diagram)}
+          onCancel={onDone}
+        />
+        <div className="actions">
+          <button type="button" onClick={onDone}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const hasOtherDiagram = (state: ModelState, id: Id) => {
+  for (const d of state.diagrams.live()) if (d.id !== id) return true;
+  return false;
+};

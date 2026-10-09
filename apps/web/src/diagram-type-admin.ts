@@ -70,6 +70,20 @@ export function withSubject(
   return { subject: Object.keys(next).length > 0 ? (next as DiagramType["subject"]) : undefined };
 }
 
+/**
+ * What a document type describes (views-and-design-artifacts.md §13): the element types its documents can be about,
+ * kept as the template's subject, with the type's `objectTypes` equal to it. At least one type stays.
+ */
+export function setDescribes(draft: Draft, key: TypeKey, types: TypeKey[]): Draft {
+  const type = draft.diagramTypes.find((t) => t.key === key);
+  if (!type?.document || types.length === 0) return draft;
+  // The types replace a category filter: what the admin ticks is what the document describes.
+  return updateDiagramType(draft, key, {
+    objectTypes: types,
+    document: { ...type.document, subject: { type: types } },
+  });
+}
+
 export const removeDiagramType = (draft: Draft, key: TypeKey): Draft => ({
   ...draft,
   diagramTypes: draft.diagramTypes.filter((t) => t.key !== key),
