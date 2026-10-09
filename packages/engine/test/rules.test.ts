@@ -311,10 +311,11 @@ describe("rule 7: deleting an object deletes its relationships and occurrences",
     const inverse = result.log[0]!.inverse.map((e) => e.edit);
     expect(inverse[0]).toBe("createObject");
     expect(inverse.slice(1, 1 + relationships.length)).toEqual(relationships.map(() => "createRelationship"));
+    // Then its symbols and lines, and its four links (slice DOC-R2).
     expect(new Set(inverse.slice(1 + relationships.length))).toEqual(
-      new Set(["addObjectOccurrence", "addRelationshipOccurrence"]),
+      new Set(["addObjectOccurrence", "addRelationshipOccurrence", "createLink"]),
     );
-    expect(inverse).toHaveLength(1 + relationships.length + 5 + 9);
+    expect(inverse).toHaveLength(1 + relationships.length + 5 + 9 + 4);
   });
 
   it("brings back a restored object with a higher version", () => {

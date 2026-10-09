@@ -79,6 +79,7 @@ export function snapshot(state: ModelState) {
     objectOccurrences: collection(state.objectOccurrences.live()),
     relationshipOccurrences: collection(state.relationshipOccurrences.live()),
     annotations: collection(state.annotations.live()),
+    links: collection(state.links.live()),
   };
 }
 
@@ -125,6 +126,13 @@ export function checkInvariants(state: ModelState): void {
     if (f.parentId && !state.folders.get(f.parentId)) fail(`folder ${f.id} has no parent`);
   for (const o of state.objects.live()) if (!state.folders.get(o.folderId)) fail(`object ${o.id} has no folder`);
   for (const d of state.diagrams.live()) if (!state.folders.get(d.folderId)) fail(`diagram ${d.id} has no folder`);
+  for (const l of state.links.live()) {
+    if (!state.objects.get(l.sourceId)) fail(`link ${l.id} has no element`);
+    if ("objectId" in l.target && !state.objects.get(l.target.objectId))
+      fail(`link ${l.id} points at a missing element`);
+    if ("diagramId" in l.target && !state.diagrams.get(l.target.diagramId))
+      fail(`link ${l.id} points at a missing diagram`);
+  }
   for (const r of state.relationships.live()) {
     if (!state.objects.get(r.sourceId) || !state.objects.get(r.targetId))
       fail(`relationship ${r.id} has a missing end`);

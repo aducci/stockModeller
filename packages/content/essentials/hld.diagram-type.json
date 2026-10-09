@@ -4,7 +4,7 @@
   "description": "A design artifact about one application: summary, key facts, its context diagram and a described row for every connection drawn on it, with the information flows each stands for.",
   "kind": "document",
   "subject": {
-    "linkProperty": "documentation.link"
+    "linkKind": "document"
   },
   "objectTypes": ["applicationBase", "service"],
   "document": {

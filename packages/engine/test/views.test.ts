@@ -184,17 +184,35 @@ describe("documents", () => {
   });
 });
 
-describe("diagram subjects and documentation links (DOC-1)", () => {
+describe("diagram subjects and url links (DOC-1)", () => {
   const app = (state: ReturnType<typeof exampleState>) => state.objects.get("O-APP-1")!;
+  // Essentials no longer has a url property with many values (links are records since DOC-R2): a package that does.
+  const withLinks = Metamodel.compile(
+    {
+      ...essentials.metamodel,
+      propertyTypes: [
+        ...essentials.metamodel.propertyTypes!,
+        { key: "test.links", name: "Links", group: "Test", dataType: "url", many: true },
+      ],
+      objectTypes: essentials.metamodel.objectTypes.map((t) =>
+        t.key === "application" ? { ...t, properties: [...(t.properties ?? []), "test.links"] } : t,
+      ),
+    },
+    essentials.diagramTypes,
+  );
   const setLinks = (state: ReturnType<typeof exampleState>, value: unknown) =>
-    apply(state, [
-      {
-        edit: "setProperties",
-        id: "O-APP-1",
-        baseVersion: app(state).version,
-        set: { "documentation.link": value as string[] },
-      },
-    ]);
+    apply(
+      state,
+      [
+        {
+          edit: "setProperties",
+          id: "O-APP-1",
+          baseVersion: app(state).version,
+          set: { "test.links": value as string[] },
+        },
+      ],
+      { metamodel: withLinks },
+    );
 
   it("lets any diagram be about an object, and only an object", () => {
     const state = exampleState();
@@ -226,7 +244,7 @@ describe("diagram subjects and documentation links (DOC-1)", () => {
   it("keeps several links, web pages and diagrams, in a url property with many", () => {
     const state = exampleState();
     expect(setLinks(state, ["https://wiki.example.com/x", "diagram:D-01"]).ok).toBe(true);
-    expect(app(state).properties["documentation.link"]).toEqual(["https://wiki.example.com/x", "diagram:D-01"]);
+    expect(app(state).properties["test.links"]).toEqual(["https://wiki.example.com/x", "diagram:D-01"]);
     // A single link stored before the type allowed many is still valid.
     expect(setLinks(state, "https://wiki.example.com/y").ok).toBe(true);
     expect(setLinks(state, ["ftp://x"])).toMatchObject({ ok: false });
@@ -235,11 +253,12 @@ describe("diagram subjects and documentation links (DOC-1)", () => {
     expect(setLinks(state, [1])).toMatchObject({ ok: false });
   });
 
-  it("refuses a link property that is not a url with many, and many on anything but a url", () => {
-    const types = essentials.diagramTypes.map((t) =>
-      t.key === "context" ? { ...t, subject: { linkProperty: "ownership.businessOwner" } } : t,
-    );
-    expect(() => Metamodel.compile(essentials.metamodel, types)).toThrow(MetamodelError);
+  it("refuses an unknown link kind or one that cannot point at the type's diagrams, and many on anything but a url", () => {
+    const linking = (linkKind: string) =>
+      essentials.diagramTypes.map((t) => (t.key === "context" ? { ...t, subject: { linkKind } } : t));
+    expect(() => Metamodel.compile(essentials.metamodel, linking("nope"))).toThrow(/unknown link kind "nope"/);
+    expect(() => Metamodel.compile(essentials.metamodel, linking("document"))).toThrow(/cannot point at a diagram/);
+    expect(() => Metamodel.compile(essentials.metamodel, linking("drillDown"))).not.toThrow(MetamodelError);
     const pkg = {
       ...essentials.metamodel,
       propertyTypes: essentials.metamodel.propertyTypes!.map((p) =>

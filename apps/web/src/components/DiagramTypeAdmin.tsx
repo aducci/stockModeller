@@ -248,6 +248,7 @@ function GeneralTab({ type, draft, metamodel, update, onChange, inUse }: TabProp
       </label>
       {kind === "document" ? (
         <DescribesField
+          update={update}
           type={type}
           metamodel={metamodel}
           onChange={(types) => onChange(setDescribes(draft, type.key, types))}
@@ -278,8 +279,13 @@ function GeneralTab({ type, draft, metamodel, update, onChange, inUse }: TabProp
  * What a document type describes (views-and-design-artifacts.md §13): the element types, with their subtypes, that its
  * documents can be about. Each document is about one of them; what it shows is up to its sections.
  */
-function DescribesField(props: { type: DiagramType; metamodel: Metamodel; onChange(types: TypeKey[]): void }) {
-  const { type, metamodel, onChange } = props;
+function DescribesField(props: {
+  type: DiagramType;
+  metamodel: Metamodel;
+  onChange(types: TypeKey[]): void;
+  update(patch: Partial<DiagramType>): void;
+}) {
+  const { type, metamodel, onChange, update } = props;
   const chosen =
     type.document?.subject?.type ?? metamodel.diagramType(type.key)?.template?.subject.type ?? type.objectTypes;
   return (
@@ -305,6 +311,7 @@ function DescribesField(props: { type: DiagramType; metamodel: Metamodel; onChan
           </label>
         );
       })}
+      <LinkKindField type={type} metamodel={metamodel} update={update} />
     </fieldset>
   );
 }
@@ -316,7 +323,6 @@ function DescribesField(props: { type: DiagramType; metamodel: Metamodel; onChan
 function SubjectField(props: { type: DiagramType; metamodel: Metamodel; update(patch: Partial<DiagramType>): void }) {
   const { type, metamodel, update } = props;
   const chosen = type.subject?.type;
-  const linkProperties = metamodel.allPropertyTypes().filter((p) => p.dataType === "url" && p.many);
   return (
     <fieldset className="dt-choices">
       <legend>About an element</legend>
@@ -344,22 +350,35 @@ function SubjectField(props: { type: DiagramType; metamodel: Metamodel; update(p
             {t.definition.name}
           </label>
         ))}
-      <label className="field">
-        <span>Link it from</span>
-        <select
-          aria-label="Link it from"
-          value={type.subject?.linkProperty ?? ""}
-          onChange={(e) => update(withSubject(type, { linkProperty: e.target.value || undefined }))}
-        >
-          <option value="">Nowhere</option>
-          {linkProperties.map((p) => (
-            <option key={p.key} value={p.key}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-      </label>
+      <LinkKindField type={type} metamodel={metamodel} update={update} />
     </fieldset>
+  );
+}
+
+/**
+ * The kind of link a diagram of this type gets from the element it is about (views-and-design-artifacts.md §13):
+ * only kinds that can point at a document (for documents) or at a diagram (for the other kinds of view).
+ */
+function LinkKindField(props: { type: DiagramType; metamodel: Metamodel; update(patch: Partial<DiagramType>): void }) {
+  const { type, metamodel, update } = props;
+  const target = kindOf(type) === "document" ? "document" : "diagram";
+  const kinds = metamodel.allLinkKinds().filter((k) => k.targets.includes(target));
+  return (
+    <label className="field">
+      <span>Link it from the element as</span>
+      <select
+        aria-label="Link it from the element as"
+        value={type.subject?.linkKind ?? ""}
+        onChange={(e) => update(withSubject(type, { linkKind: e.target.value || undefined }))}
+      >
+        <option value="">No link</option>
+        {kinds.map((k) => (
+          <option key={k.key} value={k.key}>
+            {k.name}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 

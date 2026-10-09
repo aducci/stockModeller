@@ -8,6 +8,7 @@ import {
   type CollectionName,
   type DiagramRow,
   type FolderRow,
+  type LinkRow,
   type ObjectOccurrenceRow,
   type ObjectRow,
   type RelationshipOccurrenceRow,
@@ -20,7 +21,7 @@ import type { Database } from "./schema";
 import { scenarioAncestry } from "./repositories";
 
 type ScenarioTable =
-  "object" | "relationship" | "diagram" | "object_occurrence" | "relationship_occurrence" | "annotation";
+  "object" | "relationship" | "diagram" | "object_occurrence" | "relationship_occurrence" | "annotation" | "link";
 
 const TABLES: Record<CollectionName, keyof Database> = {
   folders: "folder",
@@ -30,6 +31,7 @@ const TABLES: Record<CollectionName, keyof Database> = {
   objectOccurrences: "object_occurrence",
   relationshipOccurrences: "relationship_occurrence",
   annotations: "annotation",
+  links: "link",
 };
 
 const json = (value: unknown) => JSON.stringify(value);
@@ -75,13 +77,14 @@ export async function loadState(
     })),
   );
 
-  const [objects, relationships, diagrams, occurrences, lines, annotations] = await Promise.all([
+  const [objects, relationships, diagrams, occurrences, lines, annotations, links] = await Promise.all([
     resolve(tx, "object", repositoryId, ancestry),
     resolve(tx, "relationship", repositoryId, ancestry),
     resolve(tx, "diagram", repositoryId, ancestry),
     resolve(tx, "object_occurrence", repositoryId, ancestry),
     resolve(tx, "relationship_occurrence", repositoryId, ancestry),
     resolve(tx, "annotation", repositoryId, ancestry),
+    resolve(tx, "link", repositoryId, ancestry),
   ]);
 
   state.load("objects", objects.map(fromObject));
@@ -90,6 +93,7 @@ export async function loadState(
   state.load("objectOccurrences", occurrences.map(fromObjectOccurrence));
   state.load("relationshipOccurrences", lines.map(fromRelationshipOccurrence));
   state.load("annotations", annotations.map(fromAnnotation));
+  state.load("links", links.map(fromLink));
   return { state, seq };
 }
 
@@ -216,6 +220,22 @@ function fromAnnotation(r: any): AnnotationRow {
     z: r.z,
     content: r.content,
     style: r.style,
+    deleted: r.deleted,
+    scenarioId: r.scenario_id,
+  };
+}
+function fromLink(r: any): LinkRow {
+  return {
+    id: r.id,
+    sourceId: r.source_id,
+    kind: r.kind,
+    target:
+      r.target_diagram_id !== null
+        ? { diagramId: r.target_diagram_id }
+        : r.target_object_id !== null
+          ? { objectId: r.target_object_id }
+          : { url: r.url },
+    ...(r.label !== null ? { label: r.label } : {}),
     deleted: r.deleted,
     scenarioId: r.scenario_id,
   };
@@ -373,6 +393,20 @@ function toDatabase(touched: TouchedRow, ctx: WriteContext): Record<string, unkn
         z: r.z,
         content: json(r.content),
         style: json(r.style),
+        deleted: r.deleted,
+      };
+    }
+    case "links": {
+      const r = touched.after as LinkRow;
+      return {
+        ...scoped,
+        id: r.id,
+        source_id: r.sourceId,
+        kind: r.kind,
+        target_object_id: "objectId" in r.target ? r.target.objectId : null,
+        target_diagram_id: "diagramId" in r.target ? r.target.diagramId : null,
+        url: "url" in r.target ? r.target.url : null,
+        label: r.label ?? null,
         deleted: r.deleted,
       };
     }

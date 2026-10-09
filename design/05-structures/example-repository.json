@@ -26,8 +26,7 @@
     { "id": "O-APP-1", "type": "application", "name": "Claims Manager", "key": "APP-0001", "folderId": "F04",
       "properties": { "lifecycle.status": "active", "lifecycle.activeFrom": "2015-04-01", "ownership.businessOwner": "dana@example.com",
                       "assessment.businessFit": "4", "assessment.technicalFit": "2", "assessment.criticality": "high",
-                      "cost.runCost": { "amount": 120000, "currency": "EUR" }, "technical.users": 350,
-                      "documentation.link": ["https://wiki.example.com/claims-manager", "diagram:D-04", "diagram:D-03"] },
+                      "cost.runCost": { "amount": 120000, "currency": "EUR" }, "technical.users": 350 },
       "externalIds": { "servicenow": "cmdb_ci_appl_7781" } },
     { "id": "O-APP-2", "type": "application", "name": "Legacy CRM", "key": "APP-0002", "folderId": "F04",
       "properties": { "lifecycle.status": "active", "assessment.technicalFit": "1", "cost.runCost": { "amount": 210000, "currency": "EUR" } } },
@@ -36,12 +35,12 @@
     { "id": "O-SRV-1", "type": "server", "name": "SRV-APP-01", "folderId": "F05", "properties": { "lifecycle.status": "active" } },
     { "id": "O-ORG-1", "type": "organisationUnit", "name": "Claims department", "folderId": "F01", "properties": {} },
     { "id": "O-INT-1", "type": "interface", "name": "Claims API", "folderId": "F04", "properties": {} },
-    { "id": "O-INT-2", "type": "interface", "name": "Payments API", "folderId": "F04", "properties": { "documentation.link": ["diagram:D-07", "diagram:D-06"] } },
+    { "id": "O-INT-2", "type": "interface", "name": "Payments API", "folderId": "F04", "properties": {} },
     { "id": "O-DAT-1", "type": "dataObject", "name": "Claim", "folderId": "F08", "properties": {} },
     { "id": "O-DAT-2", "type": "dataObject", "name": "Payment", "folderId": "F08", "properties": {} },
-    { "id": "O-PRC-2", "type": "process", "name": "Manage Claims", "folderId": "F03", "properties": { "lifecycle.status": "active", "documentation.link": ["diagram:D-08"] } },
+    { "id": "O-PRC-2", "type": "process", "name": "Manage Claims", "folderId": "F03", "properties": { "lifecycle.status": "active" } },
     { "id": "O-PRC-3", "type": "process", "name": "Recover Costs", "folderId": "F03", "properties": {} },
-    { "id": "O-FN-1", "type": "applicationFunction", "name": "Pay a claim", "folderId": "F04", "properties": { "documentation.link": ["diagram:D-05"] } }
+    { "id": "O-FN-1", "type": "applicationFunction", "name": "Pay a claim", "folderId": "F04", "properties": {} }
   ],
   "relationships": [
     { "id": "R-01", "type": "contains", "sourceId": "O-CAP-1", "targetId": "O-CAP-2", "properties": {} },
@@ -68,6 +67,16 @@
     { "id": "R-26", "type": "composedOf", "sourceId": "O-PRC-2", "targetId": "O-PRC-1", "properties": {} },
     { "id": "R-27", "type": "composedOf", "sourceId": "O-PRC-2", "targetId": "O-PRC-3", "properties": {} },
     { "id": "R-28", "type": "triggers", "sourceId": "O-PRC-1", "targetId": "O-PRC-3", "properties": {} }
+  ],
+  "links": [
+    { "id": "L-01", "sourceId": "O-APP-1", "kind": "web", "target": { "url": "https://wiki.example.com/claims-manager" }, "label": "Team wiki" },
+    { "id": "L-02", "sourceId": "O-APP-1", "kind": "document", "target": { "diagramId": "D-04" } },
+    { "id": "L-03", "sourceId": "O-APP-1", "kind": "drillDown", "target": { "diagramId": "D-03" } },
+    { "id": "L-04", "sourceId": "O-APP-1", "kind": "related", "target": { "objectId": "O-APP-2" }, "label": "Reads customer data from it" },
+    { "id": "L-05", "sourceId": "O-INT-2", "kind": "document", "target": { "diagramId": "D-07" } },
+    { "id": "L-06", "sourceId": "O-INT-2", "kind": "drillDown", "target": { "diagramId": "D-06" } },
+    { "id": "L-07", "sourceId": "O-PRC-2", "kind": "drillDown", "target": { "diagramId": "D-08" } },
+    { "id": "L-08", "sourceId": "O-FN-1", "kind": "drillDown", "target": { "diagramId": "D-05" } }
   ],
   "scenarioChanges": {
     "S0000000000000000000000002": [

@@ -40,9 +40,9 @@
             "type": "string"
           }
         },
-        "linkProperty": {
+        "linkKind": {
           "type": "string",
-          "description": "A url property with many values: making a diagram of this type about an element adds a link to it there, in the same change"
+          "description": "build (slice DOC-R2): a link kind of the package (linkKinds); making a diagram of this type about an element adds a link of this kind to the element, in the same change"
         }
       }
     },

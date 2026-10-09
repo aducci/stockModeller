@@ -2,6 +2,7 @@
 import {
   COMPONENT_KEYS,
   LAYOUT_KEY,
+  LINK_TARGET_KINDS,
   ABSTRACTION_PROPERTY,
   REGION_COMPONENT_KEYS,
   SEMANTIC_KINDS,
@@ -12,6 +13,7 @@ import {
   resolveTemplate,
   semanticKindInfo,
   type DiagramType,
+  type LinkKind,
   type ResolvedSection,
   type ResolvedTemplate,
   type SectionDefinition,
@@ -90,6 +92,7 @@ export class Metamodel {
   private readonly valueLists = new Map<string, ValueList>();
   private readonly diagramTypes = new Map<TypeKey, ResolvedDiagramType>();
   private readonly rulesByRelationshipType = new Map<TypeKey, CompiledRule[]>();
+  private readonly linkKinds = new Map<string, LinkKind>();
 
   constructor(
     readonly name: string,
@@ -107,6 +110,16 @@ export class Metamodel {
 
   relationshipType(key: TypeKey): ResolvedRelationshipType | undefined {
     return this.relationshipTypes.get(key);
+  }
+
+  /** A kind of link (slice DOC-R2, views-and-design-artifacts.md §13). */
+  linkKind(key: string): LinkKind | undefined {
+    return this.linkKinds.get(key);
+  }
+
+  /** Every link kind, in the package's order. */
+  allLinkKinds(): LinkKind[] {
+    return [...this.linkKinds.values()];
   }
 
   /** Every relationship type, in the package's order. */
@@ -345,6 +358,15 @@ export class Metamodel {
       mm.rulesByRelationshipType.set(rule.relationshipType, list);
     }
 
+    for (const lk of pkg.linkKinds ?? []) {
+      if (mm.linkKinds.has(lk.key)) duplicate("Link kind", lk.key);
+      if (lk.targets.length === 0) problems.push(`Link kind "${lk.key}" can point at nothing`);
+      for (const t of lk.targets)
+        if (!(LINK_TARGET_KINDS as readonly string[]).includes(t))
+          problems.push(`Link kind "${lk.key}" points at unknown target "${t}"`);
+      mm.linkKinds.set(lk.key, lk);
+    }
+
     for (const dt of diagramTypes) {
       if (mm.diagramTypes.has(dt.key)) duplicate("Diagram type", dt.key);
       for (const t of dt.objectTypes) typeRef(t, `Diagram type "${dt.key}"`);
@@ -375,12 +397,13 @@ export class Metamodel {
         if (!mm.propertyTypes.has(p)) problems.push(`Diagram type "${dt.key}" uses unknown property type "${p}"`);
       }
       for (const t of dt.subject?.type ?? []) typeRef(t, `Diagram type "${dt.key}" subject`);
-      const link = dt.subject?.linkProperty;
-      if (link !== undefined) {
-        const pt = mm.propertyTypes.get(link);
-        if (!pt) problems.push(`Diagram type "${dt.key}" links from unknown property type "${link}"`);
-        else if (pt.dataType !== "url" || !pt.many)
-          problems.push(`Diagram type "${dt.key}" links from "${link}", which is not a url property with many values`);
+      const linkKind = dt.subject?.linkKind;
+      if (linkKind !== undefined) {
+        const kind = mm.linkKinds.get(linkKind);
+        const target = dt.kind === "document" ? "document" : "diagram";
+        if (!kind) problems.push(`Diagram type "${dt.key}" links with unknown link kind "${linkKind}"`);
+        else if (!kind.targets.includes(target))
+          problems.push(`Diagram type "${dt.key}" links with "${linkKind}", which cannot point at a ${target}`);
       }
       if (dt.decomposes) {
         if (!mm.relationshipTypes.has(dt.decomposes.relationship))

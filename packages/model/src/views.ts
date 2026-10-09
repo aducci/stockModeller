@@ -77,6 +77,9 @@ export const REGION_COMPONENT_KEYS: readonly ComponentKey[] = [
  */
 export const SUBJECT_KEY = "subject";
 
+/** What a link kind may point at (slice DOC-R2, views-and-design-artifacts.md §13). */
+export const LINK_TARGET_KINDS = ["document", "diagram", "element", "web"] as const;
+
 /** build (slice DOC-1): a link in a url property to a diagram or document of the repository is `diagram:<id>`. */
 export const DIAGRAM_LINK = "diagram:";
 

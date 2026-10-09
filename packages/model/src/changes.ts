@@ -13,6 +13,7 @@ import type {
   SymbolStyle,
   LineStyle,
   RuleFinding,
+  LinkTarget,
 } from "./model";
 
 export interface OnExisting {
@@ -104,7 +105,14 @@ export type ModelEdit =
    * build: place an item among its siblings in the explorer (its folder, or its container for a contained object).
    * `rank` is a fractional-index key; `null` drops it (unranked items follow ranked ones, by name). Last writer wins.
    */
-  | { edit: "setRank"; item: "folder" | "object" | "diagram"; id: Id; rank: string | null };
+  | { edit: "setRank"; item: "folder" | "object" | "diagram"; id: Id; rank: string | null }
+  /**
+   * build (slice DOC-R2): a link from an element to a document or diagram, an element or a web page, of a kind the
+   * metamodel defines. Links are not versioned: the last writer wins, like layout. `label: null` clears the label.
+   */
+  | { edit: "createLink"; id: Id; sourceId: Id; kind: string; target: LinkTarget; label?: string }
+  | { edit: "updateLink"; id: Id; set: { kind?: string; label?: string | null } }
+  | { edit: "deleteLink"; id: Id };
 
 // ================================================================ diagram edits (layout: last writer wins)
 export type DiagramEdit =

@@ -1,11 +1,11 @@
-// What a diagram is about (DOC-1): its subject, the link from the element's documentation, and the diagram that
-// every symbol of the element opens.
+// What a diagram is about (DOC-1): its subject, the link from the element (a record of a kind since DOC-R2), and the
+// diagram that every symbol of the element opens.
 import { describe, expect, it } from "vitest";
 import { essentials, insuranceGroup } from "@connectome/content";
 import { applyChange, Metamodel, ModelState } from "@connectome/engine";
 import type { Edit } from "@connectome/model";
 import { newDocumentPlan } from "../src/document";
-import { aboutEdits, canBeAbout, diagramsAbout, subjectDiagramFor, unlinkEdits } from "../src/subjects";
+import { aboutEdits, canBeAbout, diagramsAbout, subjectDiagramFor } from "../src/subjects";
 import { diagramAroundPlan } from "../src/views";
 
 const metamodel = Metamodel.compile(essentials.metamodel, essentials.diagramTypes);
@@ -35,23 +35,30 @@ describe("diagram subjects", () => {
     ]);
   });
 
-  it("opens a diagram about the element from its symbols elsewhere, never a document or the diagram itself", () => {
+  it("opens a drill-down link or a diagram about the element from its symbols, never a document or itself", () => {
     const state = exampleState();
     expect(subjectDiagramFor(state, metamodel, "O-APP-1", "D-01")?.id).toBe("D-03");
     expect(subjectDiagramFor(state, metamodel, "O-APP-1", "D-03")).toBeUndefined();
     expect(subjectDiagramFor(state, metamodel, "O-APP-2", "D-01")).toBeUndefined();
+    // A drill-down link wins over a diagram that is only about the element.
+    run(state, [
+      { edit: "createLink", id: "L-X", sourceId: "O-APP-2", kind: "drillDown", target: { diagramId: "D-08" } },
+    ]);
+    expect(subjectDiagramFor(state, metamodel, "O-APP-2", "D-01")?.id).toBe("D-08");
   });
 
-  it("makes a new document about its subject and links it from the subject's documentation, in one change", () => {
+  it("makes a new document about its subject and links it from the subject as a document, in one change", () => {
     const state = exampleState();
     const hld = metamodel.diagramType("hld")!.definition;
     const plan = newDocumentPlan(state, metamodel, hld, state.objects.get("O-APP-3")!, "D-NEW");
     run(state, plan.edits);
     expect(state.diagrams.get("D-NEW")!.definition).toEqual({ subject: "O-APP-3" });
-    expect(state.objects.get("O-APP-3")!.properties["documentation.link"]).toEqual(["diagram:D-NEW"]);
+    expect(state.links.find("bySource", "O-APP-3").map((l) => [l.kind, l.target])).toEqual([
+      ["document", { diagramId: "D-NEW" }],
+    ]);
   });
 
-  it("adds to the links already there, and links a new canvas around an element", () => {
+  it("adds to the links already there, and links a new canvas around an element as a drill-down", () => {
     const state = exampleState();
     const plan = diagramAroundPlan(
       state,
@@ -61,27 +68,26 @@ describe("diagram subjects", () => {
       "D-C",
     );
     run(state, plan.edits);
-    expect(state.objects.get("O-APP-1")!.properties["documentation.link"]).toEqual([
-      "https://wiki.example.com/claims-manager",
-      "diagram:D-04",
-      "diagram:D-03",
-      "diagram:D-C",
+    expect(state.links.find("bySource", "O-APP-1").map((l) => l.kind)).toEqual([
+      "web",
+      "document",
+      "drillDown",
+      "related",
+      "drillDown",
     ]);
+    expect(state.links.find("byDiagram", "D-C").map((l) => l.sourceId)).toEqual(["O-APP-1"]);
   });
 
-  it("does not link from a type that names no link property, nor twice", () => {
+  it("does not link from a type that names no link kind, nor twice", () => {
     const state = exampleState();
     expect(aboutEdits(state, metamodel, "applicationLandscape", "O-APP-1", "D-X").edits).toEqual([]);
     expect(aboutEdits(state, metamodel, "hld", "O-APP-1", "D-04").edits).toEqual([]);
   });
 
-  it("takes a deleted diagram's links out of the elements' documentation", () => {
+  it("loses the links to a deleted diagram", () => {
     const state = exampleState();
-    run(state, [...unlinkEdits(state, metamodel, "D-04"), { edit: "deleteDiagram", id: "D-04" }]);
-    expect(state.objects.get("O-APP-1")!.properties["documentation.link"]).toEqual([
-      "https://wiki.example.com/claims-manager",
-      "diagram:D-03",
-    ]);
+    run(state, [{ edit: "deleteDiagram", id: "D-04" }]);
+    expect(state.links.find("bySource", "O-APP-1").map((l) => l.id)).toEqual(["L-01", "L-03", "L-04"]);
   });
 
   it("offers a type for elements its subject filter, or a document's template, accepts", () => {

@@ -9,6 +9,8 @@ interface ExampleRepository {
   folders: { id: Id; parentId: Id | null; name: string }[];
   objects: Record<string, unknown>[];
   relationships: Record<string, unknown>[];
+  /** Links from elements (slice DOC-R2, views-and-design-artifacts.md §13), created after the views they point at. */
+  links: Record<string, unknown>[];
   scenarioChanges: Record<Id, Record<string, unknown>[]>;
   diagrams: {
     id: Id;
@@ -35,7 +37,7 @@ export const insuranceGroup = {
   baselineScenarioId: baselineScenario.id,
   targetScenario,
 
-  /** The baseline as one change: folders, objects, relationships and the views with their occurrences. */
+  /** The baseline as one change: folders, objects, relationships, the views with their occurrences, then links. */
   baselineChange(changeId: Id = "C-EXAMPLE"): Change {
     const edits: unknown[] = [
       ...example.folders.map((f) => ({ edit: "createFolder", ...f })),
@@ -52,6 +54,7 @@ export const insuranceGroup = {
       }
       for (const annotation of d.annotations) edits.push({ edit: "addAnnotation", diagramId: d.id, annotation });
     }
+    for (const link of example.links) edits.push({ edit: "createLink", ...link });
     return parseChange({ id: changeId, scenarioId: baselineScenario.id, label: "Load example repository", edits });
   },
 

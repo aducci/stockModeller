@@ -36,7 +36,10 @@ describe("decomposition diagrams", () => {
     expect(shown.map((o) => state.objects.get(o.objectId)!.name)).toEqual(["Handle Claim", "Recover Costs"]);
     // The line between the parts that the type shows comes with them.
     expect(state.relationshipOccurrences.find("byDiagram", "D-L0").map((l) => l.relationshipId)).toEqual(["R-28"]);
-    expect(state.objects.get("O-PRC-2")!.properties["documentation.link"]).toEqual(["diagram:D-08", "diagram:D-L0"]);
+    expect(state.links.find("bySource", "O-PRC-2").map((l) => [l.kind, l.target])).toEqual([
+      ["drillDown", { diagramId: "D-08" }],
+      ["drillDown", { diagramId: "D-L0" }],
+    ]);
   });
 
   it("makes what is drawn on it a part of its subject, once, and only types the rules allow", () => {

@@ -60,6 +60,23 @@ export interface MetamodelPackage {
   exchangeMappings?: ExchangeMapping[];
   /** Reusable groups of document sections (views-and-design-artifacts.md §8.4), used by the package's templates. */
   documentPatterns?: DocumentPattern[];
+  /** build (slice DOC-R2): the kinds of link an element can have (views-and-design-artifacts.md §13). */
+  linkKinds?: LinkKind[];
+}
+
+/** What a link of a kind may point at: documents, other views, elements, web pages. */
+export type LinkTargetKind = "document" | "diagram" | "element" | "web";
+
+/** build (slice DOC-R2): a kind of link, e.g. *Documented in* (views-and-design-artifacts.md §13). */
+export interface LinkKind {
+  key: string;
+  /** Read from the element: "Documented in". */
+  name: string;
+  /** Read from the target, under *Linked from*: "Documents"; absent = the name. */
+  inverseName?: string;
+  targets: LinkTargetKind[];
+  /** Double-clicking a symbol of the element opens the first link of this kind (after the symbol's own child). */
+  drillDown?: boolean;
 }
 
 export type ColourRuleAction =
@@ -79,12 +96,12 @@ export interface GenerationRule {
   trigger?: "manual" | "onChange" | "nightly";
 }
 
-/** build (slice DOC-1): which elements a diagram type's diagrams may be about, and where an element links them. */
+/** build (slice DOC-1): which elements a diagram type's diagrams may be about, and how an element links them. */
 export interface DiagramSubject {
   type?: TypeKey[];
   category?: SemanticCategory[];
-  /** A url property with `many`: making a diagram of this type about an element adds a link to it there. */
-  linkProperty?: PropertyKey;
+  /** build (slice DOC-R2): making a diagram of this type about an element adds a link of this kind to it. */
+  linkKind?: string;
 }
 
 /** build (slice DOC-1b): a diagram type whose diagrams decompose their subject through a relationship type. */

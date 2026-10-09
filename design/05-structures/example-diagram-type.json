@@ -14,9 +14,6 @@
     "flowsTo",
     "calls"
   ],
-  "properties": [
-    "documentation.link"
-  ],
   "nesting": "nested",
   "showExistingRelationships": true,
   "symbols": {

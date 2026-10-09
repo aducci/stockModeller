@@ -188,6 +188,16 @@ export interface AnnotationTable extends ScenarioRow {
   style: Json<Record<string, unknown>>;
 }
 
+/** build (slice DOC-R2, migration 013): a link from an element; exactly one target column is set. */
+export interface LinkTable extends ScenarioRow {
+  source_id: string;
+  kind: string;
+  target_object_id: string | null;
+  target_diagram_id: string | null;
+  url: string | null;
+  label: string | null;
+}
+
 export interface ChangeTable extends Tenant {
   id: string;
   repository_id: string;
@@ -230,6 +240,7 @@ export interface Database {
   object_occurrence: ObjectOccurrenceTable;
   relationship_occurrence: RelationshipOccurrenceTable;
   annotation: AnnotationTable;
+  link: LinkTable;
   change: ChangeTable;
   change_log: ChangeLogTable;
 }

@@ -314,4 +314,40 @@ describeDb("engine + database", () => {
     const typesAfter = await withWorkspace(t.conn, WS, (tx) => loadMetamodelPackage(tx, REPO));
     expect(sortByKey(typesAfter.metamodel.objectTypes)).toEqual(sortByKey(types.metamodel.objectTypes));
   });
+
+  it("migration 013 turns Documentation values into links of the right kind (B70)", async () => {
+    // Put the database back as it was before links: the table gone, the values in the property, no link kinds.
+    const client = new pg.Client({ connectionString: t.url });
+    await client.connect();
+    try {
+      await client.query(`
+        DROP TABLE link;
+        UPDATE object SET properties = properties || '{"documentation.link":
+          ["https://wiki.example.com/claims-manager", "diagram:D-04", "diagram:D-03"]}'::jsonb
+          WHERE repository_id = '${REPO}' AND id = 'O-APP-1' AND scenario_id = '${BASELINE}';
+        UPDATE object SET properties = properties || '{"documentation.link": "diagram:D-05"}'::jsonb
+          WHERE repository_id = '${REPO}' AND id = 'O-FN-1' AND scenario_id = '${BASELINE}';
+        UPDATE diagram_type SET definition = jsonb_set(definition #- '{subject,linkKind}', '{subject,linkProperty}',
+          '"documentation.link"') WHERE definition->'subject' ? 'linkKind';
+        UPDATE repository SET settings = settings #- '{metamodel,linkKinds}';`);
+      await client.query(await readFile(MIGRATIONS_DIR + "013_links.sql", "utf8"));
+    } finally {
+      await client.end();
+    }
+    const after = await withWorkspace(t.conn, WS, (tx) => loadState(tx, REPO, BASELINE));
+    const linksOf = (id: string) => after.state.links.find("bySource", id).map((l) => [l.kind, l.target]);
+    expect(linksOf("O-APP-1")).toEqual([
+      ["web", { url: "https://wiki.example.com/claims-manager" }],
+      ["document", { diagramId: "D-04" }],
+      ["drillDown", { diagramId: "D-03" }],
+    ]);
+    expect(linksOf("O-FN-1")).toEqual([["drillDown", { diagramId: "D-05" }]]);
+    expect(after.state.objects.get("O-APP-1")!.properties).not.toHaveProperty(["documentation.link"]);
+    const { metamodel, diagramTypes } = await withWorkspace(t.conn, WS, (tx) => loadMetamodelPackage(tx, REPO));
+    expect(metamodel.linkKinds).toEqual(essentials.metamodel.linkKinds);
+    expect(diagramTypes.find((d) => d.key === "hld")!.subject).toEqual({ linkKind: "document" });
+    expect(diagramTypes.find((d) => d.key === "context")!.subject).toEqual(
+      essentials.diagramTypes.find((d) => d.key === "context")!.subject,
+    );
+  });
 });

@@ -133,8 +133,7 @@
           "amount": 120000,
           "currency": "EUR"
         },
-        "technical.users": 350,
-        "documentation.link": ["https://wiki.example.com/claims-manager", "diagram:D-04", "diagram:D-03"]
+        "technical.users": 350
       },
       "externalIds": {
         "servicenow": "cmdb_ci_appl_7781"
@@ -194,9 +193,7 @@
       "type": "interface",
       "name": "Payments API",
       "folderId": "F04",
-      "properties": {
-        "documentation.link": ["diagram:D-07", "diagram:D-06"]
-      }
+      "properties": {}
     },
     {
       "id": "O-DAT-1",
@@ -218,8 +215,7 @@
       "name": "Manage Claims",
       "folderId": "F03",
       "properties": {
-        "lifecycle.status": "active",
-        "documentation.link": ["diagram:D-08"]
+        "lifecycle.status": "active"
       }
     },
     {
@@ -234,9 +230,7 @@
       "type": "applicationFunction",
       "name": "Pay a claim",
       "folderId": "F04",
-      "properties": {
-        "documentation.link": ["diagram:D-05"]
-      }
+      "properties": {}
     }
   ],
   "relationships": [
@@ -434,6 +428,74 @@
       "sourceId": "O-PRC-1",
       "targetId": "O-PRC-3",
       "properties": {}
+    }
+  ],
+  "links": [
+    {
+      "id": "L-01",
+      "sourceId": "O-APP-1",
+      "kind": "web",
+      "target": {
+        "url": "https://wiki.example.com/claims-manager"
+      },
+      "label": "Team wiki"
+    },
+    {
+      "id": "L-02",
+      "sourceId": "O-APP-1",
+      "kind": "document",
+      "target": {
+        "diagramId": "D-04"
+      }
+    },
+    {
+      "id": "L-03",
+      "sourceId": "O-APP-1",
+      "kind": "drillDown",
+      "target": {
+        "diagramId": "D-03"
+      }
+    },
+    {
+      "id": "L-04",
+      "sourceId": "O-APP-1",
+      "kind": "related",
+      "target": {
+        "objectId": "O-APP-2"
+      },
+      "label": "Reads customer data from it"
+    },
+    {
+      "id": "L-05",
+      "sourceId": "O-INT-2",
+      "kind": "document",
+      "target": {
+        "diagramId": "D-07"
+      }
+    },
+    {
+      "id": "L-06",
+      "sourceId": "O-INT-2",
+      "kind": "drillDown",
+      "target": {
+        "diagramId": "D-06"
+      }
+    },
+    {
+      "id": "L-07",
+      "sourceId": "O-PRC-2",
+      "kind": "drillDown",
+      "target": {
+        "diagramId": "D-08"
+      }
+    },
+    {
+      "id": "L-08",
+      "sourceId": "O-FN-1",
+      "kind": "drillDown",
+      "target": {
+        "diagramId": "D-05"
+      }
     }
   ],
   "scenarioChanges": {
