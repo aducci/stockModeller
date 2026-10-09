@@ -19,7 +19,7 @@ Quiet, dense, professional chrome: the colourful part is the customer's diagrams
 - Added / changed / removed colours mean the same thing everywhere: compare, review, properties and diagrams.
 - Spacing: 2, 4, 8, 12, 16, 24, 32.
 - Radius: 2 (inputs), 4 (cards), 999 (chips).
-- Type: IBM Plex Sans (fallback system-ui), 13 px base, 12 px tables, 15 px panel titles. IBM Plex Mono for keys, IDs and queries.
+- Type: IBM Plex Sans (fallback system-ui) in three sizes: 11 px small (labels, meta, chips), 12 px base (body, tables, the explorer), 14 px large (panel titles). These match what the app mostly uses today; the body's 13 px default and the stray sizes move onto this scale. IBM Plex Mono for keys, IDs and queries.
 
 ## 2. UI building blocks
 

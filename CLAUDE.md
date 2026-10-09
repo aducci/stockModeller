@@ -6,6 +6,7 @@
 - Every write goes through the change engine (`packages/engine/src/apply.ts`). Each edit must record an exact inverse: the property test in `packages/engine/test/inverse.test.ts` checks this, round-tripping the inverses through JSON as the database does.
 - The engine is pure (no I/O). ESLint enforces the package boundaries in `eslint.config.js`.
 - API responses are checked against `design/03-platform/openapi.yaml` in `apps/server/test`; new endpoints go into that file too.
+- Repo skills in `.claude/skills/` codify the principles pack: `model-changes`, `ux-basics`, `visual-style` and `principles-review`. Load the ones a change touches.
 
 ## Commands
 
