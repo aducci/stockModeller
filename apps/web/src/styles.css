@@ -2189,32 +2189,18 @@ button.toggle .badge {
   flex-basis: 100%;
   margin: 0;
 }
-.doc-preview {
-  display: block;
+/* A linked diagram drawn read-only by the canvas's own renderer (DiagramPicture). */
+.canvas.picture {
+  margin: 0;
+}
+.canvas.picture svg {
   width: 100%;
-  background: var(--canvas);
   border: 1px solid var(--line);
   border-radius: 6px;
   cursor: zoom-in;
 }
-.doc-preview-box {
-  fill: var(--sky-fill);
-  stroke: var(--sky-ink);
-  stroke-width: 1;
-}
-.doc-preview .subject .doc-preview-box {
-  stroke-width: 2.5;
-}
-.doc-preview text {
-  font-size: 13px;
-  fill: var(--fg);
-}
-.doc-preview-line {
-  stroke: var(--fg-2);
-  stroke-width: 1.5;
-}
-.doc-preview-arrow {
-  fill: var(--fg-2);
+.canvas.picture .occ rect {
+  cursor: inherit;
 }
 .doc-banner {
   display: flex;
