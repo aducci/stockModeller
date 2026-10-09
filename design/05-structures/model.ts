@@ -42,7 +42,7 @@ export type PropertyEditor =
 export interface PropertyType {
   key: PropertyKey; name: string; group: string; dataType: DataType;
   unit?: string; valueList?: string; objectTypes?: TypeKey[];
-  many?: boolean;                               // build (DOC-1): url only; a list of links, web or diagram:<id>
+  many?: boolean;                               // build (DOC-1, DOC-2): url or objectRef; a list of links (web or diagram:<id>) or of object ids
   required?: boolean; default?: PropertyValue; help?: string;
   validation?: { min?: number; max?: number; pattern?: string; maxLength?: number; decimals?: number };
   formula?: { expression: string; resultType: Exclude<DataType, "calculated" | "richText"> };
@@ -107,6 +107,7 @@ export interface RelationshipType {
   semantic?: SemanticKind;                      // what the engine understands it to mean (default "association")
   semanticDirection?: "forward" | "reverse";    // reverse: the source plays the kind's target role
   cascadeDelete?: boolean;                      // composition: deleting the whole deletes its parts
+  abstraction?: SemanticAbstraction;            // build (DOC-2): default semantic.abstraction of its relationships
   payload?: PayloadUse;                         // whether relationships carry objects (default "optional" for flow and trigger, else "none")
   distinct?: "pair" | "pairAndPayload" | "none";  // what counts as a duplicate relationship (default by kind)
   properties?: PropertyKey[];

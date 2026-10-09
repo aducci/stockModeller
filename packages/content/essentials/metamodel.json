@@ -1,6 +1,6 @@
 {
   "name": "Essentials",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "layers": [
     {
       "key": "strategy",
@@ -212,6 +212,24 @@
       "help": "Where it is documented: web pages, and the documents and diagrams about it in this repository"
     },
     {
+      "key": "integration.informationFlows",
+      "name": "Information flows",
+      "group": "integration",
+      "dataType": "objectRef",
+      "many": true,
+      "objectTypes": ["applicationFunction", "informationFlow"],
+      "help": "The information flows and application functions this connection stands for. Flows implied by what its ends realise or contain are added without listing them"
+    },
+    {
+      "key": "integration.excludedFlows",
+      "name": "Not part of it",
+      "group": "integration",
+      "dataType": "objectRef",
+      "many": true,
+      "objectTypes": ["applicationFunction", "informationFlow"],
+      "help": "Flows implied by what this connection's ends realise or contain that it does not stand for"
+    },
+    {
       "key": "technical.users",
       "name": "Number of users",
       "group": "technical",
@@ -407,6 +425,36 @@
       }
     },
     {
+      "key": "applicationFunction",
+      "name": "Application function",
+      "plural": "Application functions",
+      "layer": "application",
+      "category": "behaviour",
+      "abstraction": "logical",
+      "defaultFolder": "Applications/Functions",
+      "properties": ["documentation.link"],
+      "symbol": {
+        "shape": "roundRect",
+        "width": 140,
+        "height": 50
+      }
+    },
+    {
+      "key": "informationFlow",
+      "name": "Information flow",
+      "plural": "Information flows",
+      "layer": "application",
+      "category": "behaviour",
+      "abstraction": "logical",
+      "defaultFolder": "Applications/Information flows",
+      "properties": ["documentation.link"],
+      "symbol": {
+        "shape": "rect",
+        "width": 140,
+        "height": 46
+      }
+    },
+    {
       "key": "dataObject",
       "name": "Data object",
       "layer": "data",
@@ -496,7 +544,7 @@
       "verb": "flows to",
       "inverseVerb": "receives from",
       "semantic": "flow",
-      "properties": ["flow.frequency", "flow.protocol"]
+      "properties": ["flow.frequency", "flow.protocol", "integration.informationFlows", "integration.excludedFlows"]
     },
     {
       "key": "accesses",
@@ -517,7 +565,9 @@
       "name": "Calls",
       "verb": "calls",
       "inverseVerb": "is called by",
-      "semantic": "interaction"
+      "semantic": "interaction",
+      "abstraction": "logical",
+      "properties": ["integration.informationFlows", "integration.excludedFlows"]
     },
     {
       "key": "triggers",
@@ -659,6 +709,11 @@
       "relationshipType": "composedOf",
       "sourceType": "applicationBase",
       "targetType": "interface"
+    },
+    {
+      "relationshipType": "composedOf",
+      "sourceType": "applicationBase",
+      "targetType": "applicationFunction"
     },
     {
       "relationshipType": "composedOf",

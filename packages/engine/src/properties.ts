@@ -48,6 +48,16 @@ function checkText(pt: PropertyType, s: string): string | null {
   return null;
 }
 
+function checkRef(pt: PropertyType, id: string, ctx: ValueContext): string | null {
+  const type = ctx.objectTypeOf(id);
+  if (!type) return "must refer to an existing object";
+  const allowed = pt.objectTypes;
+  if (allowed && allowed.length > 0 && !allowed.some((t) => ctx.metamodel.isA(type, t))) {
+    return `must refer to an object of type ${allowed.join(" or ")}`;
+  }
+  return null;
+}
+
 export interface ValueContext {
   metamodel: Metamodel;
   /** The type of a live object, or undefined if there is none (for objectRef properties). */
@@ -101,12 +111,14 @@ export function checkValue(pt: PropertyType, value: PropertyValue, ctx: ValueCon
       return unknown.length === 0 ? null : `has unknown values: ${unknown.join(", ")}`;
     }
     case "objectRef": {
-      if (typeof value !== "string") return "must be an object id";
-      const type = ctx.objectTypeOf(value);
-      if (!type) return "must refer to an existing object";
-      const allowed = pt.objectTypes;
-      if (allowed && allowed.length > 0 && !allowed.some((t) => ctx.metamodel.isA(type, t))) {
-        return `must refer to an object of type ${allowed.join(" or ")}`;
+      if (!pt.many) return typeof value === "string" ? checkRef(pt, value, ctx) : "must be an object id";
+      // A list of references (slice DOC-2); a single one stored before the type allowed many still reads as one.
+      const ids = typeof value === "string" ? [value] : value;
+      if (!Array.isArray(ids) || ids.some((id) => typeof id !== "string")) return "must be a list of object ids";
+      if (new Set(ids).size !== ids.length) return "must not repeat an object";
+      for (const id of ids as string[]) {
+        const problem = checkRef(pt, id, ctx);
+        if (problem) return problem;
       }
       return null;
     }

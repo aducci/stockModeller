@@ -581,6 +581,7 @@ class Transaction {
         rel.payload.filter((id) => id !== obj.id),
       );
     }
+    this.dropReferences(obj.id);
     for (const occ of this.state.objectOccurrences.find("byObject", obj.id)) this.removeObjectOccurrence(occ);
     for (const rel of this.relationshipsOf(obj.id)) {
       // Deleting an interaction has already deleted its messages.
@@ -608,6 +609,73 @@ class Transaction {
       },
       ...this.restoreRank("object", current),
     );
+  }
+
+  /**
+   * Takes a deleted object out of every reference property that holds it, on objects and relationships, so no value
+   * points at it (slice DOC-2). Each change records its inverse before the delete's own, so undo restores the object
+   * first and then the references to it.
+   */
+  private dropReferences(id: Id): void {
+    const refs = this.mm
+      .allPropertyTypes()
+      .filter((p) => p.dataType === "objectRef")
+      .map((p) => p.key);
+    if (refs.length === 0) return;
+    const without = (properties: Record<string, PropertyValue>) => {
+      const set: Record<string, PropertyValue> = {};
+      for (const key of refs) {
+        const value = properties[key];
+        if (value === id) set[key] = null;
+        else if (Array.isArray(value) && value.includes(id)) {
+          const kept = value.filter((v) => v !== id);
+          set[key] = kept.length > 0 ? kept : null;
+        }
+      }
+      return set;
+    };
+    const apply = (properties: Record<string, PropertyValue>, set: Record<string, PropertyValue>) => {
+      const next = { ...properties };
+      for (const [k, v] of Object.entries(set)) {
+        if (v === null) delete next[k];
+        else next[k] = v;
+      }
+      return next;
+    };
+    const previous = (properties: Record<string, PropertyValue>, set: Record<string, PropertyValue>) =>
+      Object.fromEntries(Object.keys(set).map((k) => [k, properties[k] ?? null]));
+    for (const holder of this.state.objects.live()) {
+      const set = without(holder.properties);
+      if (Object.keys(set).length === 0) continue;
+      this.write("objects", { ...holder, properties: apply(holder.properties, set) });
+      this.markChanged(
+        "objects",
+        holder.id,
+        Object.keys(set).map((k) => `properties.${k}`),
+      );
+      this.step({
+        edit: "setProperties",
+        id: holder.id,
+        baseVersion: PENDING_VERSION,
+        set: previous(holder.properties, set),
+      });
+    }
+    for (const holder of this.state.relationships.live()) {
+      const set = without(holder.properties);
+      if (Object.keys(set).length === 0) continue;
+      this.write("relationships", { ...holder, properties: apply(holder.properties, set) });
+      this.markChanged(
+        "relationships",
+        holder.id,
+        Object.keys(set).map((k) => `properties.${k}`),
+      );
+      this.step({
+        edit: "setRelationshipProperties",
+        id: holder.id,
+        baseVersion: PENDING_VERSION,
+        set: previous(holder.properties, set),
+      });
+    }
   }
 
   // ------------------------------------------------------------------ relationships

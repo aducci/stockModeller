@@ -83,7 +83,7 @@ describe("documents", () => {
   it("without a subject or content, list what is missing", () => {
     const doc = projectDocument(exampleState(), metamodel, hld, {});
     expect(doc.sections.map((s) => s.definition.key)).toEqual(["summary", "facts", "context", "integrations", "risks"]);
-    expect(doc.findings).toEqual(["Summary is empty", "Context: no diagram yet", "Integrations: none yet"]);
+    expect(doc.findings).toEqual(["Summary is empty", "Context: no diagram yet", "Information flows: none yet"]);
     expect([doc.complete, doc.total]).toEqual([2, 5]);
   });
 
@@ -108,11 +108,12 @@ describe("documents", () => {
     ]);
     // A flow has no interaction pattern: not applicable, so not required either.
     expect(t.rows[0]!.cells["interaction.pattern"]!.applicable).toBe(false);
-    // Claims Manager calls Payments API and Legacy CRM flows to it in the model, but neither is on the context.
-    expect(t.missing.map((r) => r.id)).toEqual(["R-16", "R-09"]);
-    expect(t.findings).toEqual(["Integrations: 2 relationships are not on the context"]);
+    // Legacy CRM flows to Claims Manager in the model but not on the context. Claims Manager calls Payments API is
+    // not missing: the conceptual flow to Payments Hub, which realises Payments API, stands for it (DOC-2).
+    expect(t.missing.map((r) => r.id)).toEqual(["R-09"]);
+    expect(t.findings).toEqual(["Information flows: 1 relationship is not on the context"]);
     const ignored = table(
-      projectDocument(state, metamodel, hld, { ...definition, integrations: { ignored: ["R-09", "R-16"] } }),
+      projectDocument(state, metamodel, hld, { ...definition, integrations: { ignored: ["R-09"] } }),
     );
     expect(ignored.missing).toEqual([]);
   });
@@ -129,7 +130,7 @@ describe("documents", () => {
     ]);
     const t = table(projectDocument(state, metamodel, hld, { subject: "O-APP-1", context: { diagramId: "D-CTX" } }));
     expect(t.rows[0]!.toDescribe).toEqual(["Protocol"]);
-    expect(t.findings[0]).toBe("Integrations: Payments Hub has no protocol");
+    expect(t.findings[0]).toBe("Information flows: Payments Hub has no protocol");
   });
 
   it("say when the linked diagram was deleted", () => {
@@ -272,5 +273,37 @@ describe("prose", () => {
     expect(proseToMarkup(prose, (id) => (id === "O-APP-3" ? "Payments Hub" : "Legacy CRM"))).toBe(
       "Replaces @[Legacy CRM](O-APP-2) for intake.\n\nThen @[Payments Hub](O-APP-3)",
     );
+  });
+});
+
+describe("information flows (DOC-2)", () => {
+  it("list under each connection what it stands for: listed flows, and those its ends' scopes imply", () => {
+    const state = withContext();
+    const t = table(projectDocument(state, metamodel, hld, { subject: "O-APP-1", context: { diagramId: "D-CTX" } }));
+    const row = t.rows[0]!;
+    // Claims Manager → Payments Hub is conceptual; Claims Manager calls Payments API (logical), which Payments Hub
+    // realises, so the call and the Pay a claim function it lists come under the row with nothing linked by hand.
+    expect(row.implied!.map((i) => [i.relationship.id, i.via.map((r) => r.id)])).toEqual([["R-16", ["R-15"]]]);
+    expect(row.flows!.map((f) => [f.object.name, f.implied, f.through?.id, f.sequence?.id])).toEqual([
+      ["Pay a claim", true, "R-16", "D-05"],
+    ]);
+  });
+
+  it("leave out an implied flow the connection excludes, and list the ones it names", () => {
+    const state = withContext();
+    const r08 = () => state.relationships.get("R-08")!;
+    apply(state, [
+      { edit: "createObject", id: "F-NEW", type: "informationFlow", name: "Payment status", folderId: "F04" },
+      {
+        edit: "setRelationshipProperties",
+        id: "R-08",
+        baseVersion: r08().version,
+        set: { "integration.informationFlows": ["F-NEW"], "integration.excludedFlows": ["O-FN-1"] },
+      },
+    ]);
+    const t = table(projectDocument(state, metamodel, hld, { subject: "O-APP-1", context: { diagramId: "D-CTX" } }));
+    expect(t.rows[0]!.flows!.map((f) => [f.object.name, f.implied, f.sequence])).toEqual([
+      ["Payment status", false, undefined],
+    ]);
   });
 });

@@ -47,7 +47,7 @@ test("writes a high-level design whose integrations follow its context diagram",
   await expect(summary.getByRole("button", { name: "Fraud Screening" })).toBeVisible();
 
   // The context is a diagram the author draws; the table waits for it.
-  const integrations = section(page, "Integrations");
+  const integrations = section(page, "Information flows");
   await expect(integrations).toContainText("Create the context diagram first");
   await section(page, "Context").getByRole("button", { name: "Create context diagram" }).click();
   await expect(section(page, "Context").getByRole("img", { name: "Diagram preview" })).toContainText("Payments Hub");
@@ -56,7 +56,7 @@ test("writes a high-level design whose integrations follow its context diagram",
   await expect(integrations.getByRole("status")).toContainText("missing from the context: Claims Manager");
   await integrations.getByRole("button", { name: "Add to context" }).click();
   await expect(section(page, "Context").getByRole("img", { name: "Diagram preview" })).toContainText("Claims Manager");
-  const claims = integrations.locator("tbody tr", { hasText: "Claims Manager" });
+  const claims = integrations.locator("tbody tr[data-relationship]", { hasText: "Claims Manager" });
   await expect(claims.getByLabel("Protocol of Claims Manager")).toHaveValue("REST");
   await expect(claims).toContainText("← receives from");
 
@@ -64,7 +64,7 @@ test("writes a high-level design whose integrations follow its context diagram",
   await integrations.getByRole("button", { name: "+ Add integration" }).click();
   await integrations.getByLabel("Counterpart").selectOption({ label: "Fraud Screening" });
   await integrations.getByRole("button", { name: "Payments Hub flows to Fraud Screening" }).click();
-  const fraud = integrations.locator("tbody tr", { hasText: "Fraud Screening" });
+  const fraud = integrations.locator("tbody tr[data-relationship]", { hasText: "Fraud Screening" });
   await expect(fraud).toContainText("to describe");
   await expect(section(page, "Context").getByRole("img", { name: "Diagram preview" })).toContainText("Fraud Screening");
   await fraud.getByLabel("Protocol of Fraud Screening").fill("HTTPS");
@@ -93,8 +93,8 @@ test("writes a high-level design whose integrations follow its context diagram",
   await expect(completeness).toHaveText("5 of 5 sections complete");
   await expect(section(page, "Summary").getByRole("button", { name: "Legacy CRM" })).toBeVisible();
   await expect(
-    section(page, "Integrations")
-      .locator("tbody tr", { hasText: "Fraud Screening" })
+    section(page, "Information flows")
+      .locator("tbody tr[data-relationship]", { hasText: "Fraud Screening" })
       .getByLabel("Protocol of Fraud Screening"),
   ).toHaveValue("HTTPS");
 
@@ -103,7 +103,9 @@ test("writes a high-level design whose integrations follow its context diagram",
   await row(page, "Fraud Screening").click({ button: "right" });
   await menuItem(page, /^Delete object/).click();
   await page.getByRole("dialog").getByRole("button", { name: "Delete object" }).click();
-  await expect(section(page, "Integrations").locator("tbody tr", { hasText: "Fraud Screening" })).toHaveCount(0);
+  await expect(
+    section(page, "Information flows").locator("tbody tr[data-relationship]", { hasText: "Fraud Screening" }),
+  ).toHaveCount(0);
   await expect(section(page, "Summary")).toContainText("deleted element");
   await saved(page);
 });

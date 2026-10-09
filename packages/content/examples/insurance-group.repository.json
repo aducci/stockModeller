@@ -228,6 +228,15 @@
       "name": "Recover Costs",
       "folderId": "F03",
       "properties": {}
+    },
+    {
+      "id": "O-FN-1",
+      "type": "applicationFunction",
+      "name": "Pay a claim",
+      "folderId": "F04",
+      "properties": {
+        "documentation.link": ["diagram:D-05"]
+      }
     }
   ],
   "relationships": [
@@ -287,7 +296,8 @@
       "targetId": "O-APP-3",
       "properties": {
         "flow.frequency": 300,
-        "flow.protocol": "REST"
+        "flow.protocol": "REST",
+        "semantic.abstraction": "conceptual"
       }
     },
     {
@@ -342,7 +352,8 @@
       "properties": {
         "interaction.pattern": "synchronous",
         "interaction.protocol": "REST",
-        "interaction.operation": "POST /payments"
+        "interaction.operation": "POST /payments",
+        "integration.informationFlows": ["O-FN-1"]
       }
     },
     {
@@ -751,6 +762,9 @@
       "name": "Pay a claim",
       "diagramType": "sequence",
       "folderId": "F09",
+      "definition": {
+        "subject": "O-FN-1"
+      },
       "objectOccurrences": [
         {
           "id": "OO-51",

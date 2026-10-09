@@ -5,6 +5,7 @@
   "subject": {
     "linkProperty": "documentation.link"
   },
+  "lineAbstraction": "conceptual",
   "objectTypes": ["applicationBase", "interface", "service", "organisationUnit", "dataObject"],
   "relationshipTypes": ["flowsTo", "calls", "serves", "accesses"],
   "nesting": "lines",

@@ -40,7 +40,8 @@
     { "id": "O-DAT-1", "type": "dataObject", "name": "Claim", "folderId": "F08", "properties": {} },
     { "id": "O-DAT-2", "type": "dataObject", "name": "Payment", "folderId": "F08", "properties": {} },
     { "id": "O-PRC-2", "type": "process", "name": "Manage Claims", "folderId": "F03", "properties": { "lifecycle.status": "active", "documentation.link": ["diagram:D-08"] } },
-    { "id": "O-PRC-3", "type": "process", "name": "Recover Costs", "folderId": "F03", "properties": {} }
+    { "id": "O-PRC-3", "type": "process", "name": "Recover Costs", "folderId": "F03", "properties": {} },
+    { "id": "O-FN-1", "type": "applicationFunction", "name": "Pay a claim", "folderId": "F04", "properties": { "documentation.link": ["diagram:D-05"] } }
   ],
   "relationships": [
     { "id": "R-01", "type": "contains", "sourceId": "O-CAP-1", "targetId": "O-CAP-2", "properties": {} },
@@ -50,14 +51,14 @@
     { "id": "R-05", "type": "realizes", "sourceId": "O-APP-1", "targetId": "O-CAP-2", "properties": {} },
     { "id": "R-06", "type": "realizes", "sourceId": "O-APP-3", "targetId": "O-CAP-3", "properties": {} },
     { "id": "R-07", "type": "serves", "sourceId": "O-APP-1", "targetId": "O-PRC-1", "properties": {} },
-    { "id": "R-08", "type": "flowsTo", "sourceId": "O-APP-1", "targetId": "O-APP-3", "properties": { "flow.frequency": 300, "flow.protocol": "REST" } },
+    { "id": "R-08", "type": "flowsTo", "sourceId": "O-APP-1", "targetId": "O-APP-3", "properties": { "flow.frequency": 300, "flow.protocol": "REST", "semantic.abstraction": "conceptual" } },
     { "id": "R-09", "type": "flowsTo", "sourceId": "O-APP-2", "targetId": "O-APP-1", "properties": { "flow.protocol": "SFTP" } },
     { "id": "R-10", "type": "hostedOn", "sourceId": "O-APP-1", "targetId": "O-SRV-1", "properties": {} },
     { "id": "R-11", "type": "flowsTo", "sourceId": "O-STP-1", "targetId": "O-STP-2", "properties": {} },
     { "id": "R-13", "type": "owns", "sourceId": "O-ORG-1", "targetId": "O-APP-1", "properties": {} },
     { "id": "R-14", "type": "realizes", "sourceId": "O-APP-1", "targetId": "O-INT-1", "properties": {} },
     { "id": "R-15", "type": "realizes", "sourceId": "O-APP-3", "targetId": "O-INT-2", "properties": {} },
-    { "id": "R-16", "type": "calls", "sourceId": "O-APP-1", "targetId": "O-INT-2", "properties": { "interaction.pattern": "synchronous", "interaction.protocol": "REST", "interaction.operation": "POST /payments" } },
+    { "id": "R-16", "type": "calls", "sourceId": "O-APP-1", "targetId": "O-INT-2", "properties": { "interaction.pattern": "synchronous", "interaction.protocol": "REST", "interaction.operation": "POST /payments", "integration.informationFlows": ["O-FN-1"] } },
     { "id": "R-17", "type": "flowsTo", "sourceId": "O-APP-1", "targetId": "O-INT-2", "name": "POST /payments", "properties": {}, "payload": ["O-DAT-2"], "parentId": "R-16" },
     { "id": "R-18", "type": "flowsTo", "sourceId": "O-INT-2", "targetId": "O-APP-1", "name": "201 Created", "properties": {}, "payload": ["O-DAT-2"], "parentId": "R-16" },
     { "id": "R-19", "type": "calls", "sourceId": "O-APP-2", "targetId": "O-INT-1", "properties": { "interaction.pattern": "asynchronous", "interaction.protocol": "AMQP" } },
@@ -137,6 +138,7 @@
     },
     {
       "id": "D-05", "name": "Pay a claim", "diagramType": "sequence", "folderId": "F09",
+      "definition": { "subject": "O-FN-1" },
       "objectOccurrences": [
         { "id": "OO-51", "objectId": "O-APP-1", "parentOccurrenceId": null, "x": 110, "y": 40, "w": 140, "h": 52, "z": 1 },
         { "id": "OO-52", "objectId": "O-INT-2", "parentOccurrenceId": null, "x": 330, "y": 40, "w": 130, "h": 48, "z": 1 }

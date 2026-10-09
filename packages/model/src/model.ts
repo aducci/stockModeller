@@ -66,7 +66,10 @@ export interface PropertyType {
   unit?: string;
   valueList?: string;
   objectTypes?: TypeKey[];
-  /** build (slice DOC-1): url only. A list of links, each a web address or `diagram:<id>` (see `DIAGRAM_LINK`). */
+  /**
+   * build (slice DOC-1): url and objectRef only. A url holds a list of links, each a web address or `diagram:<id>`
+   * (see `DIAGRAM_LINK`); an objectRef a list of object ids (slice DOC-2).
+   */
   many?: boolean;
   required?: boolean;
   default?: PropertyValue;
@@ -171,6 +174,7 @@ export interface RelationshipType {
   semantic?: SemanticKind; // what the engine understands it to mean (default "association")
   semanticDirection?: "forward" | "reverse"; // reverse: the source plays the kind's target role
   cascadeDelete?: boolean; // composition: deleting the whole deletes its parts
+  abstraction?: SemanticAbstraction; // build (slice DOC-2): default semantic.abstraction of its relationships
   payload?: PayloadUse; // whether relationships carry objects (default "optional" for flow and trigger, else "none")
   distinct?: "pair" | "pairAndPayload" | "none"; // what counts as a duplicate relationship (default by kind)
   properties?: PropertyKey[];
