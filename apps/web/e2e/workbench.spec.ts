@@ -177,8 +177,7 @@ test("the View menu picks a light or dark theme, kept after a reload", async ({ 
   await page.getByRole("menubar").getByRole("menuitem", { name: "View", exact: true }).click();
   await page.getByRole("menuitem", { name: "Theme" }).click();
   await expect(page.getByRole("menuitemradio", { name: "Dark" })).toHaveAttribute("aria-checked", "true");
-  await page.keyboard.press("Escape");
-  await choose("Match system");
+  await page.getByRole("menuitemradio", { name: "Match system" }).click();
   expect(await theme()).toBe("system");
   expect(await pane()).toBe("#fdfdfe");
 });
