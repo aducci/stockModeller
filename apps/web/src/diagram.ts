@@ -117,8 +117,15 @@ export function stepZoom(zoom: number, direction: 1 | -1): number {
   return steps.find((z) => (direction > 0 ? z > zoom + 1e-6 : z < zoom - 1e-6)) ?? steps[steps.length - 1]!;
 }
 
+/** Symbols being dragged: `ids` move by (dx, dy), and whatever is nested in them moves with them. */
+export interface DragOffset {
+  ids: ReadonlySet<Id>;
+  dx: number;
+  dy: number;
+}
+
 /** Diagram positions of every occurrence on a diagram (nested ones are stored relative to their parent). */
-export function layoutBoxes(state: ModelState, diagramId: Id, offset?: { id: Id; dx: number; dy: number }) {
+export function layoutBoxes(state: ModelState, diagramId: Id, offset?: DragOffset) {
   const boxes = new Map<Id, Box>();
   const place = (occId: Id, seen: Set<Id>): Box | undefined => {
     const known = boxes.get(occId);
@@ -127,7 +134,7 @@ export function layoutBoxes(state: ModelState, diagramId: Id, offset?: { id: Id;
     if (!occ || seen.has(occId)) return undefined;
     seen.add(occId);
     const parent = occ.parentOccurrenceId ? place(occ.parentOccurrenceId, seen) : undefined;
-    const moved = offset?.id === occId ? offset : { dx: 0, dy: 0 };
+    const moved = offset?.ids.has(occId) ? offset : { dx: 0, dy: 0 };
     const box = {
       x: occ.x + moved.dx + (parent?.x ?? 0),
       y: occ.y + moved.dy + (parent?.y ?? 0),
@@ -139,6 +146,25 @@ export function layoutBoxes(state: ModelState, diagramId: Id, offset?: { id: Id;
   };
   for (const o of state.objectOccurrences.find("byDiagram", diagramId)) place(o.id, new Set());
   return boxes;
+}
+
+/**
+ * The selected symbols that move by themselves: those not nested (at any depth) in another selected symbol, which
+ * already carries them, since nested positions are relative to their parent.
+ */
+export function movingRoots(state: ModelState, selected: readonly Id[]): Id[] {
+  const chosen = new Set(selected);
+  const carried = (occId: Id): boolean => {
+    for (
+      let o = state.objectOccurrences.get(occId);
+      o?.parentOccurrenceId;
+      o = state.objectOccurrences.get(o.parentOccurrenceId)
+    ) {
+      if (chosen.has(o.parentOccurrenceId)) return true;
+    }
+    return false;
+  };
+  return selected.filter((id) => !carried(id));
 }
 
 /** Where the line from a box's centre towards a point leaves the box. */

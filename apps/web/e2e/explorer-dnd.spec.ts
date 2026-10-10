@@ -120,3 +120,15 @@ test("Alt+drop asks how an object relates, and contains it with the chosen type"
   await saved(page);
   await expect(childLabels(page, "Item One")).toHaveText(["Item Two"]);
 });
+
+test("Ctrl+A marks every row the explorer shows, and Escape clears the marks", async ({ page }) => {
+  await signIn(page);
+  await explorer(page).getByLabel("Filter the explorer").fill("Item");
+  await row(page, "Item One").click();
+  await page.keyboard.press("ControlOrMeta+a");
+  const shown = await explorer(page).locator(".row[data-id]:not(.member)").count();
+  expect(shown).toBeGreaterThan(1);
+  await expect(explorer(page).locator(".row.marked")).toHaveCount(shown);
+  await page.keyboard.press("Escape");
+  await expect(explorer(page).locator(".row.marked")).toHaveCount(0);
+});

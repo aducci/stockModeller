@@ -23,6 +23,7 @@ import {
   defaultFolderFor,
   freeSpot,
   layoutBoxes,
+  movingRoots,
   nestingChoice,
   paletteTypes,
   renditionSize,
@@ -60,7 +61,9 @@ const FLASH_MS = 1500;
 
 type Point = { x: number; y: number };
 type Gesture =
-  { kind: "move"; occId: Id; start: Point; dx: number; dy: number } | { kind: "connect"; occId: Id; to: Point };
+  /** `ids`: the symbols that move (the dragged one, or the whole selection), without those nested in another. */
+  | { kind: "move"; occId: Id; ids: Id[]; start: Point; dx: number; dy: number }
+  | { kind: "connect"; occId: Id; to: Point };
 
 export function DiagramEditor({ id }: { id: Id }) {
   const { state, metamodel } = useModel();
@@ -72,6 +75,8 @@ export function DiagramEditor({ id }: { id: Id }) {
   const workbenchSelection = useWorkbench((s) => s.selection);
   const traced = useWorkbench((s) => s.trace?.objectIds);
   const [selected, setSelected] = useState<Id | null>(null);
+  /** Symbols selected with the first one (Shift/Ctrl/⌘-click, Ctrl/⌘+A); they move and are removed together. */
+  const [alsoSelected, setAlsoSelected] = useState<ReadonlySet<Id>>(new Set());
   const [gesture, setGesture] = useState<Gesture | null>(null);
   /** A new symbol being named: where it will go, and the symbol it goes inside, if any. */
   const [naming, setNaming] = useState<{ key: number; type: string; box: Box; parent: Id | null } | null>(null);
@@ -94,6 +99,11 @@ export function DiagramEditor({ id }: { id: Id }) {
   useEffect(() => {
     if (selected && !selectedOcc) setSelected(null);
   }, [selected, selectedOcc]);
+  // The others go with the first one, and each goes when its occurrence does.
+  useEffect(() => {
+    const kept = selected ? [...alsoSelected].filter((o) => state.objectOccurrences.get(o)) : [];
+    if (kept.length !== alsoSelected.size) setAlsoSelected(new Set(kept));
+  }, [selected, alsoSelected, state]);
   // Selecting another item elsewhere (explorer, properties) clears the canvas selection.
   useEffect(() => {
     if (selectedOcc && workbenchSelection?.id !== selectedOcc.objectId) setSelected(null);
@@ -120,7 +130,7 @@ export function DiagramEditor({ id }: { id: Id }) {
 
   if (!diagram) return <p className="muted pad">This diagram was deleted.</p>;
 
-  const offset = gesture?.kind === "move" ? { id: gesture.occId, dx: gesture.dx, dy: gesture.dy } : undefined;
+  const offset = gesture?.kind === "move" ? { ids: new Set(gesture.ids), dx: gesture.dx, dy: gesture.dy } : undefined;
   const boxes = layoutBoxes(state, id, offset);
   const all = [...boxes.values()];
   const width = Math.max(800, ...all.map((b) => b.x + b.w + MARGIN));
@@ -141,10 +151,24 @@ export function DiagramEditor({ id }: { id: Id }) {
     const el = document.elementFromPoint(clientX, clientY)?.closest<SVGElement>("[data-occ]");
     return el?.dataset.occ ?? null;
   };
-  const choose = (occId: Id | null) => {
+  const choose = (occId: Id | null, others: Id[] = []) => {
     setSelected(occId);
+    setAlsoSelected(new Set(occId ? others.filter((o) => o !== occId) : []));
     const occ = occId ? state.objectOccurrences.get(occId) : undefined;
     select(occ ? { kind: "object", id: occ.objectId } : null);
+  };
+  /** Every selected symbol, the first one first. */
+  const chosen = selected ? [selected, ...alsoSelected] : [];
+  /** Shift/Ctrl/⌘-click: adds a symbol to the selection, or takes it out (the next one then comes first). */
+  const toggleChosen = (occId: Id) => {
+    if (!chosen.includes(occId)) return selected ? setAlsoSelected(new Set([...alsoSelected, occId])) : choose(occId);
+    const rest = chosen.filter((o) => o !== occId);
+    if (occId === selected) choose(rest[0] ?? null, rest.slice(1));
+    else setAlsoSelected(new Set(rest.slice(1)));
+  };
+  const selectAll = () => {
+    const ids = paintOrder([...occurrences], boxes).map((o) => o.id);
+    if (ids.length > 0) choose(ids[0]!, ids.slice(1));
   };
   const nameOf = (objectId: Id) => state.objects.get(objectId)?.name ?? "(deleted)";
 
@@ -347,10 +371,14 @@ export function DiagramEditor({ id }: { id: Id }) {
     if (e.button !== 0) return;
     e.stopPropagation();
     canvas.current?.focus();
-    choose(occId);
     setMenu(null);
+    if (e.shiftKey || e.ctrlKey || e.metaKey) return toggleChosen(occId);
+    // Dragging one of several selected symbols moves them all; any other symbol becomes the selection.
+    const group = chosen.length > 1 && chosen.includes(occId) ? chosen : [occId];
+    if (group.length === 1) choose(occId);
     (e.currentTarget as Element).setPointerCapture(e.pointerId);
-    setGesture({ kind: "move", occId, start: { x: e.clientX, y: e.clientY }, dx: 0, dy: 0 });
+    const ids = movingRoots(state, group);
+    setGesture({ kind: "move", occId, ids, start: { x: e.clientX, y: e.clientY }, dx: 0, dy: 0 });
   };
   const onHandlePointerDown = (e: PointerEvent, occId: Id) => {
     if (e.button !== 0) return;
@@ -375,16 +403,20 @@ export function DiagramEditor({ id }: { id: Id }) {
   };
 
   const finishMove = (g: Extract<Gesture, { kind: "move" }>) => {
-    const occ = state.objectOccurrences.get(g.occId);
-    if (!occ || Math.hypot(g.dx, g.dy) < 3) return;
-    const x = snap(occ.x + g.dx);
-    const y = snap(occ.y + g.dy);
-    // Top-level symbols stay on the canvas; nested ones may sit anywhere relative to their parent.
-    const clamp = (n: number) => (occ.parentOccurrenceId ? n : Math.max(0, n));
-    if (clamp(x) === occ.x && clamp(y) === occ.y) return;
-    edit(`Move ${nameOf(occ.objectId)}`, [
-      { edit: "moveObjectOccurrence", diagramId: id, occurrenceId: occ.id, x: clamp(x), y: clamp(y) },
-    ]);
+    if (Math.hypot(g.dx, g.dy) < 3) return;
+    const edits: Edit[] = g.ids.flatMap((occId) => {
+      const occ = state.objectOccurrences.get(occId);
+      if (!occ) return [];
+      // Top-level symbols stay on the canvas; nested ones may sit anywhere relative to their parent.
+      const clamp = (n: number) => (occ.parentOccurrenceId ? n : Math.max(0, n));
+      const x = clamp(snap(occ.x + g.dx));
+      const y = clamp(snap(occ.y + g.dy));
+      if (x === occ.x && y === occ.y) return [];
+      return [{ edit: "moveObjectOccurrence" as const, diagramId: id, occurrenceId: occ.id, x, y }];
+    });
+    if (edits.length === 0) return;
+    const one = edits.length === 1 && state.objectOccurrences.get(g.ids[0]!);
+    edit(one ? `Move ${nameOf(one.objectId)}` : `Move ${edits.length} symbols`, edits);
   };
 
   const openConnectMenu = (from: Id, to: Id, at: Point) => {
@@ -640,48 +672,54 @@ export function DiagramEditor({ id }: { id: Id }) {
       { label: "Rename", shortcut: "F2", run: () => setRenaming(occId) },
       childDiagramMenu(occ),
       "separator",
-      { label: "Remove from diagram", shortcut: "Del", run: () => removeFromDiagram(occId) },
+      { label: "Remove from diagram", shortcut: "Del", run: () => removeFromDiagram([occId]) },
       { label: "Delete object…", shortcut: "⇧Del", danger: true, run: () => askDeleteObject(objectId) },
     ];
   };
 
   /**
-   * Takes a symbol off the diagram; the object stays in the model. On a decomposition (DOC-1b), a part's last symbol
-   * is also no longer offered as missing, and the toast offers to take it out of the subject as well.
+   * Takes symbols off the diagram in one change; the objects stay in the model. On a decomposition (DOC-1b), a part
+   * whose last symbol goes is also no longer offered as missing, and the toast offers to take it out of the subject.
    */
-  const removeFromDiagram = (occId: Id, otherwise?: Parameters<typeof edit>[2]) => {
-    const occ = state.objectOccurrences.get(occId);
-    if (!occ) return;
-    const objectId = occ.objectId;
+  const removeFromDiagram = (occIds: Id[], otherwise?: Parameters<typeof edit>[2]) => {
+    const occs = occIds.flatMap((o) => state.objectOccurrences.get(o) ?? []);
+    if (occs.length === 0) return;
+    const removing = new Set(occs.map((o) => o.id));
     const d = decompositionOf(state, metamodel, diagram);
-    const last = occurrences.filter((o) => o.objectId === objectId).length === 1;
-    const link =
-      d && last
-        ? state.relationships
+    const lastGone = (objectId: Id) => occurrences.every((o) => o.objectId !== objectId || removing.has(o.id));
+    const parts = d
+      ? [...new Set(occs.map((o) => o.objectId))].filter(lastGone).flatMap((objectId) => {
+          const link = state.relationships
             .find("byTarget", objectId)
-            .find((r) => r.type === d.relationship && r.sourceId === d.subject.id)
-        : undefined;
-    const edits: Edit[] = [{ edit: "removeOccurrence", diagramId: id, occurrenceId: occId }];
-    if (d && link) {
-      const ignored = ((diagram.definition?.[IGNORED_PARTS] as Id[] | undefined) ?? []).filter((p) => p !== objectId);
+            .find((r) => r.type === d.relationship && r.sourceId === d.subject.id);
+          return link ? [{ objectId, link }] : [];
+        })
+      : [];
+    const edits: Edit[] = occs.map((o) => ({ edit: "removeOccurrence", diagramId: id, occurrenceId: o.id }));
+    if (d && parts.length > 0) {
+      const gone = new Set(parts.map((p) => p.objectId));
+      const ignored = ((diagram.definition?.[IGNORED_PARTS] as Id[] | undefined) ?? []).filter((p) => !gone.has(p));
       edits.push({
         edit: "setViewDefinition",
         diagramId: id,
         baseVersion: diagram.version,
-        set: { [IGNORED_PARTS]: [...ignored, objectId] },
+        set: { [IGNORED_PARTS]: [...ignored, ...gone] },
       });
     }
     const action =
-      d && link
+      d && parts.length > 0
         ? {
-            label: `Also remove from ${d.subject.name}`,
+            label:
+              parts.length === 1 ? `Also remove from ${d.subject.name}` : `Also remove them from ${d.subject.name}`,
             run: () =>
-              edit(`Remove ${nameOf(objectId)} from ${d.subject.name}`, [
-                { edit: "deleteRelationship", id: link.id, baseVersion: link.version },
-              ]),
+              edit(
+                `Remove ${parts.length === 1 ? nameOf(parts[0]!.objectId) : `${parts.length} parts`} from ${d.subject.name}`,
+                parts.map((p) => ({ edit: "deleteRelationship" as const, id: p.link.id, baseVersion: p.link.version })),
+              ),
           }
         : otherwise;
-    if (edit(`Remove ${nameOf(objectId)} from ${diagram.name}`, edits, action)) choose(null);
+    const label = occs.length === 1 ? nameOf(occs[0]!.objectId) : `${occs.length} symbols`;
+    if (edit(`Remove ${label} from ${diagram.name}`, edits, action)) choose(null);
   };
 
   // ---------------------------------------------------------------- keyboard
@@ -705,7 +743,16 @@ export function DiagramEditor({ id }: { id: Id }) {
       e.preventDefault();
       return setZoom(1);
     }
+    if (mod && e.key.toLowerCase() === "a") {
+      e.preventDefault();
+      return selectAll();
+    }
     if (!selectedOcc) return;
+    if ((e.key === "Delete" || e.key === "Backspace") && chosen.length > 1) {
+      e.preventDefault();
+      if (e.shiftKey) return notify("Select one symbol to delete its object from the model");
+      return removeFromDiagram(chosen);
+    }
     if ((e.key === "r" || e.key === "R") && !mod) {
       e.preventDefault();
       const current = RENDITION_ORDER.indexOf(selectedOcc.style.rendition ?? "box");
@@ -720,7 +767,7 @@ export function DiagramEditor({ id }: { id: Id }) {
       e.preventDefault();
       const objectId = selectedOcc.objectId;
       if (e.shiftKey) return askDeleteObject(objectId);
-      removeFromDiagram(selectedOcc.id, { label: "Delete object", run: () => askDeleteObject(objectId) });
+      removeFromDiagram([selectedOcc.id], { label: "Delete object", run: () => askDeleteObject(objectId) });
     }
   };
 
@@ -731,7 +778,8 @@ export function DiagramEditor({ id }: { id: Id }) {
       ? occurrences.filter((o) => o.objectId === selectedOcc.objectId && o.id !== selected).map((o) => o.id)
       : [],
   );
-  const handleBox = selectedOcc && gesture?.kind !== "move" ? boxes.get(selectedOcc.id) : undefined;
+  const handleBox =
+    selectedOcc && chosen.length === 1 && gesture?.kind !== "move" ? boxes.get(selectedOcc.id) : undefined;
   const connecting = gesture?.kind === "connect" ? gesture : null;
   const connectFrom = connecting ? boxes.get(connecting.occId) : undefined;
   // A decomposition (DOC-1b): the way up, and the subject's parts not drawn yet. Both stay quiet when empty.
@@ -843,7 +891,7 @@ export function DiagramEditor({ id }: { id: Id }) {
             const count = repeats.get(o.objectId) ?? 1;
             const classes = [
               "occ",
-              o.id === selected && "selected",
+              chosen.includes(o.id) && "selected",
               siblings.has(o.id) && "sibling",
               flash.has(o.id) && "flash",
               traced?.has(o.objectId) && "traced",

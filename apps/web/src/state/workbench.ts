@@ -118,6 +118,8 @@ interface WorkbenchState {
   setExplorerTask(task: ExplorerTask | null): void;
   /** Adds an explorer row to the marked set, or takes it out; null clears the set. */
   toggleMark(item: Selection | null): void;
+  /** Replaces the marked set (Ctrl/⌘+A in the explorer marks every row shown). */
+  setMarks(items: Selection[]): void;
   /** A toast that reports no change (e.g. why a gesture did nothing). */
   notify(text: string, tone?: Toast["tone"]): void;
   showTrace(trace: WorkbenchState["trace"]): void;
@@ -420,6 +422,10 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
       set((s) => ({
         marked: s.marked.some((m) => m.id === item.id) ? s.marked.filter((m) => m.id !== item.id) : [...s.marked, item],
       }));
+    },
+
+    setMarks(items) {
+      set({ marked: items });
     },
 
     notify(text, tone = "info") {

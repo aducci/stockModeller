@@ -58,11 +58,12 @@ Every gesture has a clear effect on the model, and the editor always says what i
 |---|---|
 | `/` | Quick add |
 | `F2` | Rename |
-| `Delete` / `Shift+Delete` | Remove from diagram / delete object |
+| `Delete` / `Shift+Delete` | Remove from diagram / delete object. With several symbols selected, Delete removes them all in one change; Shift+Delete asks for one symbol (B-1) |
+| Shift/Ctrl/⌘-click, `⌘A`, `Esc` | Add a symbol to the selection or take it out / select every symbol / clear. Dragging any selected symbol moves the whole selection in one change; symbols nested in a selected one move with it (B-1) |
 | `⌘D` | Duplicate occurrences (new occurrences of the same objects) |
 | `⌘G` | Group the selection inside a new parent object (type offered by the rules) |
 | `⌘L` | Auto-layout the selection |
-| `⌘Z` / `⇧⌘Z` | Undo / redo |
+| `⌘Z` / `⇧⌘Z` | Undo / redo (anywhere in the workbench; built in B-1) |
 | `Space` + drag, scroll | Pan, zoom |
 
 ## 7. Rendering

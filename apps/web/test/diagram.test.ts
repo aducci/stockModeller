@@ -8,6 +8,7 @@ import {
   edgePoint,
   freeSpot,
   layoutBoxes,
+  movingRoots,
   nestingChoice,
   paletteTypes,
   snap,
@@ -38,10 +39,15 @@ describe("diagram editor helpers", () => {
 
   it("places nested occurrences relative to their parent, and moves children with a dragged parent", () => {
     expect(layoutBoxes(state, diagram.id).get("OO-2")).toEqual({ x: 36, y: 56, w: 230, h: 160 });
-    const dragged = layoutBoxes(state, diagram.id, { id: "OO-1", dx: 10, dy: 20 });
+    const dragged = layoutBoxes(state, diagram.id, { ids: new Set(["OO-1"]), dx: 10, dy: 20 });
     expect(dragged.get("OO-1")).toMatchObject({ x: 30, y: 40 });
     expect(dragged.get("OO-2")).toMatchObject({ x: 46, y: 76 });
     expect(dragged.get("OO-4")).toMatchObject({ x: 60, y: 110 });
+  });
+
+  it("moves only the selected symbols that no other selected symbol carries", () => {
+    expect(movingRoots(state, ["OO-2", "OO-1", "OO-3"])).toEqual(["OO-1"]);
+    expect(movingRoots(state, ["OO-4", "OO-2"])).toEqual(["OO-4", "OO-2"]);
   });
 
   it("ends a line on the edge of a box", () => {

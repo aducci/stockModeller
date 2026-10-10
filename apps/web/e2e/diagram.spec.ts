@@ -295,6 +295,45 @@ test("Delete removes from the diagram; Shift+Delete deletes the object", async (
   await saved(page);
 });
 
+test("Shift-click selects several symbols that move and are removed together; Ctrl+A selects all", async ({ page }) => {
+  await signIn(page);
+  await openDiagram(page);
+  await addFromPalette(page, "Application", "Left Tool", 300, 560);
+  await addFromPalette(page, "Application", "Right Tool", 520, 560);
+  const left = await position(page, "Left Tool");
+  const right = await position(page, "Right Tool");
+
+  await symbol(page, "Left Tool").click();
+  await symbol(page, "Right Tool").click({ modifiers: ["Shift"] });
+  await expect(canvas(page).locator(".occ.selected")).toHaveCount(2);
+
+  // Dragging one of them moves both, in one change.
+  const c = await centre(page, "Left Tool");
+  await drag(page, c, { x: c.x + 64, y: c.y + 32 });
+  expect(await position(page, "Left Tool")).toEqual({ x: left.x + 64, y: left.y + 32 });
+  expect(await position(page, "Right Tool")).toEqual({ x: right.x + 64, y: right.y + 32 });
+  await expect(page.getByRole("status").filter({ hasText: "Move 2 symbols" })).toBeVisible();
+
+  // Shift-clicking a selected symbol takes it out of the selection.
+  await symbol(page, "Right Tool").click({ modifiers: ["Shift"] });
+  await expect(canvas(page).locator(".occ.selected")).toHaveCount(1);
+  await symbol(page, "Right Tool").click({ modifiers: ["Shift"] });
+  await page.keyboard.press("Delete");
+  await expect(symbol(page, "Left Tool")).toHaveCount(0);
+  await expect(symbol(page, "Right Tool")).toHaveCount(0);
+  await expect(page.getByRole("status").filter({ hasText: "Remove 2 symbols from Claims landscape" })).toBeVisible();
+  await page.keyboard.press("ControlOrMeta+z");
+  await expect(symbol(page, "Left Tool")).toHaveCount(1);
+  await expect(symbol(page, "Right Tool")).toHaveCount(1);
+
+  await canvas(page).focus();
+  await page.keyboard.press("ControlOrMeta+a");
+  await expect(canvas(page).locator(".occ.selected")).toHaveCount(await canvas(page).locator(".occ").count());
+  await page.keyboard.press("Escape");
+  await expect(canvas(page).locator(".occ.selected")).toHaveCount(0);
+  await saved(page);
+});
+
 test("renames with F2 on the canvas", async ({ page }) => {
   await signIn(page);
   await openDiagram(page);

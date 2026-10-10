@@ -150,7 +150,7 @@ One menu component serves the top bar's menu bar and the explorer's right-click 
 | Explorer: several marked rows | Group *n* items… · Add to group ▸ · Clear marks |
 | Explorer: empty space | New folder at the top level · New diagram |
 
-In the explorer, F2 renames the focused row in place, Ctrl/⌘+↑ and Ctrl/⌘+↓ move it one place among its siblings (as dropping it there would, so the order is stored and shared), Delete deletes it (on a member row: removes it from the group), Shift+F10 or the context-menu key opens its menu, and Ctrl/⌘-click marks rows to drag or group together (Esc clears the marks). Anywhere in the workbench except a text box, Ctrl/⌘+Z undoes the user's last change in this session and Ctrl/⌘+Shift+Z (or Ctrl+Y) redoes it; a text box keeps its own undo for what is being typed. A View menu follows in a later slice.
+In the explorer, F2 renames the focused row in place, Ctrl/⌘+↑ and Ctrl/⌘+↓ move it one place among its siblings (as dropping it there would, so the order is stored and shared), Delete deletes it (on a member row: removes it from the group), Shift+F10 or the context-menu key opens its menu, and Ctrl/⌘-click marks rows to drag or group together, Ctrl/⌘+A marks every row shown (B-1), and Esc clears the marks. Anywhere in the workbench except a text box, Ctrl/⌘+Z undoes the user's last change in this session and Ctrl/⌘+Shift+Z (or Ctrl+Y) redoes it; a text box keeps its own undo for what is being typed. A View menu follows in a later slice.
 
 ## Object viewer
 
