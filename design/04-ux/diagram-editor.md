@@ -14,7 +14,7 @@ Every gesture has a clear effect on the model, and the editor always says what i
 | Drag from a symbol's handle to another symbol | Choose a relationship type from those the rules **allow** for that pair (most used first) → new relationship + its occurrence between exactly those two symbols. If the relationship already exists, only a new occurrence is drawn |
 | Drag a handle onto empty space | New object + relationship in one step |
 | Drop a symbol **inside** another | New nesting relationship (e.g. *contains*) + nested occurrence, for a new object from the palette and an existing one from the explorer; the symbol under the pointer is outlined while dragging. If no rule allows it, the symbol is placed on the diagram and the toast says why (B55) |
-| Paste | Pastes occurrences of the **same** objects. "Paste as new objects" creates copies |
+| Paste | Pastes occurrences of the **same** objects. "Paste as new objects" creates copies. *Built in B-1 (B74): Ctrl/⌘+C copies the selected symbols and the lines between them (their names also go to the system clipboard), Ctrl/⌘+X copies and removes them, Ctrl/⌘+V pastes on any diagram (beside the original on its own diagram, else where there is room in view) and selects what it pasted, Ctrl/⌘+D duplicates in place; each is one change. Paste as new objects is not built* |
 
 ## 2. Editing
 
@@ -60,7 +60,8 @@ Every gesture has a clear effect on the model, and the editor always says what i
 | `F2` | Rename |
 | `Delete` / `Shift+Delete` | Remove from diagram / delete object. With several symbols selected, Delete removes them all in one change; Shift+Delete asks for one symbol (B-1) |
 | Shift/Ctrl/⌘-click, `⌘A`, `Esc` | Add a symbol to the selection or take it out / select every symbol / clear. Dragging any selected symbol moves the whole selection in one change; symbols nested in a selected one move with it (B-1) |
-| `⌘D` | Duplicate occurrences (new occurrences of the same objects) |
+| `⌘C` / `⌘X` / `⌘V` | Copy / cut / paste the selected symbols (occurrences of the same objects, B-1) |
+| `⌘D` | Duplicate occurrences (new occurrences of the same objects; built in B-1) |
 | `⌘G` | Group the selection inside a new parent object (type offered by the rules) |
 | `⌘L` | Auto-layout the selection |
 | `⌘Z` / `⇧⌘Z` | Undo / redo (anywhere in the workbench; built in B-1) |

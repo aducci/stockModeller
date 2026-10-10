@@ -334,6 +334,28 @@ test("Shift-click selects several symbols that move and are removed together; Ct
   await saved(page);
 });
 
+test("copy and paste, and duplicate, show the same object again rather than a copy", async ({ page }) => {
+  await signIn(page);
+  await openDiagram(page);
+  await addFromPalette(page, "Application", "Copy Tool", 700, 560);
+  await symbol(page, "Copy Tool").click();
+  await page.keyboard.press("ControlOrMeta+c");
+  await expect(page.getByRole("status").filter({ hasText: "Copied Copy Tool" })).toBeVisible();
+  await page.keyboard.press("ControlOrMeta+v");
+  await expect(symbol(page, "Copy Tool")).toHaveCount(2);
+  await expect(page.getByRole("status").filter({ hasText: "Paste Copy Tool on Claims landscape" })).toBeVisible();
+
+  await page.keyboard.press("ControlOrMeta+d");
+  await expect(symbol(page, "Copy Tool")).toHaveCount(3);
+  await page.keyboard.press("ControlOrMeta+z");
+  await expect(symbol(page, "Copy Tool")).toHaveCount(2);
+
+  // Still one object in the model.
+  await explorer(page).getByLabel("Filter the explorer").fill("Copy Tool");
+  await expect(explorer(page).locator(".row", { hasText: "Copy Tool" })).toHaveCount(1);
+  await saved(page);
+});
+
 test("renames with F2 on the canvas", async ({ page }) => {
   await signIn(page);
   await openDiagram(page);

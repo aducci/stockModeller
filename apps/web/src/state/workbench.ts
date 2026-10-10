@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { LiveSession, type PresenceUser, type SessionStatus } from "@connectome/client";
 import { ulid, type DiagramType, type Edit, type Id, type MetamodelPackage } from "@connectome/model";
 import { describeRejection } from "../text";
+import type { Clip } from "../clipboard";
 
 export type ItemKind = "object" | "folder" | "diagram";
 export interface Selection {
@@ -95,6 +96,8 @@ interface WorkbenchState {
   undoStack: OwnChange[];
   /** The changes that undid them, last undone last: Ctrl/⌘+Shift+Z redoes by undoing the last one. */
   redoStack: OwnChange[];
+  /** Symbols copied or cut on a canvas (Ctrl/⌘+C, X), pasted with Ctrl/⌘+V on any diagram of this repository. */
+  clip: Clip | null;
 
   open(options: OpenOptions): Promise<void>;
   close(): void;
@@ -120,6 +123,7 @@ interface WorkbenchState {
   toggleMark(item: Selection | null): void;
   /** Replaces the marked set (Ctrl/⌘+A in the explorer marks every row shown). */
   setMarks(items: Selection[]): void;
+  setClip(clip: Clip | null): void;
   /** A toast that reports no change (e.g. why a gesture did nothing). */
   notify(text: string, tone?: Toast["tone"]): void;
   showTrace(trace: WorkbenchState["trace"]): void;
@@ -197,6 +201,7 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
     metamodelProperty: null,
     undoStack: [],
     redoStack: [],
+    clip: null,
 
     async open(options) {
       get().close();
@@ -265,6 +270,7 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
           metamodelProperty: null,
           undoStack: [],
           redoStack: [],
+          clip: null,
         });
       } catch (error) {
         if (mine !== generation) return;
@@ -426,6 +432,10 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
 
     setMarks(items) {
       set({ marked: items });
+    },
+
+    setClip(clip) {
+      set({ clip });
     },
 
     notify(text, tone = "info") {

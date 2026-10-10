@@ -22,6 +22,7 @@ import {
   connectChoices,
   defaultFolderFor,
   freeSpot,
+  GRID,
   layoutBoxes,
   movingRoots,
   nestingChoice,
@@ -38,6 +39,8 @@ import { canvasTypesFor, diagramAroundPlan } from "../views";
 import { subjectDiagramFor } from "../subjects";
 import { IGNORED_PARTS, breadcrumb, decompositionOf, missingParts, partEdits, placePartsEdits } from "../decompose";
 import { SearchPicker } from "./SearchPicker";
+import { clipOrigin, copySymbols, pasteEdits, type Clip } from "../clipboard";
+import { isMac } from "../keys";
 
 /** Drag-and-drop payloads: an object type from the palette, or an existing object from the explorer. */
 export const DRAG_TYPE = "application/x-connectome-type";
@@ -170,6 +173,7 @@ export function DiagramEditor({ id }: { id: Id }) {
     const ids = paintOrder([...occurrences], boxes).map((o) => o.id);
     if (ids.length > 0) choose(ids[0]!, ids.slice(1));
   };
+  const modKey = isMac() ? "⌘" : "Ctrl+";
   const nameOf = (objectId: Id) => state.objects.get(objectId)?.name ?? "(deleted)";
 
   // ---------------------------------------------------------------- adding
@@ -187,19 +191,25 @@ export function DiagramEditor({ id }: { id: Id }) {
   const startNaming = (type: string, box: Box, parent: Id | null) =>
     setNaming((n) => ({ key: (n?.key ?? 0) + 1, type, box, parent }));
 
-  /** Adds a new symbol of a type where there is room in view: clicking a palette item. */
-  const addInView = (type: string) => {
+  /** The part of the diagram in view, in diagram coordinates, below the sticky palette. */
+  const viewArea = (): Box | null => {
     const el = canvas.current;
-    if (!el) return;
+    if (!el) return null;
     const view = (el.closest(".tab-body") ?? el).getBoundingClientRect();
     const rect = el.getBoundingClientRect();
-    const top = Math.max(rect.top, view.top + 48); // below the sticky palette
-    const area = {
+    const top = Math.max(rect.top, view.top + 48);
+    return {
       x: (Math.max(rect.left, view.left) - rect.left) / zoom,
       y: (top - rect.top) / zoom,
       w: (Math.min(rect.right, view.right) - Math.max(rect.left, view.left)) / zoom,
       h: (Math.min(rect.bottom, view.bottom) - top) / zoom,
     };
+  };
+
+  /** Adds a new symbol of a type where there is room in view: clicking a palette item. */
+  const addInView = (type: string) => {
+    const area = viewArea();
+    if (!area) return;
     const symbol = symbolFor(metamodel, diagram, type);
     const spot = freeSpot(boxes.values(), { w: symbol.width, h: symbol.height }, area);
     startNaming(type, { ...spot, w: symbol.width, h: symbol.height }, null);
@@ -670,6 +680,8 @@ export function DiagramEditor({ id }: { id: Id }) {
         })),
       },
       { label: "Rename", shortcut: "F2", run: () => setRenaming(occId) },
+      { label: "Copy", shortcut: `${modKey}C`, run: () => copyChosen([occId]) },
+      { label: "Duplicate", shortcut: `${modKey}D`, run: () => duplicate([occId]) },
       childDiagramMenu(occ),
       "separator",
       { label: "Remove from diagram", shortcut: "Del", run: () => removeFromDiagram([occId]) },
@@ -722,6 +734,45 @@ export function DiagramEditor({ id }: { id: Id }) {
     if (edit(`Remove ${label} from ${diagram.name}`, edits, action)) choose(null);
   };
 
+  // ---------------------------------------------------------------- copy, paste and duplicate
+
+  /** Shows a clip's objects again on this diagram, with the top-left of what was copied at `at`, and selects them. */
+  const pasteAt = (clip: Clip, at: Point, verb: "Paste" | "Duplicate") => {
+    const { edits, occIds } = pasteEdits(state, clip, id, at, nextZ, ulid);
+    if (occIds.length === 0) return notify("Nothing to paste: the copied objects were deleted");
+    const first = state.objectOccurrences.get(clip.symbols[0]!.key);
+    const what = occIds.length === 1 && first ? nameOf(first.objectId) : `${occIds.length} symbols`;
+    if (edit(`${verb} ${what} on ${diagram.name}`, edits)) choose(occIds[0]!, occIds.slice(1));
+  };
+  const copyChosen = (occIds: Id[] = chosen) => {
+    const clip = copySymbols(state, id, occIds);
+    useWorkbench.getState().setClip(clip);
+    // The names go to the system clipboard too, one per line, for a list in a mail or a spreadsheet.
+    const names = clip.symbols.map((s) => nameOf(s.objectId)).join("\n");
+    navigator.clipboard?.writeText(names).catch(() => {});
+    notify(clip.symbols.length === 1 ? `Copied ${names}` : `Copied ${clip.symbols.length} symbols`);
+  };
+  /** Ctrl/⌘+V: beside the copied symbols on their own diagram, else where there is room in view. */
+  const paste = () => {
+    const clip = useWorkbench.getState().clip;
+    if (!clip || clip.symbols.length === 0) return notify("Nothing to paste: copy symbols first with Ctrl/⌘+C");
+    const origin = clipOrigin(clip);
+    if (clip.diagramId === id) return pasteAt(clip, { x: origin.x + GRID * 2, y: origin.y + GRID * 2 }, "Paste");
+    const roots = clip.symbols.filter((s) => s.parentKey === null);
+    const size = {
+      w: Math.max(...roots.map((s) => s.x + s.w)) - origin.x,
+      h: Math.max(...roots.map((s) => s.y + s.h)) - origin.y,
+    };
+    const area = viewArea();
+    pasteAt(clip, area ? freeSpot(boxes.values(), size, area) : { x: GRID * 3, y: GRID * 3 }, "Paste");
+  };
+  /** Ctrl/⌘+D: the selected symbols again, just below and to the right, without touching the clipboard. */
+  const duplicate = (occIds: Id[] = chosen) => {
+    const clip = copySymbols(state, id, occIds);
+    const origin = clipOrigin(clip);
+    pasteAt(clip, { x: origin.x + GRID * 2, y: origin.y + GRID * 2 }, "Duplicate");
+  };
+
   // ---------------------------------------------------------------- keyboard
 
   const onKeyDown = (e: KeyboardEvent) => {
@@ -746,6 +797,19 @@ export function DiagramEditor({ id }: { id: Id }) {
     if (mod && e.key.toLowerCase() === "a") {
       e.preventDefault();
       return selectAll();
+    }
+    if (mod && !e.shiftKey && !e.altKey && "cxvd".includes(e.key.toLowerCase()) && e.key.length === 1) {
+      const key = e.key.toLowerCase();
+      if (key === "v") {
+        e.preventDefault();
+        return paste();
+      }
+      if (chosen.length === 0) return;
+      e.preventDefault();
+      if (key === "d") return duplicate();
+      copyChosen();
+      if (key === "x") removeFromDiagram(chosen);
+      return;
     }
     if (!selectedOcc) return;
     if ((e.key === "Delete" || e.key === "Backspace") && chosen.length > 1) {
