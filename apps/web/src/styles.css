@@ -3510,10 +3510,51 @@ button.toggle .badge {
 }
 .cxn-panes {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  /* The middle column is the gutter the wires cross: wide enough for a curve to read, narrow enough to keep the panes. */
+  grid-template-columns: minmax(0, 1fr) 64px minmax(0, 1fr);
   flex: 1;
   min-height: 0;
+}
+.cxn-wires {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.cxn-wires .wire {
+  cursor: pointer;
+}
+.cxn-wires .line {
+  fill: none;
+  stroke: var(--fg-2);
+  stroke-width: 1.5;
+  opacity: 0.6;
+}
+.cxn-wires .hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 8;
+}
+.cxn-wires .wire.off .line {
+  stroke-dasharray: 4 3;
+}
+.cxn-wires .node {
+  fill: var(--pane);
+  stroke: var(--fg-2);
+  stroke-width: 1.5;
+}
+.cxn-wires.focused .wire:not(.strong) {
+  opacity: 0.25;
+}
+.cxn-wires .wire.strong .line,
+.cxn-wires .wire:hover .line {
+  stroke: var(--accent);
+  stroke-width: 2;
+  opacity: 1;
+}
+.cxn-wires .wire.strong .node,
+.cxn-wires .wire:hover .node {
+  fill: var(--accent);
+  stroke: var(--accent);
 }
 .cxn-pane {
   display: flex;
@@ -3633,6 +3674,13 @@ button.toggle .badge {
 }
 .cxn-row.on {
   background: var(--sky-fill);
+}
+/* A hovered row's partners (or a hovered wire's rows) get a bar on the edge their wire meets. */
+.cxn-pane[data-side="left"] .cxn-row.hot {
+  box-shadow: inset -3px 0 0 var(--accent);
+}
+.cxn-pane[data-side="right"] .cxn-row.hot {
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 .cxn-row.drop {
   outline: 2px dashed var(--accent);
@@ -3805,5 +3853,9 @@ button.toggle .badge {
 @media (max-width: 760px) {
   .cxn-panes {
     grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .cxn-wires {
+    display: none;
   }
 }
