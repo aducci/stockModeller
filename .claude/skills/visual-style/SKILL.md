@@ -13,7 +13,7 @@ The chrome is quiet so the customer's diagrams carry the colour. The light theme
 2. **Roles:** named by purpose, such as `--bg`, `--pane`, `--line`, `--fg`, `--fg-2`, `--accent`, `--added`, `--changed` and `--removed`. They point at palette values, and dark mode redefines them.
 3. **Components:** use roles only. No hex, `rgb()` or palette token in a component rule, and no colour in an inline `style={{}}` unless it comes from model data (a symbol's fill).
 
-A new purpose gets a new role in `:root` and in the dark block, and a row in `design/04-ux/design-system.md` §1. A theme or customer brand changes layers 1 and 2 and never touches a component.
+A new purpose gets a new role in `:root` and in both dark blocks (the system one and `[data-theme="dark"]`), and a row in `design/04-ux/design-system.md` §1. A theme or customer brand changes layers 1 and 2 and never touches a component.
 
 ## 2. A colour means one thing
 
@@ -39,14 +39,14 @@ Never show status by colour alone. Pair it with an icon, a shape or a word.
 
 Use the scales in `design/04-ux/design-system.md` §1 and nothing between them:
 
-- **Text:** three sizes: small for labels, meta and chips; base for body, tables and the explorer; large for panel titles. No half-pixel sizes.
+- **Text:** `var(--text-sm)`, `var(--text-md)` or `var(--text-lg)`: small for labels, meta and chips; base for body, tables and the explorer; large for panel titles. Never a raw pixel size. Only the document page (`--doc-*`) and the sign-in title (`--text-title`) have their own tokens.
 - **Spacing:** 2, 4, 8, 12, 16, 24, 32 px.
-- **Radius:** 2 for inputs, 4 for cards and menus, 999 for chips.
+- **Radius:** `var(--radius-sm)` for inputs, `var(--radius)` for cards and menus, 999px for chips and pills, 50% for round dots.
 - **Font:** IBM Plex Sans, with IBM Plex Mono for keys, ids and queries. Use tabular figures for numbers.
 
 A value outside a scale needs a comment saying why. When touching a rule that already breaks a scale, move it onto the scale in the same change.
 
 ## Before committing
 
-- Check the change in light and dark (`prefers-color-scheme` in the browser's dev tools).
+- Check the change in light and dark (View → Theme).
 - Check `npm run check` (Prettier formats the CSS).

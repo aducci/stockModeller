@@ -15,6 +15,7 @@ import { canvasTypesFor, diagramAroundPlan, sequenceOfPlan, sequenceType } from 
 import { connectInCxn, openCxnBuilder } from "../cxn";
 import type { MenuEntry } from "./Menu";
 import { isMac, shortcutLabel } from "../keys";
+import { applyTheme, savedTheme, type Theme } from "../theme";
 
 const store = () => useWorkbench.getState();
 const NO_FOLDER = "Select a folder, or an item in one, first";
@@ -355,6 +356,22 @@ export function editMenu(): MenuEntry[] {
       shortcut: shortcutLabel("redo", mac),
       disabled: next ? null : "Nothing to redo",
       run: () => void store().redoLast(),
+    },
+  ];
+}
+
+/** The View menu: how the workbench looks in this browser. */
+export function viewMenu(): MenuEntry[] {
+  const current = savedTheme();
+  const themes: [Theme, string][] = [
+    ["system", "Match system"],
+    ["light", "Light"],
+    ["dark", "Dark"],
+  ];
+  return [
+    {
+      label: "Theme",
+      submenu: themes.map(([theme, label]) => ({ label, checked: theme === current, run: () => applyTheme(theme) })),
     },
   ];
 }

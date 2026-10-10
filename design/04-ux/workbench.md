@@ -140,6 +140,7 @@ One menu component serves the top bar's menu bar and the explorer's right-click 
 |---|---|
 | **File** (top bar) | New object, New diagram, New folder, New group · Rename (F2) · Delete · Close tab, Close all tabs · Switch repository…, Sign out. New items go into the selected folder or the selected item's folder. New diagram opens the dialog with the types grouped by kind (B46), where the folder can be changed, so it needs no selection |
 | **Edit** (top bar) | Undo *the last change* (Ctrl/⌘+Z) · Redo *it* (Ctrl/⌘+Shift+Z, or Ctrl+Y). Each names the change it would undo, and is greyed out with the reason when there is nothing to undo or the change is still saving (slice B-1) |
+| **View** (top bar) | Theme ▸ Match system, Light, Dark: a tick marks the one in effect, and the choice is kept in this browser (slice B-2, [design system](design-system.md) §1) |
 | **Review** (top bar) | Possible duplicates: opens a tab listing pairs of objects that may be one thing, with the likeness, the reasons and *Not duplicates* ([duplicates-and-identity.md](../02-model/duplicates-and-identity.md) §6, slice D-3) |
 | **Tools** (top bar) | **CXN Builder**: an unsaved CXN Builder tab for linking sets of elements in bulk; an element's right-click menu has **Connect in CXN Builder…** with that element selected ([views](../02-model/views-and-design-artifacts.md) §15, slice CXN-1) |
 | Explorer: folder | Object viewer · New ▸ (Object, Diagram, Folder, Group: the submenu does not repeat "New") · Rename · Move up, Move down · Delete folder (only when empty) |
@@ -150,7 +151,7 @@ One menu component serves the top bar's menu bar and the explorer's right-click 
 | Explorer: several marked rows | Group *n* items… · Add to group ▸ · Clear marks |
 | Explorer: empty space | New folder at the top level · New diagram |
 
-In the explorer, F2 renames the focused row in place, Ctrl/⌘+↑ and Ctrl/⌘+↓ move it one place among its siblings (as dropping it there would, so the order is stored and shared), Delete deletes it (on a member row: removes it from the group), Shift+F10 or the context-menu key opens its menu, and Ctrl/⌘-click marks rows to drag or group together, Ctrl/⌘+A marks every row shown (B-1), and Esc clears the marks. Anywhere in the workbench except a text box, Ctrl/⌘+Z undoes the user's last change in this session and Ctrl/⌘+Shift+Z (or Ctrl+Y) redoes it; a text box keeps its own undo for what is being typed. A View menu follows in a later slice.
+In the explorer, F2 renames the focused row in place, Ctrl/⌘+↑ and Ctrl/⌘+↓ move it one place among its siblings (as dropping it there would, so the order is stored and shared), Delete deletes it (on a member row: removes it from the group), Shift+F10 or the context-menu key opens its menu, and Ctrl/⌘-click marks rows to drag or group together, Ctrl/⌘+A marks every row shown (B-1), and Esc clears the marks. Anywhere in the workbench except a text box, Ctrl/⌘+Z undoes the user's last change in this session and Ctrl/⌘+Shift+Z (or Ctrl+Y) redoes it; a text box keeps its own undo for what is being typed.
 
 ## Object viewer
 

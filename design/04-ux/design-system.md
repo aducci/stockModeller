@@ -7,7 +7,7 @@ Quiet, dense, professional chrome: the colourful part is the customer's diagrams
 | Token | Light | Dark | Use |
 |---|---|---|---|
 | `--bg` | `#e8ecf1` | `#0f141a` | App background |
-| `--pane` / `--pane-2` | `#ffffff` / `#f4f6f9` | `#161d26` / `#1b2430` | Panels / headers, hovers |
+| `--pane` / `--pane-2` | `#fdfdfe` / `#f4f6f9` | `#161d26` / `#1b2430` | Panels / headers, hovers |
 | `--line` | `#c9d2dc` | `#2b3746` | Borders |
 | `--fg` / `--fg-2` | `#1d2733` / `#5b6b7c` | `#e3e9f0` / `#97a7b8` | Text / secondary text |
 | `--accent` | `#2c5d98` | `#7fb0ea` | Selection, links, primary buttons |
@@ -18,8 +18,9 @@ Quiet, dense, professional chrome: the colourful part is the customer's diagrams
 
 - Added / changed / removed colours mean the same thing everywhere: compare, review, properties and diagrams.
 - Spacing: 2, 4, 8, 12, 16, 24, 32.
-- Radius: 2 (inputs), 4 (cards), 999 (chips).
-- Type: IBM Plex Sans (fallback system-ui) in three sizes: 11 px small (labels, meta, chips), 12 px base (body, tables, the explorer), 14 px large (panel titles). These match what the app mostly uses today; the body's 13 px default and the stray sizes move onto this scale. IBM Plex Mono for keys, IDs and queries.
+- Radius: `--radius-sm` 2 (inputs, small marks), `--radius` 4 (cards, menus, dialogs), 999 (chips, pills, switches); 50% for round dots.
+- Type: IBM Plex Sans (fallback system-ui) in three sizes for the workbench: `--text-sm` 11 px (labels, meta, chips), `--text-md` 12 px (body, tables, the explorer), `--text-lg` 14 px (panel titles). Two places read differently and have their own tokens: the sign-in card's title (`--text-title` 18 px) and the document page, which is reading content (`--doc-text` 13 px, `--doc-heading` 16 px, `--doc-title` 22 px). Text drawn on a canvas scales with the drawing. IBM Plex Mono for keys, IDs and queries.
+- Theme: light by default, dark when the system asks for it. View → Theme overrides the system with Light or Dark for this browser (`data-theme` on `<html>`, kept in localStorage). Text on a strong fill (primary and danger buttons, error toasts) uses `--pane`, so it flips with the theme.
 
 ## 2. UI building blocks
 
