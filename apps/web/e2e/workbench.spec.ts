@@ -96,6 +96,26 @@ test("creates a folder and an object in it, and undoes from the toast", async ({
   await expect(page.getByTestId("save-state")).toHaveText("All changes saved");
 });
 
+test("undoes and redoes with the keyboard and the Edit menu", async ({ page }) => {
+  await signIn(page);
+  await rename(page, "Payments Hub", "Payments Core");
+  await expect(page.getByTestId("save-state")).toHaveText("All changes saved");
+  await explorer(page).getByLabel("Filter the explorer").fill("Payments");
+
+  await explorer(page).locator(".row", { hasText: "Payments Core" }).click();
+  await page.keyboard.press("ControlOrMeta+z");
+  await expect(explorer(page).locator(".row", { hasText: "Payments Hub" })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Undone: Rename" })).toBeVisible();
+
+  await page.keyboard.press("ControlOrMeta+Shift+z");
+  await expect(explorer(page).locator(".row", { hasText: "Payments Core" })).toBeVisible();
+
+  await page.getByRole("menubar").getByRole("menuitem", { name: "Edit" }).click();
+  await page.getByRole("menuitem", { name: /^Undo Rename/ }).click();
+  await expect(explorer(page).locator(".row", { hasText: "Payments Hub" })).toBeVisible();
+  await expect(page.getByTestId("save-state")).toHaveText("All changes saved");
+});
+
 test("offers an existing object when a new one is named the same, and selects it", async ({ page }) => {
   await signIn(page);
   await selectInExplorer(page, "Payments Hub");

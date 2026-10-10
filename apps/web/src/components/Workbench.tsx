@@ -11,7 +11,8 @@ import { usePanelPrefs } from "./Inspector";
 import { Toasts } from "./Toasts";
 import { DeleteObjectDialog } from "./DeleteObjectDialog";
 import { MenuBar } from "./Menu";
-import { fileMenu, metamodelMenu, reviewMenu, toolsMenu } from "./commands";
+import { editMenu, fileMenu, metamodelMenu, reviewMenu, toolsMenu } from "./commands";
+import { inTextEntry, workbenchShortcut } from "../keys";
 
 export function Workbench({ repositoryId, scenarioId }: { repositoryId: string; scenarioId: string | null }) {
   const signIn = useAuth((s) => s.signIn)!;
@@ -36,6 +37,20 @@ export function Workbench({ repositoryId, scenarioId }: { repositoryId: string; 
     };
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, []);
+
+  // Undo and redo work from anywhere in the workbench except inside a text box, which keeps its own undo.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || inTextEntry(e.target)) return;
+      const shortcut = workbenchShortcut(e);
+      if (!shortcut) return;
+      e.preventDefault();
+      const { undoLast, redoLast } = useWorkbench.getState();
+      void (shortcut === "undo" ? undoLast() : redoLast());
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
   if (error && !session) {
@@ -108,6 +123,7 @@ function TopBar() {
       <MenuBar
         menus={[
           { label: "File", entries: () => fileMenu(session.store.state, session.store.metamodel) },
+          { label: "Edit", entries: editMenu },
           { label: "Tools", entries: () => toolsMenu(session.store.metamodel) },
           { label: "Review", entries: reviewMenu },
           { label: "Metamodel", entries: metamodelMenu },

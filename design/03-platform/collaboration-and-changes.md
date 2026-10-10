@@ -75,7 +75,7 @@ Short drops are tolerated: changes queue and a "Reconnecting…" banner shows. A
 
 | Feature | Behaviour |
 |---|---|
-| Undo / redo | Per user, for that user's own changes in the current scenario. Undo submits a new change built from the stored inverse edits. If someone has since changed the same property, that part is skipped and the user is told |
+| Undo / redo | Per user, for that user's own changes in the current scenario. Undo submits a new change built from the stored inverse edits. If someone has since changed the same property, that part is skipped and the user is told. As built (B-1): the web app keeps the session's own changes as an undo stack (Ctrl/⌘+Z, Edit › Undo) and the undo changes as a redo stack; redo undoes the undo, so `POST …/changes/{id}/undo` serves both, labelled *Undo:* or *Redo:*. A new change clears the redo stack |
 | Item history | Timeline per object, relationship or diagram: who, when, what changed. "Restore this version" = a new change |
 | Activity feed | All changes in the repository, filterable by user, folder, type and source |
 | Point in time | Open any diagram or catalogue as it was at a date (read-only) |

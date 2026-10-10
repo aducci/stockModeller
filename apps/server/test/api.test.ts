@@ -284,6 +284,19 @@ describeDb("API", () => {
     expect(summaries).toEqual([expect.objectContaining({ source: "undo", label: `Undo: ${replaceCrm.label}` })]);
   });
 
+  it("redoes by undoing the undo, and undoes the redo", async () => {
+    const redo = await api.post(`/repositories/${REPO}/changes/C-UNDO-1/undo`, { id: "C-REDO-1" });
+    expect(redo.status).toBe(201);
+    expect((await api.get(`/repositories/${REPO}/objects/01J-NEW?scenario=${TARGET}`)).status).toBe(200);
+    const undoRedo = await api.post(`/repositories/${REPO}/changes/C-REDO-1/undo`, { id: "C-UNDO-2" });
+    expect(undoRedo.status).toBe(201);
+    expect((await api.get(`/repositories/${REPO}/objects/01J-NEW?scenario=${TARGET}`)).status).toBe(404);
+    const labels = ((await api.get(`/repositories/${REPO}/changes?since=3`)).body as { label: string }[]).map(
+      (c) => c.label,
+    );
+    expect(labels).toEqual([`Redo: ${replaceCrm.label}`, `Undo: ${replaceCrm.label}`]);
+  });
+
   it("never shows another workspace's repository", async () => {
     const res = await api.get(`/repositories/${REPO}`, token("eve@example.com", "W2"));
     expect(res.status).toBe(404);

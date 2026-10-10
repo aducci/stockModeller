@@ -369,7 +369,7 @@ export class ModelService {
       principal,
       repositoryId,
       change.scenario_id,
-      { id: newChangeId ?? ulid(), label: `Undo: ${change.label}`, edits },
+      { id: newChangeId ?? ulid(), label: undoLabel(change.label, change.undoes_change_id !== null), edits },
       { source: "undo", undoesChangeId: changeId },
     );
   }
@@ -453,4 +453,12 @@ function parseBody(body: unknown, scenarioId: string) {
     }
     throw error;
   }
+}
+
+/** The label of the change that undoes `label`: undoing an undo is a redo, and undoing a redo is an undo again. */
+export function undoLabel(label: string, isUndo: boolean): string {
+  if (!isUndo) return `Undo: ${label}`;
+  if (label.startsWith("Undo: ")) return `Redo: ${label.slice("Undo: ".length)}`;
+  if (label.startsWith("Redo: ")) return `Undo: ${label.slice("Redo: ".length)}`;
+  return `Undo: ${label}`;
 }

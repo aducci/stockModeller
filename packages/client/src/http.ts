@@ -99,10 +99,11 @@ export class ApiClient {
     return this.request("GET", `/repositories/${encodeURIComponent(repositoryId)}/scenarios`);
   }
 
-  /** Undoes one of the user's own committed changes with a new change (it arrives over the live connection). */
-  undo(repositoryId: Id, changeId: Id): Promise<{ seq: number; changeId: Id }> {
+  /** Undoes one of the user's own committed changes with a new change (it arrives over the live connection).
+   * `newChangeId` names that change, so undoing it again is a redo. */
+  undo(repositoryId: Id, changeId: Id, newChangeId?: Id): Promise<{ seq: number; changeId: Id }> {
     const path = `/repositories/${encodeURIComponent(repositoryId)}/changes/${encodeURIComponent(changeId)}/undo`;
-    return this.request("POST", path);
+    return this.request("POST", path, newChangeId ? { id: newChangeId } : undefined);
   }
 
   ticket(): Promise<{ ticket: string; expiresAt: string }> {
