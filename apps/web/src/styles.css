@@ -1,7 +1,20 @@
 /* Tokens from design/04-ux/design-system.md §1: quiet chrome, the colour belongs to the diagrams. */
 :root {
+  /* Type scale (§1): three sizes for the workbench, plus the sign-in title and the document page's reading sizes. */
+  --text-sm: 11px;
+  --text-md: 12px;
+  --text-lg: 14px;
+  --text-title: 18px;
+  --doc-text: 13px;
+  --doc-heading: 16px;
+  --doc-title: 22px;
+  --radius-sm: 2px;
+  --radius: 4px;
+}
+/* Light is the default; the theme follows the system unless the View menu picks one (data-theme on <html>). */
+:root {
   --bg: #e8ecf1;
-  --pane: #ffffff;
+  --pane: #fdfdfe;
   --pane-2: #f4f6f9;
   --line: #c9d2dc;
   --fg: #1d2733;
@@ -32,7 +45,7 @@
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #0f141a;
     --pane: #161d26;
     --pane-2: #1b2430;
@@ -64,6 +77,37 @@
     color-scheme: dark;
   }
 }
+:root[data-theme="dark"] {
+  --bg: #0f141a;
+  --pane: #161d26;
+  --pane-2: #1b2430;
+  --line: #2b3746;
+  --fg: #e3e9f0;
+  --fg-2: #97a7b8;
+  --accent: #7fb0ea;
+  --added: #6fd3a0;
+  --changed: #f0b45c;
+  --removed: #f08a80;
+  --canvas: #121922;
+  --grid: #1a232e;
+  --sky-fill: #1c3350;
+  --sky-ink: #9cc4f0;
+  --teal-fill: #163c3a;
+  --teal-ink: #84d6cd;
+  --green-fill: #1d3a22;
+  --green-ink: #9ad39f;
+  --amber-fill: #3d2c12;
+  --amber-ink: #f0c27a;
+  --sand-fill: #352d20;
+  --sand-ink: #d9c49c;
+  --rose-fill: #3f1f22;
+  --rose-ink: #f2a3a3;
+  --violet-fill: #2a2342;
+  --violet-ink: #c3b2f0;
+  --slate-fill: #252e39;
+  --slate-ink: #b3c0ce;
+  color-scheme: dark;
+}
 
 * {
   box-sizing: border-box;
@@ -78,7 +122,7 @@ body {
   background: var(--bg);
   color: var(--fg);
   font:
-    13px/1.4 "IBM Plex Sans",
+    var(--text-md) / 1.4 "IBM Plex Sans",
     system-ui,
     sans-serif;
 }
@@ -94,7 +138,7 @@ select,
 textarea {
   background: var(--pane);
   border: 1px solid var(--line);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   padding: 3px 6px;
 }
 input:focus-visible,
@@ -108,7 +152,7 @@ button:focus-visible,
 button {
   background: var(--pane-2);
   border: 1px solid var(--line);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   padding: 3px 8px;
   cursor: pointer;
 }
@@ -156,7 +200,7 @@ ul.plain li {
   border-radius: 999px;
   background: var(--pane-2);
   border: 1px solid var(--line);
-  font-size: 12px;
+  font-size: var(--text-md);
 }
 
 /* Sign-in and repository pages */
@@ -169,14 +213,14 @@ ul.plain li {
 .card {
   background: var(--pane);
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius);
   padding: 24px;
   width: min(420px, 100%);
   display: grid;
   gap: 12px;
 }
 .card h1 {
-  font-size: 18px;
+  font-size: var(--text-title);
   margin: 0;
 }
 .card label {
@@ -234,14 +278,14 @@ ul.plain li {
   height: 22px;
   border-radius: 999px;
   color: #fff;
-  font-size: 10px;
+  font-size: var(--text-sm);
   font-weight: 600;
   display: grid;
   place-items: center;
 }
 .save {
   color: var(--fg-2);
-  font-size: 12px;
+  font-size: var(--text-md);
 }
 .save.warn {
   color: var(--changed);
@@ -305,7 +349,7 @@ ul.plain li {
   border-radius: 0;
   background: transparent;
   padding: 10px 0;
-  font-size: 12px;
+  font-size: var(--text-md);
   color: var(--fg-2);
 }
 .dock-rail button:hover {
@@ -338,7 +382,7 @@ ul.plain li {
   border-radius: 0;
   background: transparent;
   padding: 0 10px;
-  font-size: 12px;
+  font-size: var(--text-md);
   color: var(--fg-2);
   white-space: nowrap;
 }
@@ -388,7 +432,7 @@ ul.plain li {
   padding: 6px 8px;
   background: var(--pane-2);
   border-bottom: 1px solid var(--line);
-  font-size: 12px;
+  font-size: var(--text-md);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -405,7 +449,7 @@ ul.plain li {
 }
 .pane-title .tools button {
   padding: 0 5px;
-  font-size: 12px;
+  font-size: var(--text-md);
   white-space: nowrap;
 }
 .filter {
@@ -439,7 +483,7 @@ ul.plain li {
 }
 /* The explorer reads at 12px: dense enough for a full tree, still comfortable (design-system.md §2). */
 .explorer .tree {
-  font-size: 12px;
+  font-size: var(--text-md);
   line-height: 18px;
 }
 .row:hover {
@@ -479,7 +523,7 @@ ul.plain li {
   background: var(--pane-2);
   border-top: 1px solid var(--line);
   color: var(--fg-2);
-  font-size: 12px;
+  font-size: var(--text-md);
 }
 .row .label {
   overflow: hidden;
@@ -565,7 +609,7 @@ ul.plain li {
   gap: 6px;
   padding: 3px 8px;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius);
   background: var(--pane);
   color: inherit;
   font: inherit;
@@ -582,7 +626,7 @@ ul.plain li {
   width: 20px;
   height: 16px;
   border: 1px solid var(--line);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
 }
 .canvas {
   position: relative;
@@ -618,7 +662,7 @@ ul.plain li {
   stroke-width: 3;
 }
 .canvas text {
-  font-size: 12px;
+  font-size: var(--text-md);
   fill: var(--occ-ink, var(--fg));
   pointer-events: none;
 }
@@ -636,7 +680,7 @@ ul.plain li {
   paint-order: stroke;
 }
 .canvas .card-label {
-  font-size: 11px;
+  font-size: var(--text-sm);
   opacity: 0.7;
 }
 .canvas .occ .divider {
@@ -652,7 +696,7 @@ ul.plain li {
   min-width: 28px;
   padding: 2px 6px;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius);
   background: var(--pane);
   color: var(--fg);
   font-variant-numeric: tabular-nums;
@@ -684,7 +728,7 @@ ul.plain li {
   box-sizing: border-box;
   padding: 4px 6px 6px;
   border: 1.5px dashed var(--accent);
-  border-radius: 4px;
+  border-radius: var(--radius);
   background: color-mix(in srgb, var(--pane) 92%, var(--accent));
   box-shadow: 0 4px 14px rgb(0 0 0 / 0.15);
 }
@@ -693,7 +737,7 @@ ul.plain li {
   align-items: center;
   gap: 4px;
   margin-bottom: 4px;
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--fg-2);
   white-space: nowrap;
   overflow: hidden;
@@ -701,7 +745,7 @@ ul.plain li {
 }
 .foc-hint {
   padding: 3px 0 0;
-  font-size: 11px;
+  font-size: var(--text-sm);
 }
 .foc-list .foc-hint {
   padding: 4px 8px;
@@ -721,7 +765,7 @@ ul.plain li {
   list-style: none;
   background: var(--pane);
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius);
   box-shadow: 0 2px 8px rgb(0 0 0 / 0.2);
 }
 .menu button {
@@ -751,25 +795,25 @@ ul.plain li {
   padding: 16px;
   background: var(--pane);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius);
 }
 .dialog h2 {
   margin: 0 0 8px;
-  font-size: 16px;
+  font-size: var(--text-lg);
 }
 .dialog h3 {
   margin: 12px 0 4px;
-  font-size: 12px;
+  font-size: var(--text-md);
   color: var(--fg-2);
 }
 .dialog .choice {
   margin: 12px 0 0;
   padding: 6px 10px;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius);
 }
 .dialog .choice legend {
-  font-size: 12px;
+  font-size: var(--text-md);
   color: var(--fg-2);
 }
 .dialog .choice label {
@@ -795,10 +839,10 @@ ul.plain li {
   margin: 0;
   padding: 6px 10px;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius);
 }
 .new-diagram .kind legend {
-  font-size: 12px;
+  font-size: var(--text-md);
   font-weight: 600;
 }
 .new-diagram .kind legend .muted {
@@ -809,14 +853,14 @@ ul.plain li {
   gap: 6px;
   align-items: baseline;
   padding: 3px 4px;
-  border-radius: 3px;
+  border-radius: var(--radius);
   cursor: pointer;
 }
 .new-diagram .kind label.chosen {
   background: var(--sky-fill);
 }
 .new-diagram .kind label .muted {
-  font-size: 12px;
+  font-size: var(--text-md);
 }
 .new-diagram .fields {
   display: grid;
@@ -829,7 +873,7 @@ ul.plain li {
   display: contents;
 }
 .new-diagram .field > span {
-  font-size: 12px;
+  font-size: var(--text-md);
   color: var(--fg-2);
 }
 .new-diagram .check,
@@ -844,7 +888,7 @@ ul.plain li {
 button.danger {
   background: var(--removed);
   border-color: var(--removed);
-  color: #fff;
+  color: var(--pane);
 }
 
 /* Properties: the generic inspector (design/04-ux/workbench.md "Properties panel"). Dense 24 px rows, fields
@@ -864,14 +908,14 @@ button.danger {
   align-items: center;
   min-width: 0;
   padding-left: 5px;
-  font-size: 12px;
+  font-size: var(--text-md);
   white-space: nowrap;
 }
 .props-header .meta .mono {
-  font-size: 11px;
+  font-size: var(--text-sm);
 }
 .breadcrumb {
-  font-size: 12px;
+  font-size: var(--text-md);
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
@@ -879,13 +923,13 @@ button.danger {
 .props-header h2.name {
   margin: 0;
   padding: 2px 5px;
-  font-size: 15px;
+  font-size: var(--text-lg);
 }
 .props .bare,
 .props .value {
   border-color: transparent;
   background: transparent;
-  border-radius: 3px;
+  border-radius: var(--radius);
 }
 .props .bare:hover:not(:read-only),
 .props .value:hover:not(:disabled, :read-only) {
@@ -898,13 +942,13 @@ button.danger {
   background: var(--pane);
 }
 .props-header input.name {
-  font-size: 15px;
+  font-size: var(--text-lg);
   font-weight: 600;
   padding: 2px 4px;
 }
 .props-header textarea.description {
   resize: none;
-  font-size: 12.5px;
+  font-size: var(--text-md);
   line-height: 1.4;
   padding: 2px 4px;
   field-sizing: content;
@@ -936,7 +980,7 @@ button.danger {
   flex: 1;
   min-width: 64px;
   padding: 1px 6px;
-  font-size: 12px;
+  font-size: var(--text-md);
   background: var(--pane-2);
 }
 button.toggle {
@@ -944,8 +988,8 @@ button.toggle {
   background: transparent;
   color: var(--fg-2);
   padding: 1px 6px;
-  font-size: 12px;
-  border-radius: 3px;
+  font-size: var(--text-md);
+  border-radius: var(--radius);
   white-space: nowrap;
 }
 button.toggle:hover {
@@ -974,7 +1018,7 @@ button.toggle[aria-pressed="true"] {
   border: 0;
   background: transparent;
   padding: 4px 10px;
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -995,7 +1039,7 @@ button.toggle[aria-pressed="true"] {
 .section-toggle .count {
   margin-left: auto;
   font:
-    400 10.5px "IBM Plex Mono",
+    400 var(--text-sm) "IBM Plex Mono",
     ui-monospace,
     monospace;
   letter-spacing: 0;
@@ -1008,7 +1052,7 @@ button.toggle[aria-pressed="true"] {
 }
 .rel-group h4 {
   margin: 6px 0 2px;
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--fg-2);
   text-transform: uppercase;
@@ -1032,7 +1076,7 @@ button.toggle[aria-pressed="true"] {
   gap: 2px;
   padding-right: 8px;
   color: var(--fg-2);
-  font-size: 12px;
+  font-size: var(--text-md);
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -1063,7 +1107,7 @@ button.toggle[aria-pressed="true"] {
 .editor .value {
   height: 22px;
   padding: 0 4px;
-  font-size: 12.5px;
+  font-size: var(--text-md);
 }
 .editor textarea.value {
   height: auto;
@@ -1080,7 +1124,7 @@ button.toggle[aria-pressed="true"] {
 }
 .unit {
   color: var(--fg-2);
-  font-size: 11px;
+  font-size: var(--text-sm);
 }
 .editor .clear {
   visibility: hidden;
@@ -1114,7 +1158,7 @@ button.toggle[aria-pressed="true"] {
   display: inline-flex;
   margin-left: 4px;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius);
   overflow: hidden;
 }
 .segmented button {
@@ -1122,7 +1166,7 @@ button.toggle[aria-pressed="true"] {
   border-radius: 0;
   background: transparent;
   padding: 0 7px;
-  font-size: 11.5px;
+  font-size: var(--text-sm);
   line-height: 18px;
   color: var(--fg-2);
 }
@@ -1144,7 +1188,7 @@ button.toggle[aria-pressed="true"] {
   height: 10px;
   padding: 0;
   border: 1px solid var(--line);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: transparent;
 }
 .rating button.on {
@@ -1153,7 +1197,7 @@ button.toggle[aria-pressed="true"] {
 }
 .rating-label {
   margin-left: 4px;
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--fg-2);
 }
 button.switch {
@@ -1164,7 +1208,7 @@ button.switch {
   margin-left: 5px;
   padding: 0;
   border: 0;
-  border-radius: 7px;
+  border-radius: 999px;
   background: var(--line);
 }
 button.switch::after {
@@ -1192,10 +1236,10 @@ button.switch[aria-checked="true"]::after {
 }
 .chips button {
   border: 1px solid var(--line);
-  border-radius: 9px;
+  border-radius: 999px;
   background: transparent;
   padding: 0 7px;
-  font-size: 11.5px;
+  font-size: var(--text-sm);
   line-height: 17px;
   color: var(--fg-2);
 }
@@ -1223,7 +1267,7 @@ button.switch[aria-checked="true"]::after {
   .prop-row > label {
     min-height: 16px;
     padding-top: 4px;
-    font-size: 11px;
+    font-size: var(--text-sm);
   }
   .splitter,
   .props-header .breadcrumb {
@@ -1254,7 +1298,7 @@ button.switch[aria-checked="true"]::after {
   background: var(--fg);
   color: var(--bg);
   padding: 6px 8px 6px 12px;
-  border-radius: 4px;
+  border-radius: var(--radius);
   box-shadow: 0 2px 8px rgb(0 0 0 / 0.2);
 }
 .toast button.link {
@@ -1263,14 +1307,14 @@ button.switch[aria-checked="true"]::after {
 }
 .toast.error {
   background: var(--removed);
-  color: #fff;
+  color: var(--pane);
 }
 .toast.warning {
   background: var(--changed);
-  color: #fff;
+  color: var(--pane);
 }
 .toast.warning button.link {
-  color: #fff;
+  color: var(--pane);
 }
 
 @media (max-width: 900px) {
@@ -1313,7 +1357,7 @@ ul.messages li {
 }
 .props-header h2.name {
   margin: 0;
-  font-size: 15px;
+  font-size: var(--text-lg);
 }
 .canvas .line-hit {
   stroke: transparent;
@@ -1327,7 +1371,7 @@ ul.messages li {
   stroke: var(--accent);
 }
 .canvas .line-label {
-  font-size: 11px;
+  font-size: var(--text-sm);
   fill: var(--fg-2);
   pointer-events: none;
 }
@@ -1366,7 +1410,7 @@ ul.messages li {
   min-width: 200px;
   background: var(--pane);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius);
   box-shadow: 0 6px 20px rgb(0 0 0 / 18%);
 }
 .menu .separator {
@@ -1415,7 +1459,7 @@ ul.messages li {
 .menu-arrow {
   color: inherit;
   opacity: 0.7;
-  font-size: 12px;
+  font-size: var(--text-md);
 }
 .submenu {
   position: absolute;
@@ -1444,7 +1488,7 @@ svg.glyph {
 .row .twisty {
   flex: none;
   width: 12px;
-  font-size: 10px;
+  font-size: var(--text-sm);
   text-align: center;
   color: var(--fg-2);
 }
@@ -1456,7 +1500,7 @@ svg.glyph {
   color: var(--fg-2);
 }
 .row .ref-mark {
-  font-size: 10px;
+  font-size: var(--text-sm);
 }
 .view-icon .tile {
   fill: var(--accent);
@@ -1487,7 +1531,7 @@ svg.glyph {
 }
 .explorer .group-row,
 .explorer .ref-row {
-  font-size: 11.5px;
+  font-size: var(--text-sm);
 }
 .explorer .ref-row:hover,
 .explorer .group-row:hover {
@@ -1500,7 +1544,7 @@ svg.glyph {
 }
 .trace-column h4 {
   margin: 8px 0 2px;
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--fg-2);
   text-transform: uppercase;
@@ -1517,20 +1561,20 @@ svg.glyph {
   max-width: 38%;
   height: 22px;
   padding: 0 4px;
-  font-size: 12px;
+  font-size: var(--text-md);
   font-weight: 500;
   background: var(--pane-2);
 }
 .inspector-toolbar.editing-set {
   justify-content: space-between;
-  font-size: 12px;
+  font-size: var(--text-md);
   color: var(--fg-2);
 }
 .inspector-toolbar .depth {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
+  font-size: var(--text-md);
   color: var(--fg-2);
 }
 .inspector-toolbar .depth input {
@@ -1547,7 +1591,7 @@ svg.glyph {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--accent);
-  font-size: 12.5px;
+  font-size: var(--text-md);
 }
 .editor .edit-link {
   margin-left: auto;
@@ -1572,7 +1616,7 @@ svg.glyph {
 .editor .link-item > .link,
 .editor .add-link {
   padding-left: 5px;
-  font-size: 12.5px;
+  font-size: var(--text-md);
 }
 .editor .remove-link {
   padding: 0 4px;
@@ -1606,7 +1650,7 @@ ul.rel-rows li:hover {
   background: var(--pane-2);
 }
 ul.rel-rows .via {
-  font-size: 11.5px;
+  font-size: var(--text-sm);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1615,10 +1659,10 @@ ul.rel-rows .via {
 ul.rel-rows .count {
   margin-left: auto;
   padding: 0 6px;
-  border-radius: 8px;
+  border-radius: 999px;
   background: var(--pane-2);
   font:
-    400 10.5px "IBM Plex Mono",
+    400 var(--text-sm) "IBM Plex Mono",
     ui-monospace,
     monospace;
   color: var(--fg-2);
@@ -1626,12 +1670,12 @@ ul.rel-rows .count {
 
 button.toggle.icon {
   padding: 1px 5px;
-  font-size: 13px;
+  font-size: var(--text-md);
   line-height: 1;
 }
 button.toggle .badge {
   margin-left: 2px;
-  font-size: 10.5px;
+  font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1656,7 +1700,7 @@ button.toggle .badge {
 }
 .mm-header h2 {
   margin: 0;
-  font-size: 15px;
+  font-size: var(--text-lg);
 }
 .mm-views {
   display: flex;
@@ -1665,7 +1709,7 @@ button.toggle .badge {
 .mm-views button {
   padding: 3px 10px;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--radius);
   background: none;
   color: var(--fg);
 }
@@ -1712,7 +1756,7 @@ button.toggle .badge {
   text-align: left;
 }
 .mm-table th {
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--fg-2);
   text-transform: uppercase;
@@ -1724,15 +1768,15 @@ button.toggle .badge {
 }
 .mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 12px;
+  font-size: var(--text-md);
 }
 .small {
-  font-size: 11px;
+  font-size: var(--text-sm);
 }
 .mm-types h3,
 .mm-block h3 {
   margin: 0 0 6px;
-  font-size: 12px;
+  font-size: var(--text-md);
   color: var(--fg-2);
 }
 .line-sample {
@@ -1797,7 +1841,7 @@ button.toggle .badge {
   min-width: 34px;
   padding: 0 6px;
   text-align: center;
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
   color: var(--fg-2);
   background: var(--pane-2);
@@ -1816,7 +1860,7 @@ button.toggle .badge {
   cursor: not-allowed;
 }
 .cell-button .count {
-  font-size: 10px;
+  font-size: var(--text-sm);
   color: var(--fg-2);
 }
 .matrix-view {
@@ -1886,7 +1930,7 @@ button.toggle .badge {
   display: inline-flex;
   flex-wrap: wrap;
   gap: 4px 12px;
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--fg-2);
 }
 .mm-cell-editor {
@@ -1898,12 +1942,12 @@ button.toggle .badge {
   padding: 10px;
   background: var(--pane);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius);
   box-shadow: 0 6px 20px rgb(0 0 0 / 0.18);
 }
 .mm-cell-editor h4 {
   margin: 0 0 6px;
-  font-size: 13px;
+  font-size: var(--text-md);
 }
 .mm-cell-editor li {
   display: flex;
@@ -1925,7 +1969,7 @@ button.toggle .badge {
 .chip.enforcement {
   border: 1px solid var(--line);
   cursor: pointer;
-  font-size: 11px;
+  font-size: var(--text-sm);
 }
 .chip.enforcement.warn,
 .chip.warn {
@@ -1938,7 +1982,7 @@ button.toggle .badge {
 }
 .chip.new {
   color: var(--changed);
-  font-size: 11px;
+  font-size: var(--text-sm);
 }
 
 /* Rule sentences */
@@ -2016,6 +2060,7 @@ button.toggle .badge {
   margin: 0 auto;
   padding: 24px 32px 64px;
   background: var(--pane);
+  font-size: var(--doc-text);
   min-height: 100%;
   box-sizing: border-box;
 }
@@ -2026,10 +2071,10 @@ button.toggle .badge {
 }
 .doc-header h1 {
   margin: 2px 0 8px;
-  font-size: 22px;
+  font-size: var(--doc-title);
 }
 .doc-kind {
-  font-size: 12px;
+  font-size: var(--text-md);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -2056,8 +2101,8 @@ button.toggle .badge {
   margin: 8px 0 0;
   padding: 8px 12px 8px 28px;
   background: var(--pane-2);
-  border-radius: 6px;
-  font-size: 13px;
+  border-radius: var(--radius);
+  font-size: var(--doc-text);
 }
 .doc-section {
   padding: 14px 0 6px;
@@ -2068,10 +2113,10 @@ button.toggle .badge {
   align-items: center;
   gap: 8px;
   margin: 0 0 4px;
-  font-size: 16px;
+  font-size: var(--doc-heading);
 }
 .doc-required {
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-weight: normal;
 }
 .doc-state {
@@ -2087,7 +2132,7 @@ button.toggle .badge {
 }
 .doc-guidance {
   margin: 0 0 8px;
-  font-size: 13px;
+  font-size: var(--doc-text);
 }
 .doc-warning {
   color: var(--removed);
@@ -2098,7 +2143,7 @@ button.toggle .badge {
   gap: 4px;
   padding: 0 6px;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius);
   background: var(--pane-2);
   font: inherit;
   line-height: 1.6;
@@ -2129,9 +2174,9 @@ button.toggle .badge {
   padding: 6px;
   background: var(--pane);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius);
   box-shadow: 0 6px 20px rgb(0 0 0 / 0.18);
-  font-size: 13px;
+  font-size: var(--text-md);
 }
 .doc-chip-menu button {
   text-align: left;
@@ -2152,7 +2197,7 @@ button.toggle .badge {
 }
 .doc-hint {
   margin: 4px 0 0;
-  font-size: 12px;
+  font-size: var(--text-md);
 }
 .doc-placeholder {
   width: 100%;
@@ -2161,7 +2206,7 @@ button.toggle .badge {
   border: 1px dashed var(--line);
   background: none;
   color: var(--fg-2);
-  border-radius: 6px;
+  border-radius: var(--radius);
   cursor: text;
 }
 .doc-mentions {
@@ -2174,7 +2219,7 @@ button.toggle .badge {
   overflow: auto;
   background: var(--pane);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius);
   box-shadow: 0 6px 20px rgb(0 0 0 / 0.18);
 }
 .doc-mentions [role="option"] {
@@ -2186,7 +2231,7 @@ button.toggle .badge {
 }
 .doc-mentions [role="option"] .muted {
   margin-left: auto;
-  font-size: 12px;
+  font-size: var(--text-md);
 }
 .doc-mentions [role="option"].active,
 .doc-mentions [role="option"]:hover {
@@ -2226,7 +2271,7 @@ button.toggle .badge {
 .canvas.picture svg {
   width: 100%;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius);
   cursor: zoom-in;
 }
 .canvas.picture .occ rect {
@@ -2241,8 +2286,8 @@ button.toggle .badge {
   margin-bottom: 8px;
   background: var(--amber-fill);
   color: var(--amber-ink);
-  border-radius: 6px;
-  font-size: 13px;
+  border-radius: var(--radius);
+  font-size: var(--text-md);
 }
 .doc-banner > span {
   flex: 1 1 300px;
@@ -2250,7 +2295,7 @@ button.toggle .badge {
 .doc-table table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: var(--doc-text);
 }
 .doc-table th,
 .doc-table td {
@@ -2284,7 +2329,7 @@ button.toggle .badge {
 }
 .doc-badge {
   white-space: nowrap;
-  font-size: 11px;
+  font-size: var(--text-sm);
   padding: 1px 6px;
   border-radius: 999px;
   background: var(--amber-fill);
@@ -2324,7 +2369,7 @@ button.toggle .badge {
 }
 .doc-register td:last-child {
   white-space: normal;
-  font-size: 12px;
+  font-size: var(--text-md);
 }
 .doc-register td.missing {
   box-shadow: inset 0 -2px 0 var(--amber-ink);
@@ -2385,7 +2430,7 @@ button.toggle .badge {
 .mm-prop-list,
 .mm-prop-editor {
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: var(--pane);
 }
 .mm-type-panel {
@@ -2405,13 +2450,13 @@ button.toggle .badge {
 .mm-type-panel h3,
 .mm-prop-form h3 {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--text-lg);
 }
 .mm-type-panel h4,
 .mm-prop-form h4,
 .mm-prop-list h4 {
   margin: 12px 0 4px;
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--fg-2);
   text-transform: uppercase;
@@ -2465,7 +2510,7 @@ button.toggle .badge {
   width: 100%;
   padding: 4px 6px;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--radius);
   background: none;
   color: var(--fg);
   text-align: left;
@@ -2531,11 +2576,11 @@ button.toggle .badge {
   margin: 0;
   padding: 6px 10px;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius);
 }
 .mm-used-columns legend {
   padding: 0 4px;
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--fg-2);
 }
@@ -2613,9 +2658,9 @@ button.toggle .badge {
   box-sizing: border-box;
   padding: 0 6px;
   border: 1.5px solid var(--sky-ink);
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: var(--sky-fill);
-  font-size: 13px;
+  font-size: var(--text-md);
 }
 .seq-name {
   flex: 1;
@@ -2653,7 +2698,7 @@ button.toggle .badge {
   cursor: pointer;
 }
 .seq-message text {
-  font-size: 12px;
+  font-size: var(--text-md);
   fill: var(--fg);
   cursor: pointer;
 }
@@ -2690,7 +2735,7 @@ button.toggle .badge {
 }
 .sequence-steps {
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: var(--doc-text);
   margin: 8px 12px;
 }
 .sequence-steps th,
@@ -2705,13 +2750,13 @@ button.toggle .badge {
 
 /* Documents: locks, section options, regions and repeaters (views-and-design-artifacts.md §8.2, slice V-4) */
 .doc-lock {
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-weight: normal;
 }
 .doc-section-menu {
   position: relative;
   margin-left: auto;
-  font-size: 13px;
+  font-size: var(--text-md);
   font-weight: normal;
 }
 .doc-section h2,
@@ -2741,7 +2786,7 @@ button.toggle .badge {
   align-items: center;
   gap: 6px;
   margin-top: 6px;
-  font-size: 13px;
+  font-size: var(--doc-text);
 }
 .doc-tag {
   display: inline-flex;
@@ -2749,7 +2794,7 @@ button.toggle .badge {
   gap: 2px;
   padding: 1px 2px 1px 8px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 999px;
 }
 .doc-column-hide {
   margin-left: 2px;
@@ -2767,7 +2812,7 @@ button.toggle .badge {
 }
 .doc-repeat-row {
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 8px 12px 4px;
 }
 .doc-repeat-row h3 {
@@ -2775,7 +2820,7 @@ button.toggle .badge {
   align-items: center;
   gap: 6px;
   margin: 0 0 4px;
-  font-size: 15px;
+  font-size: var(--text-lg);
 }
 .doc-section.nested {
   padding: 6px 0 2px;
@@ -2785,7 +2830,7 @@ button.toggle .badge {
   align-items: center;
   gap: 6px;
   margin: 0 0 4px;
-  font-size: 13px;
+  font-size: var(--doc-text);
 }
 
 /* The View section of a diagram's properties (views in the app, U-1). */
@@ -2794,7 +2839,7 @@ button.toggle .badge {
   grid-template-columns: max-content 1fr;
   gap: 2px 10px;
   margin: 0;
-  font-size: 12px;
+  font-size: var(--text-md);
 }
 .view-facts dt {
   color: var(--fg-2);
@@ -2816,13 +2861,13 @@ button.toggle .badge {
 .dt-list,
 .dt-editor {
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: var(--pane);
   padding: 10px 12px;
 }
 .dt-list h3 {
   margin: 10px 0 4px;
-  font-size: 12px;
+  font-size: var(--text-md);
   color: var(--fg-2);
 }
 .dt-list li button {
@@ -2833,7 +2878,7 @@ button.toggle .badge {
   width: 100%;
   padding: 4px 6px;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--radius);
   background: none;
   text-align: left;
 }
@@ -2851,7 +2896,7 @@ button.toggle .badge {
 }
 .dt-editor header h3 {
   margin: 0;
-  font-size: 15px;
+  font-size: var(--text-lg);
 }
 .dt-tabs {
   margin: 8px 0;
@@ -2868,7 +2913,7 @@ button.toggle .badge {
   align-items: center;
 }
 .dt-form .field > span {
-  font-size: 12px;
+  font-size: var(--text-md);
   color: var(--fg-2);
 }
 .dt-form .field.check {
@@ -2888,10 +2933,10 @@ button.toggle .badge {
   margin: 0;
   padding: 6px 10px;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius);
 }
 .dt-choices legend {
-  font-size: 12px;
+  font-size: var(--text-md);
   color: var(--fg-2);
 }
 .dt-choices p {
@@ -2940,13 +2985,13 @@ button.toggle .badge {
   overflow: auto;
   background: var(--pane);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius);
   box-shadow: 0 6px 20px rgb(0 0 0 / 0.18);
-  font-size: 13px;
+  font-size: var(--text-md);
 }
 .foc-heading {
   padding: 4px 8px 2px;
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--fg-2);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -2968,7 +3013,7 @@ button.toggle .badge {
 }
 .foc-where {
   margin-left: auto;
-  font-size: 12px;
+  font-size: var(--text-md);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2983,7 +3028,7 @@ button.toggle .badge {
 }
 .foc-warning {
   flex-basis: 100%;
-  font-size: 12px;
+  font-size: var(--text-md);
   color: var(--changed);
 }
 .foc-list .foc-create[aria-disabled="true"] {
@@ -3030,7 +3075,7 @@ button.toggle .badge {
 }
 .duplicates-view .toolbar h2 {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--text-lg);
   white-space: nowrap;
 }
 .duplicates-view .toolbar .muted {
@@ -3047,7 +3092,7 @@ button.toggle .badge {
 }
 .dup-table th {
   text-align: left;
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--fg-2);
   padding: 6px 10px;
@@ -3102,7 +3147,7 @@ button.toggle .badge {
 .new-repository .choice {
   padding: 6px 10px;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius);
 }
 .new-repository .choice label {
   display: block;
@@ -3160,7 +3205,7 @@ button.toggle .badge {
 }
 .ov-header h2 {
   margin: 0 0 6px;
-  font-size: 15px;
+  font-size: var(--text-lg);
 }
 .ov-tools,
 .ov-add {
@@ -3181,7 +3226,7 @@ button.toggle .badge {
 }
 .ov-table {
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: var(--text-md);
   width: 100%;
 }
 .ov-table th {
@@ -3267,7 +3312,7 @@ button.toggle .badge {
   cursor: pointer;
   padding: 2px 8px;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius);
   list-style: none;
 }
 .ov-columns fieldset {
@@ -3285,7 +3330,7 @@ button.toggle .badge {
   gap: 2px;
   background: var(--pane);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius);
   box-shadow: 0 4px 14px rgb(0 0 0 / 0.18);
 }
 .ov-columns fieldset p {
@@ -3317,7 +3362,7 @@ button.toggle .badge {
   border-radius: 999px;
   background: var(--pane);
   color: var(--fg-2);
-  font-size: 10px;
+  font-size: var(--text-sm);
   line-height: 1;
   vertical-align: middle;
   cursor: help;
@@ -3334,7 +3379,7 @@ button.toggle .badge {
   border-left: 2px solid var(--accent);
   background: var(--pane-2);
   color: var(--fg-2);
-  font-size: 12px;
+  font-size: var(--text-md);
   font-weight: 400;
   white-space: normal;
 }
@@ -3374,7 +3419,7 @@ button.toggle .badge {
   align-items: center;
   gap: 4px;
   padding: 4px 12px;
-  font-size: 12px;
+  font-size: var(--text-md);
   color: var(--fg-2);
 }
 .crumb-sep {
@@ -3398,7 +3443,7 @@ button.toggle .badge {
 }
 .doc-implied {
   color: var(--fg-2);
-  font-size: 12px;
+  font-size: var(--text-md);
 }
 .doc-flow-sequence {
   margin-left: 10px;
@@ -3427,7 +3472,7 @@ button.toggle .badge {
   gap: 4px;
   padding: 2px 6px;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius);
 }
 .picked-name {
   font-weight: 500;
@@ -3447,7 +3492,7 @@ button.toggle .badge {
 .link-kind {
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  font-size: 11px;
+  font-size: var(--text-sm);
 }
 .link-row {
   display: flex;
@@ -3522,7 +3567,7 @@ button.toggle .badge {
   min-height: 0;
   background: var(--pane);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius);
   position: relative;
 }
 .cxn-pane > header {
@@ -3533,7 +3578,7 @@ button.toggle .badge {
 }
 .cxn-pane h3 {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -3541,7 +3586,7 @@ button.toggle .badge {
 }
 .cxn-count {
   margin-left: auto;
-  font-size: 12px;
+  font-size: var(--text-md);
   font-variant-numeric: tabular-nums;
 }
 .cxn-chips,
@@ -3565,9 +3610,9 @@ button.toggle .badge {
   gap: 4px;
   padding: 2px 4px 2px 9px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 999px;
   background: var(--pane-2);
-  font-size: 12px;
+  font-size: var(--text-md);
 }
 .cxn-chips select.chip {
   padding: 2px 6px;
@@ -3594,14 +3639,14 @@ button.toggle .badge {
 .cxn-tools .seg {
   display: inline-flex;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius);
   overflow: hidden;
 }
 .cxn-tools .seg button {
   border: 0;
   border-radius: 0;
   padding: 2px 8px;
-  font-size: 12px;
+  font-size: var(--text-md);
 }
 .cxn-tools .seg button[aria-pressed="true"] {
   background: var(--sky-fill);
@@ -3610,7 +3655,7 @@ button.toggle .badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
+  font-size: var(--text-md);
   color: var(--fg-2);
 }
 .cxn-rows {
@@ -3644,7 +3689,7 @@ button.toggle .badge {
 }
 .cxn-row.heading {
   cursor: default;
-  font-size: 12px;
+  font-size: var(--text-md);
   font-weight: 500;
   color: var(--fg-2);
 }
@@ -3658,8 +3703,8 @@ button.toggle .badge {
   width: 13px;
   height: 13px;
   border: 1px solid var(--fg-2);
-  border-radius: 3px;
-  font-size: 10px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
   color: var(--pane);
 }
 .cxn-row.on .box {
@@ -3673,7 +3718,7 @@ button.toggle .badge {
   white-space: nowrap;
 }
 .cxn-row .meta {
-  font-size: 11px;
+  font-size: var(--text-sm);
   white-space: nowrap;
 }
 .cxn-row .cxn-end {
@@ -3685,10 +3730,10 @@ button.toggle .badge {
 .cxn-dot {
   margin-left: auto;
   padding: 0 6px;
-  border-radius: 8px;
+  border-radius: 999px;
   background: var(--violet-fill);
   color: var(--violet-ink);
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
 }
 .cxn-row .cxn-tick {
@@ -3712,7 +3757,7 @@ button.toggle .badge {
   gap: 12px;
   padding: 6px 10px;
   border-top: 1px solid var(--line);
-  font-size: 12px;
+  font-size: var(--text-md);
 }
 .cxn-strip {
   display: flex;
@@ -3723,12 +3768,12 @@ button.toggle .badge {
   padding: 10px;
   background: var(--pane);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius);
 }
 .cxn-side {
   max-width: 260px;
   padding: 5px 10px;
-  border-radius: 4px;
+  border-radius: var(--radius);
   background: var(--pane-2);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -3747,7 +3792,7 @@ button.toggle .badge {
 .cxn-existing {
   flex-basis: 100%;
   text-align: center;
-  font-size: 12px;
+  font-size: var(--text-md);
 }
 .cxn-existing b {
   color: var(--violet-ink);
@@ -3764,12 +3809,12 @@ button.toggle .badge {
   padding: 8px 10px;
   background: var(--pane);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius);
   box-shadow: 0 6px 20px rgb(0 0 0 / 0.18);
 }
 .cxn-filter-menu h4 {
   margin: 8px 0 4px;
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -3782,7 +3827,7 @@ button.toggle .badge {
   border: 0;
   background: none;
   padding: 3px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius);
   text-align: left;
 }
 .cxn-facet button:hover:not(:disabled) {

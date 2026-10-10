@@ -11,6 +11,8 @@ export interface MenuItem {
   /** Why the item cannot run now; the item is shown greyed out with this as its tooltip. */
   disabled?: string | null;
   danger?: boolean;
+  /** Set on a choice among options (a radio item): true for the one in effect, which shows a tick. */
+  checked?: boolean;
   run?(): void;
   submenu?: MenuEntry[];
 }
@@ -31,7 +33,7 @@ export function MenuList(props: {
   const list = useRef<HTMLUListElement>(null);
   const [open, setOpen] = useState<number | null>(null);
 
-  const items = () => [...(list.current?.querySelectorAll<HTMLElement>(":scope > li > [role=menuitem]") ?? [])];
+  const items = () => [...(list.current?.querySelectorAll<HTMLElement>(":scope > li > [role^=menuitem]") ?? [])];
   useEffect(() => {
     if (!autoFocus) return;
     const first = items().find((el) => el.getAttribute("aria-disabled") !== "true");
@@ -93,7 +95,8 @@ export function MenuList(props: {
         return (
           <li key={entry.label} className="menu-entry" onMouseEnter={() => setOpen(entry.submenu ? mine : null)}>
             <div
-              role="menuitem"
+              role={entry.checked === undefined ? "menuitem" : "menuitemradio"}
+              aria-checked={entry.checked}
               tabIndex={-1}
               aria-disabled={entry.disabled ? true : undefined}
               aria-haspopup={entry.submenu ? "menu" : undefined}
@@ -114,6 +117,11 @@ export function MenuList(props: {
               {entry.shortcut && (
                 <span className="menu-shortcut" aria-hidden>
                   {entry.shortcut}
+                </span>
+              )}
+              {entry.checked && (
+                <span className="menu-shortcut" aria-hidden>
+                  ✓
                 </span>
               )}
               {entry.submenu && (

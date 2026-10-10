@@ -11,7 +11,7 @@ import { usePanelPrefs } from "./Inspector";
 import { Toasts } from "./Toasts";
 import { DeleteObjectDialog } from "./DeleteObjectDialog";
 import { MenuBar } from "./Menu";
-import { editMenu, fileMenu, metamodelMenu, reviewMenu, toolsMenu } from "./commands";
+import { editMenu, fileMenu, metamodelMenu, reviewMenu, toolsMenu, viewMenu } from "./commands";
 import { inTextEntry, workbenchShortcut } from "../keys";
 
 export function Workbench({ repositoryId, scenarioId }: { repositoryId: string; scenarioId: string | null }) {
@@ -124,6 +124,7 @@ function TopBar() {
         menus={[
           { label: "File", entries: () => fileMenu(session.store.state, session.store.metamodel) },
           { label: "Edit", entries: editMenu },
+          { label: "View", entries: viewMenu },
           { label: "Tools", entries: () => toolsMenu(session.store.metamodel) },
           { label: "Review", entries: reviewMenu },
           { label: "Metamodel", entries: metamodelMenu },

@@ -156,3 +156,29 @@ test("refuses an edit that breaks a rule and says why", async ({ page }) => {
   await expect(page.getByRole("alert").filter({ hasText: "already exists" })).toBeVisible();
   await expect(properties(page).getByLabel("Name")).toHaveValue("Spare Name");
 });
+
+test("the View menu picks a light or dark theme, kept after a reload", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await signIn(page);
+  const theme = () => page.evaluate(() => document.documentElement.dataset.theme ?? "system");
+  const choose = async (name: string) => {
+    await page.getByRole("menubar").getByRole("menuitem", { name: "View", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Theme" }).click();
+    await page.getByRole("menuitemradio", { name }).click();
+  };
+  await choose("Dark");
+  expect(await theme()).toBe("dark");
+  await page.reload();
+  await expect(page.getByTestId("save-state")).toHaveText("All changes saved");
+  expect(await theme()).toBe("dark");
+  const pane = () => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--pane").trim());
+  expect(await pane()).toBe("#161d26");
+
+  await page.getByRole("menubar").getByRole("menuitem", { name: "View", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Theme" }).click();
+  await expect(page.getByRole("menuitemradio", { name: "Dark" })).toHaveAttribute("aria-checked", "true");
+  await page.keyboard.press("Escape");
+  await choose("Match system");
+  expect(await theme()).toBe("system");
+  expect(await pane()).toBe("#fdfdfe");
+});
