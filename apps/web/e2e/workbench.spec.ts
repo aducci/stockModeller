@@ -14,6 +14,10 @@ async function signIn(page: Page, userId = "dev@example.com") {
 const explorer = (page: Page) => page.getByRole("navigation", { name: "Explorer" });
 const properties = (page: Page) => page.getByRole("complementary", { name: "Properties" });
 
+/** The explorer row named exactly `name` (other rows, such as diagrams about it, may start with the same words). */
+const exactRow = (page: Page, name: string) =>
+  explorer(page).locator(".row:not(.member)", { hasText: new RegExp(`^\\W*${name}$`) });
+
 async function selectInExplorer(page: Page, name: string) {
   await explorer(page).getByLabel("Filter the explorer").fill(name);
   await explorer(page).locator(".row", { hasText: name }).first().click();
@@ -93,6 +97,26 @@ test("creates a folder and an object in it, and undoes from the toast", async ({
   await expect(toast.getByRole("button", { name: "Undo" })).toBeEnabled();
   await toast.getByRole("button", { name: "Undo" }).click();
   await expect(explorer(page).locator(".row", { hasText: "Ledger" })).toHaveCount(0);
+  await expect(page.getByTestId("save-state")).toHaveText("All changes saved");
+});
+
+test("undoes and redoes with the keyboard and the Edit menu", async ({ page }) => {
+  await signIn(page);
+  await rename(page, "Payments Hub", "Payments Core");
+  await expect(page.getByTestId("save-state")).toHaveText("All changes saved");
+  await explorer(page).getByLabel("Filter the explorer").fill("Payments");
+
+  await exactRow(page, "Payments Core").click();
+  await page.keyboard.press("ControlOrMeta+z");
+  await expect(exactRow(page, "Payments Hub")).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Undone: Rename" })).toBeVisible();
+
+  await page.keyboard.press("ControlOrMeta+Shift+z");
+  await expect(exactRow(page, "Payments Core")).toBeVisible();
+
+  await page.getByRole("menubar").getByRole("menuitem", { name: "Edit" }).click();
+  await page.getByRole("menuitem", { name: /^Undo Rename/ }).click();
+  await expect(exactRow(page, "Payments Hub")).toBeVisible();
   await expect(page.getByTestId("save-state")).toHaveText("All changes saved");
 });
 

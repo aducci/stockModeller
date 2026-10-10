@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { LiveSession, type PresenceUser, type SessionStatus } from "@connectome/client";
 import { ulid, type DiagramType, type Edit, type Id, type MetamodelPackage } from "@connectome/model";
 import { describeRejection } from "../text";
+import type { Clip } from "../clipboard";
 
 export type ItemKind = "object" | "folder" | "diagram";
 export interface Selection {
@@ -91,6 +92,12 @@ interface WorkbenchState {
   metamodelReview: boolean;
   /** The property type the Properties view of the metamodel tab shows. */
   metamodelProperty: string | null;
+  /** This session's own changes, oldest first: Ctrl/⌘+Z undoes the last (collaboration-and-changes.md §3). */
+  undoStack: OwnChange[];
+  /** The changes that undid them, last undone last: Ctrl/⌘+Shift+Z redoes by undoing the last one. */
+  redoStack: OwnChange[];
+  /** Symbols copied or cut on a canvas (Ctrl/⌘+C, X), pasted with Ctrl/⌘+V on any diagram of this repository. */
+  clip: Clip | null;
 
   open(options: OpenOptions): Promise<void>;
   close(): void;
@@ -103,12 +110,20 @@ interface WorkbenchState {
   activateTab(id: Id): void;
   /** Applies a change at once and sends it. Returns false (and shows why) when it is refused. */
   edit(label: string, edits: Edit[], action?: Toast["action"]): boolean;
+  /** Undoes one of the user's own committed changes (Undo on its toast). */
   undo(changeId: Id): Promise<void>;
+  /** Undoes the user's last change in this session (Ctrl/⌘+Z, Edit › Undo). */
+  undoLast(): Promise<void>;
+  /** Undoes the last undo (Ctrl/⌘+Shift+Z, Ctrl+Y, Edit › Redo). */
+  redoLast(): Promise<void>;
   dismiss(toastId: string): void;
   askDeleteObject(id: Id | null): void;
   setExplorerTask(task: ExplorerTask | null): void;
   /** Adds an explorer row to the marked set, or takes it out; null clears the set. */
   toggleMark(item: Selection | null): void;
+  /** Replaces the marked set (Ctrl/⌘+A in the explorer marks every row shown). */
+  setMarks(items: Selection[]): void;
+  setClip(clip: Clip | null): void;
   /** A toast that reports no change (e.g. why a gesture did nothing). */
   notify(text: string, tone?: Toast["tone"]): void;
   showTrace(trace: WorkbenchState["trace"]): void;
@@ -118,6 +133,13 @@ interface WorkbenchState {
   showMetamodelProperty(key: string | null): void;
   setMetamodelDraft(draft: MetamodelDraft | null): void;
   setMetamodelReview(open: boolean): void;
+}
+
+/** A change this session made (or an undo it asked for), and whether the server has committed it yet. */
+export interface OwnChange {
+  id: Id;
+  label: string;
+  committed: boolean;
 }
 
 let unsubscribe: (() => void) | undefined;
@@ -135,6 +157,26 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
   };
   const patchToast = (changeId: Id, patch: Partial<Toast>) =>
     set((s) => ({ toasts: s.toasts.map((t) => (t.changeId === changeId ? { ...t, ...patch } : t)) }));
+  const markCommitted = (changeId: Id) =>
+    set((s) => ({ undoStack: s.undoStack.map((c) => (c.id === changeId ? { ...c, committed: true } : c)) }));
+  const forget = (changeId: Id) =>
+    set((s) => ({
+      undoStack: s.undoStack.filter((c) => c.id !== changeId),
+      redoStack: s.redoStack.filter((c) => c.id !== changeId),
+    }));
+  /** Asks the server to undo `target` with a new change named `id`; false (and a toast saying why) if it fails. */
+  const sendUndo = async (target: Id, id: Id) => {
+    const session = get().session;
+    if (!session) return false;
+    set((s) => ({ toasts: s.toasts.filter((t) => t.changeId !== target) }));
+    try {
+      await session.api.undo(session.store.repository.id, target, id);
+      return true;
+    } catch (error) {
+      toast({ text: `Could not undo: ${error instanceof Error ? error.message : String(error)}`, tone: "error" });
+      return false;
+    }
+  };
 
   return {
     session: null,
@@ -157,6 +199,9 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
     metamodelDraft: null,
     metamodelReview: false,
     metamodelProperty: null,
+    undoStack: [],
+    redoStack: [],
+    clip: null,
 
     async open(options) {
       get().close();
@@ -184,6 +229,7 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
               return;
             case "confirmed":
               patchToast(event.change.id, { committed: true });
+              markCommitted(event.change.id);
               return;
             case "applied": {
               if (event.own) return;
@@ -198,6 +244,7 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
             }
             case "rejected":
               set((s) => ({ toasts: s.toasts.filter((t) => t.changeId !== event.change.id) }));
+              forget(event.change.id);
               toast({ text: `${event.change.label}: ${describeRejection(event.reasons[0]!)}`, tone: "error" });
               return;
             case "error":
@@ -221,6 +268,9 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
           metamodelDraft: null,
           metamodelReview: false,
           metamodelProperty: null,
+          undoStack: [],
+          redoStack: [],
+          clip: null,
         });
       } catch (error) {
         if (mine !== generation) return;
@@ -311,19 +361,54 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
         committed: false,
         ...(action ? { action } : {}),
       });
+      // A new change ends the redo chain, as in any editor.
+      set((s) => ({ undoStack: [...s.undoStack, { id, label, committed: false }], redoStack: [] }));
       return true;
     },
 
     async undo(changeId) {
-      const session = get().session;
-      if (!session) return;
-      set((s) => ({ toasts: s.toasts.filter((t) => t.changeId !== changeId) }));
-      try {
-        await session.api.undo(session.store.repository.id, changeId);
-        toast({ text: "Undone", tone: "info" });
-      } catch (error) {
-        toast({ text: `Could not undo: ${error instanceof Error ? error.message : String(error)}`, tone: "error" });
+      const done = get().undoStack.find((c) => c.id === changeId);
+      const id = ulid();
+      if (!(await sendUndo(changeId, id))) return;
+      if (done) {
+        set((s) => ({
+          undoStack: s.undoStack.filter((c) => c.id !== changeId),
+          redoStack: [...s.redoStack, { id, label: done.label, committed: true }],
+        }));
       }
+      toast({ text: done ? `Undone: ${done.label}` : "Undone", tone: "info" });
+    },
+
+    async undoLast() {
+      const last = get().undoStack.at(-1);
+      if (!last) return get().notify("Nothing to undo");
+      if (!last.committed) return get().notify(`Still saving "${last.label}". Try again in a moment.`);
+      const id = ulid();
+      // Taken off at once, so a second Ctrl/⌘+Z while this one is on its way undoes the change before it.
+      set((s) => ({ undoStack: s.undoStack.slice(0, -1) }));
+      if (!(await sendUndo(last.id, id))) {
+        set((s) => ({ undoStack: [...s.undoStack, last] }));
+        return;
+      }
+      set((s) => ({ redoStack: [...s.redoStack, { id, label: last.label, committed: true }] }));
+      toast({
+        text: `Undone: ${last.label}`,
+        tone: "info",
+        action: { label: "Redo", run: () => void get().redoLast() },
+      });
+    },
+
+    async redoLast() {
+      const last = get().redoStack.at(-1);
+      if (!last) return get().notify("Nothing to redo");
+      const id = ulid();
+      set((s) => ({ redoStack: s.redoStack.slice(0, -1) }));
+      if (!(await sendUndo(last.id, id))) {
+        set((s) => ({ redoStack: [...s.redoStack, last] }));
+        return;
+      }
+      set((s) => ({ undoStack: [...s.undoStack, { id, label: last.label, committed: true }] }));
+      toast({ text: `Redone: ${last.label}`, tone: "info" });
     },
 
     dismiss(toastId) {
@@ -343,6 +428,14 @@ export const useWorkbench = create<WorkbenchState>((set, get) => {
       set((s) => ({
         marked: s.marked.some((m) => m.id === item.id) ? s.marked.filter((m) => m.id !== item.id) : [...s.marked, item],
       }));
+    },
+
+    setMarks(items) {
+      set({ marked: items });
+    },
+
+    setClip(clip) {
+      set({ clip });
     },
 
     notify(text, tone = "info") {

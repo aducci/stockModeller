@@ -466,6 +466,15 @@ function Row(props: {
     });
   };
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a") {
+      // Ctrl/⌘+A marks every row the explorer shows (as filtered and expanded), to drag, group or move together.
+      e.preventDefault();
+      const rows = [...document.querySelectorAll<HTMLElement>(".explorer .row[data-id]:not(.member)")];
+      useWorkbench
+        .getState()
+        .setMarks(rows.map((row) => ({ kind: row.dataset.kind as Selection["kind"], id: row.dataset.id! })));
+      return;
+    }
     if ((e.ctrlKey || e.metaKey) && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
       // Ctrl/⌘+↑/↓ moves the row among its siblings; the row keeps the focus wherever it lands.
       e.preventDefault();

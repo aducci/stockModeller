@@ -14,6 +14,7 @@ import { interactionPartners } from "../sequence";
 import { canvasTypesFor, diagramAroundPlan, sequenceOfPlan, sequenceType } from "../views";
 import { connectInCxn, openCxnBuilder } from "../cxn";
 import type { MenuEntry } from "./Menu";
+import { isMac, shortcutLabel } from "../keys";
 
 const store = () => useWorkbench.getState();
 const NO_FOLDER = "Select a folder, or an item in one, first";
@@ -334,6 +335,28 @@ function importMetamodelFile() {
 /** The Tools menu: ways of working over many elements at once. */
 export function toolsMenu(metamodel: Metamodel): MenuEntry[] {
   return [{ label: "CXN Builder", run: () => openCxnBuilder(metamodel) }];
+}
+
+/** The Edit menu: undo and redo of the user's own changes in this session, with the change each would undo. */
+export function editMenu(): MenuEntry[] {
+  const { undoStack, redoStack } = store();
+  const mac = isMac();
+  const last = undoStack.at(-1);
+  const next = redoStack.at(-1);
+  return [
+    {
+      label: last ? `Undo ${last.label}` : "Undo",
+      shortcut: shortcutLabel("undo", mac),
+      disabled: !last ? "Nothing to undo" : last.committed ? null : "Still saving",
+      run: () => void store().undoLast(),
+    },
+    {
+      label: next ? `Redo ${next.label}` : "Redo",
+      shortcut: shortcutLabel("redo", mac),
+      disabled: next ? null : "Nothing to redo",
+      run: () => void store().redoLast(),
+    },
+  ];
 }
 
 /** The Review menu: reports over the whole repository. */
