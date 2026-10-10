@@ -115,6 +115,7 @@ From [views §15](02-model/views-and-design-artifacts.md#15-cxn-builder-linking-
 | C4 | Do framework perspectives (Zachman rows, BIDAT) need their own structure? | No: they are list properties, filtered with counts like any other | A nested value tree per framework (row › column) |
 | C5 | Which way does a relationship run? | Left to right; ⇄ swaps the panes. For a type allowed only the other way, the picker says *(right to left)* and creates it that way | Always ask |
 | C6 | How big may one *Link* be? | One change, at most 10,000 edits (the change limit); above that the preview says to narrow the panes | Split into several changes |
+| C7 | How does the screen show what is already connected, pair by pair? (Asked by the product owner, 2026-10-10.) | Wires across a gutter between the panes, row to row, with a node mid-wire that selects the connection; hovering a row lights its wires and partners (§15.1 *Wires*). They read at a glance and keep many-to-many legible as long as the rows are in view | A middle column of connection nodes, each wired to both rows (heavier: one more object per connection, and the column needs its own order and scrolling); numbered badges matched left and right (a row with five connections carries five numbers, and matching means reading, not seeing) |
 
 ## Found while building (M0)
 

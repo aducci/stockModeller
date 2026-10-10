@@ -60,6 +60,7 @@ test("links two sets of elements from the Tools menu, filtered, undone, dragged 
   await expect(page.getByRole("status").filter({ hasText: "Link 2 as Realizes" })).toBeVisible();
   await expect(existing(page)).toContainText("2 existing");
   await expect(row(page, "Target", "Claim Intake").locator(".cxn-tick")).toHaveText("✓");
+  await expect(page.locator(".cxn-wires > .wire")).toHaveCount(2);
   await page.screenshot({ path: "test-results/cxn-linked.png" });
   await saved(page);
 
@@ -109,4 +110,35 @@ test("opens from an element's right-click menu with that element selected", asyn
   await page.getByRole("menuitem", { name: "Connect in CXN Builder…" }).click();
   await expect(row(page, "Source", "Payments Hub")).toHaveAttribute("aria-selected", "true");
   await expect(page.locator(".cxn-side").first()).toHaveText("Payments Hub");
+});
+
+test("wires in the gutter show what is connected, light up on hover and select a connection", async ({ page }) => {
+  await signIn(page);
+  await page.getByRole("menubar").getByRole("menuitem", { name: "Tools" }).click();
+  await page.getByRole("menuitem", { name: "CXN Builder" }).click();
+  await expect(existing(page)).toContainText("2 existing “Realizes” connections");
+  const wires = page.locator(".cxn-wires > .wire");
+  await expect(wires).toHaveCount(2);
+  // Arrowheads say which way each connection runs: Realizes goes from application to capability, so swapping the
+  // panes turns them round.
+  await expect(wires.first()).toHaveAttribute("data-dir", "forward");
+  await page.getByRole("button", { name: "Swap the panes" }).click();
+  await expect(wires.first()).toHaveAttribute("data-dir", "back");
+  await page.getByRole("button", { name: "Swap the panes" }).click();
+  await expect(wires.first()).toHaveAttribute("data-dir", "forward");
+
+  // Hovering a row lights up its partners on the other side and its wires.
+  const source = page.locator(".cxn-row", { has: page.locator(".name", { hasText: "Claims Manager" }) }).first();
+  await source.hover();
+  const hot = pane(page, "Target").locator(".cxn-row.hot");
+  await expect(hot).not.toHaveCount(0);
+  await expect(page.locator(".cxn-wires > .wire.strong")).toHaveCount(await hot.count());
+  await page.locator(".cxn-view").screenshot({ path: "test-results/cxn-wires.png" });
+
+  // A wire's node selects both its rows.
+  await page.mouse.move(0, 0);
+  await wires.first().locator(".node").click();
+  await expect(pane(page, "Source").locator('[aria-selected="true"]')).toHaveCount(1);
+  await expect(pane(page, "Target").locator('[aria-selected="true"]')).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "Unlink 1" })).toBeVisible();
 });

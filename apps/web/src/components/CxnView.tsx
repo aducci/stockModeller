@@ -1,13 +1,27 @@
 // The CXN Builder (design/02-model/views-and-design-artifacts.md §15): two filtered panes and one connection type.
-// Select rows on both sides (or drag one onto the other) and press Link; ticks and counts show what is connected.
+// Select rows on both sides (or drag one onto the other) and press Link; wires in the gutter between the panes, ticks
+// and counts show what is connected.
 // A saved one is a diagram of kind `cxn`; an unsaved one lives in its tab until *Save view*.
-import { useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent, type MouseEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type DragEvent,
+  type KeyboardEvent,
+  type MouseEvent,
+  type RefObject,
+} from "react";
 import type { Metamodel, ModelState } from "@connectome/engine";
 import type { CxnPane, Id, Scope, ScopeFilter } from "@connectome/model";
 import {
   connectEdits,
   connectionKeys,
   connectionOptions,
+  connectionDirection,
+  connectionsBetween,
   cxnDefinition,
   disconnectEdits,
   facets,
@@ -23,6 +37,7 @@ import {
 import { itemSelected, useModel, useWorkbench } from "../state/workbench";
 import { notationFor } from "../notation";
 import { cxnType, saveCxnPlan } from "../cxn";
+import { layoutWires, partnersOf, wirePath, type PaneBoxes, type RowBox, type Wire } from "../cxn-wires";
 import { targetFolder } from "../explorer";
 import { Glyph } from "./Glyph";
 import { SearchPicker } from "./SearchPicker";
@@ -51,6 +66,9 @@ export function CxnView(props: { id?: Id; tabId?: Id }) {
   }));
   const [query, setQuery] = useState<Record<Side, string>>({ left: "", right: "" });
   const [preview, setPreview] = useState<LinkPlan | null>(null);
+  // What the pointer is over: a row (its wires and partners light up) or a wire (its two rows light up).
+  const [hover, setHover] = useState<{ row: Id } | { wire: [Id, Id] } | null>(null);
+  const panes = useRef<HTMLDivElement>(null);
   const model = projectCxn(state, metamodel, definition, selection);
   const connection = model.connection;
 
@@ -75,6 +93,18 @@ export function CxnView(props: { id?: Id; tabId?: Id }) {
     define(label, { panes: { ...definition.panes, [side]: { ...paneOf(definition, side), ...patch } } });
 
   const name = (id: Id) => state.objects.get(id)?.name ?? "?";
+  const emphasis = new Set<Id>([
+    ...selection.left,
+    ...selection.right,
+    ...(hover ? ("row" in hover ? [hover.row] : hover.wire) : []),
+  ]);
+  const hot = hover ? ("row" in hover ? partnersOf(model.existing, hover.row) : new Set(hover.wire)) : new Set<Id>();
+  /** A wire's node: selects its two rows, and the relationship itself in the properties panel. */
+  const pickWire = (l: Id, r: Id) => {
+    setSelection({ left: new Set([l]), right: new Set([r]) });
+    const found = connection ? connectionsBetween(state, connection, l, r)[0] : undefined;
+    focus(found?.kind === "relationship" ? { kind: "relationship", id: found.id } : { kind: "object", id: l });
+  };
   const plan = connection ? planConnect(state, metamodel, connection, selection.left, selection.right) : null;
 
   const run = (p: LinkPlan) => {
@@ -161,8 +191,25 @@ export function CxnView(props: { id?: Id; tabId?: Id }) {
 
   return (
     <div className="cxn-view">
-      <div className="cxn-panes">
-        {(["left", "right"] as Side[]).map((side) => (
+      <div className="cxn-panes" ref={panes}>
+        {(["left", "right"] as Side[]).flatMap((side) => [
+          side === "right" && (
+            <CxnWires
+              key="wires"
+              container={panes}
+              pairs={model.existing}
+              emphasis={emphasis}
+              direction={(l, r) => (connection ? connectionDirection(state, connection, l, r) : null)}
+              label={(l, r) => {
+                const dir = connection ? connectionDirection(state, connection, l, r) : null;
+                const pair =
+                  dir === "back" ? `${name(r)} → ${name(l)}` : `${name(l)} ${dir === "both" ? "↔" : "→"} ${name(r)}`;
+                return `${pair}${connName ? `: ${connName}` : ""}`;
+              }}
+              onHover={(wire) => setHover(wire ? { wire } : null)}
+              onPick={pickWire}
+            />
+          ),
           <PaneView
             key={side}
             side={side}
@@ -172,6 +219,7 @@ export function CxnView(props: { id?: Id; tabId?: Id }) {
             pane={paneOf(definition, side)}
             model={model[side]}
             selected={selection[side]}
+            hot={hot}
             query={query[side]}
             connection={connection}
             onQuery={(q) => setQuery((s) => ({ ...s, [side]: q }))}
@@ -190,8 +238,9 @@ export function CxnView(props: { id?: Id; tabId?: Id }) {
             }}
             onDrop={(target, ids) => drop(side, target, ids)}
             onEnter={() => canGo && go()}
-          />
-        ))}
+            onHover={(id) => setHover(id ? { row: id } : null)}
+          />,
+        ])}
       </div>
       <div className="cxn-strip" aria-label="Link builder">
         <span className="cxn-side" title={summary("left")}>
@@ -325,6 +374,8 @@ function PaneView(props: {
   pane: CxnPane;
   model: PaneModel;
   selected: ReadonlySet<Id>;
+  /** Rows lit up by what the pointer is over: the hovered row's partners, or a hovered wire's two rows. */
+  hot: ReadonlySet<Id>;
   query: string;
   connection: Connection | undefined;
   onQuery(q: string): void;
@@ -335,8 +386,9 @@ function PaneView(props: {
   onUnlink(id: Id): void;
   onDrop(targetId: Id, ids: Id[]): void;
   onEnter(): void;
+  onHover(id: Id | null): void;
 }) {
-  const { side, state, metamodel, scope, pane, model, selected, query } = props;
+  const { side, state, metamodel, scope, pane, model, selected, hot, query } = props;
   const from = scope.from;
   const [adding, setAdding] = useState(false);
   const [dropOn, setDropOn] = useState<Id | null>(null);
@@ -411,7 +463,7 @@ function PaneView(props: {
   };
 
   return (
-    <section className="cxn-pane" aria-label={`${LABEL[side]} pane`}>
+    <section className="cxn-pane" data-side={side} aria-label={`${LABEL[side]} pane`}>
       <header>
         <h3>{LABEL[side]}</h3>
         <span className="muted cxn-count">
@@ -528,13 +580,15 @@ function PaneView(props: {
             <div
               key={r.object.id}
               data-cxn={`${side}:${r.object.id}`}
-              className={`cxn-row${on ? " on" : ""}${dropOn === r.object.id ? " drop" : ""}`}
+              className={`cxn-row${on ? " on" : ""}${hot.has(r.object.id) ? " hot" : ""}${dropOn === r.object.id ? " drop" : ""}`}
               role="option"
               aria-selected={on}
               tabIndex={0}
               draggable
               style={{ paddingLeft: 8 + r.depth * 16 }}
               onClick={(e: MouseEvent) => props.onSelect(r.object.id, e.shiftKey ? "range" : "toggle", ids)}
+              onMouseEnter={() => props.onHover(r.object.id)}
+              onMouseLeave={() => props.onHover(null)}
               onKeyDown={(e) => keyDown(e, r.object.id)}
               onDragStart={(e) => dragStart(e, r.object.id)}
               onDragOver={(e) => {
@@ -590,6 +644,137 @@ function PaneView(props: {
         </button>
       </footer>
     </section>
+  );
+}
+
+/** Where the panes' rows are, in the gutter's coordinates; `null` while the gutter is not laid out (narrow screens). */
+function measure(svg: SVGSVGElement, container: HTMLElement) {
+  const g = svg.getBoundingClientRect();
+  if (!g.width) return null;
+  const at = (r: DOMRect): RowBox => ({ top: r.top - g.top, bottom: r.bottom - g.top });
+  const side = (s: Side): PaneBoxes => {
+    const list = container.querySelector(`.cxn-pane[data-side="${s}"] .cxn-rows`);
+    const rows = new Map<Id, RowBox>();
+    for (const el of container.querySelectorAll<HTMLElement>(`[data-cxn^="${s}:"]`))
+      rows.set(el.dataset.cxn!.slice(s.length + 1), at(el.getBoundingClientRect()));
+    return { rows, view: list ? at(list.getBoundingClientRect()) : { top: 0, bottom: g.height } };
+  };
+  return { width: g.width, height: g.height, left: side("left"), right: side("right") };
+}
+
+/**
+ * The gutter between the panes: a wire from each connected row on the left to its partner on the right, with a node
+ * in the middle that selects the connection and an arrowhead for the way it runs. An end scrolled out of its list waits, dashed, at the list's edge. It
+ * repeats what the dots and ticks say, so it is hidden from screen readers; the rows and *Select them* carry it.
+ */
+function CxnWires(props: {
+  container: RefObject<HTMLDivElement | null>;
+  pairs: [Id, Id][];
+  emphasis: ReadonlySet<Id>;
+  label(left: Id, right: Id): string;
+  direction(left: Id, right: Id): "forward" | "back" | "both" | null;
+  onHover(wire: [Id, Id] | null): void;
+  onPick(left: Id, right: Id): void;
+}) {
+  const svg = useRef<SVGSVGElement>(null);
+  const [boxes, setBoxes] = useState<ReturnType<typeof measure>>(null);
+  const key = useRef("");
+  const update = useRef(() => {});
+  update.current = () => {
+    if (!svg.current || !props.container.current) return;
+    const next = measure(svg.current, props.container.current);
+    const k = JSON.stringify(next, (_, v: unknown) => (v instanceof Map ? [...v] : v));
+    if (k === key.current) return;
+    key.current = k;
+    setBoxes(next);
+  };
+  // After every render the rows may have moved (a filter, a search, a link); scrolling and resizing move them too.
+  useLayoutEffect(() => update.current());
+  useEffect(() => {
+    const el = props.container.current;
+    if (!el) return;
+    let frame = 0;
+    const soon = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => update.current());
+    };
+    el.addEventListener("scroll", soon, true);
+    const resize = new ResizeObserver(soon);
+    resize.observe(el);
+    return () => {
+      cancelAnimationFrame(frame);
+      el.removeEventListener("scroll", soon, true);
+      resize.disconnect();
+    };
+  }, [props.container]);
+
+  const wires = boxes ? layoutWires(props.pairs, boxes.left, boxes.right, props.emphasis) : [];
+  const w = boxes?.width ?? 0;
+  const ids = useId();
+  // Arrowheads say which way each connection runs: into the right pane, back into the left, or both ways.
+  const line = (wire: Wire, strong: boolean) => {
+    const dir = props.direction(wire.left, wire.right);
+    const arrow = `url(#${ids}-${strong ? "strong" : "arrow"})`;
+    return (
+      <path
+        className="line"
+        d={wirePath(wire, w)}
+        markerEnd={dir === "forward" || dir === "both" ? arrow : undefined}
+        markerStart={dir === "back" || dir === "both" ? arrow : undefined}
+      />
+    );
+  };
+  const node = (wire: Wire) => <circle className="node" cx={w / 2} cy={(wire.y1 + wire.y2) / 2} r={4} />;
+  return (
+    <svg ref={svg} className={`cxn-wires${props.emphasis.size ? " focused" : ""}`} aria-hidden>
+      <defs>
+        {(["arrow", "strong"] as const).map((k) => (
+          <marker
+            key={k}
+            id={`${ids}-${k}`}
+            className={`arrow ${k}`}
+            viewBox="0 0 8 8"
+            refX={8}
+            refY={4}
+            markerWidth={8}
+            markerHeight={8}
+            markerUnits="userSpaceOnUse"
+            orient="auto-start-reverse"
+          >
+            <path d="M0 0 L8 4 L0 8 z" />
+          </marker>
+        ))}
+      </defs>
+      {wires.map((wire) => {
+        const l = props.label(wire.left, wire.right);
+        return (
+          <g
+            key={`${wire.left}|${wire.right}`}
+            className={`wire${wire.strong ? " strong" : ""}${wire.off1 || wire.off2 ? " off" : ""}`}
+            data-dir={props.direction(wire.left, wire.right) ?? undefined}
+            onMouseEnter={() => props.onHover([wire.left, wire.right])}
+            onMouseLeave={() => props.onHover(null)}
+            onClick={() => props.onPick(wire.left, wire.right)}
+          >
+            <title>{wire.off1 || wire.off2 ? `${l} (scroll to see the other end)` : l}</title>
+            <path className="hit" d={wirePath(wire, w)} />
+            {line(wire, false)}
+            {node(wire)}
+          </g>
+        );
+      })}
+      {/* The strong wires again on top, so a lit wire is never under a faint one; the pointer goes to the ones below. */}
+      <g className="top" pointerEvents="none">
+        {wires
+          .filter((wire) => wire.strong)
+          .map((wire) => (
+            <g key={`${wire.left}|${wire.right}`} className={`wire strong${wire.off1 || wire.off2 ? " off" : ""}`}>
+              {line(wire, true)}
+              {node(wire)}
+            </g>
+          ))}
+      </g>
+    </svg>
   );
 }
 
