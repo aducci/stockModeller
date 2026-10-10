@@ -24,7 +24,13 @@ test("duplicates a diagram type, gives it its own notation, and publishes it for
   await signIn(page);
   await page.getByRole("menubar").getByRole("menuitem", { name: "Metamodel", exact: true }).click();
   await page.getByRole("menuitem", { name: "Diagram types", exact: true }).click();
-  await expect(list(page).locator("h3")).toHaveText(["⧉ Diagrams", "▦ Matrices", "▤ Documents", "⇅ Sequences"]);
+  await expect(list(page).locator("h3")).toHaveText([
+    "⧉ Diagrams",
+    "▦ Matrices",
+    "▤ Documents",
+    "⇅ Sequences",
+    "⇄ CXN Builders",
+  ]);
 
   // The context diagram is in use: its kind is fixed.
   await list(page)

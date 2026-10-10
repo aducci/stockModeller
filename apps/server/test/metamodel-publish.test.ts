@@ -36,10 +36,10 @@ describeDb("publishing a metamodel", () => {
     expectContract(res.body, schema("MetamodelResult"));
     expect(res.body).toMatchObject({
       preview: true,
-      version: "1.10.1",
+      version: "1.11.1",
       stranded: [{ propertyType: "lifecycle.status", count: 1 }],
     });
-    expect((await snapshot()).metamodel.package.version).toBe("1.10.0");
+    expect((await snapshot()).metamodel.package.version).toBe("1.11.0");
   });
 
   it("refuses drafts that would break stored values or do not compile", async () => {
@@ -95,14 +95,15 @@ describeDb("publishing a metamodel", () => {
       server.properties = server.properties!.filter((p) => p !== "lifecycle.status");
       const flows = pkg.relationshipTypes.find((t) => t.key === "flowsTo")!;
       flows.properties = [...(flows.properties ?? []), "flow.volume"];
-      diagramTypes[0]!.properties = [...(diagramTypes[0]!.properties ?? []), "review.state"];
+      const landscape = diagramTypes.find((t) => t.key === "applicationLandscape")!;
+      landscape.properties = [...(landscape.properties ?? []), "review.state"];
     });
     const res = await api.put(PUBLISH, body);
     expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ preview: false, version: "1.10.1" });
+    expect(res.body).toMatchObject({ preview: false, version: "1.11.1" });
 
     const after = await snapshot();
-    expect(after.metamodel.package.version).toBe("1.10.1");
+    expect(after.metamodel.package.version).toBe("1.11.1");
     expect(after.metamodel.package.propertyTypes!.map((p) => p.key)).toContain("risk.notes");
     // The server's status is kept although its type no longer carries it.
     expect(after.rows.objects.find((o) => o.id === "O-SRV-1")!.properties["lifecycle.status"]).toBeDefined();

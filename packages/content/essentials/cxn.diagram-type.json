@@ -1,0 +1,14 @@
+{
+  "key": "applicationCapabilityCxn",
+  "name": "Applications → capabilities (CXN Builder)",
+  "description": "Link applications to the capabilities they realise in bulk: filter each side, pick rows on both and press Link.",
+  "kind": "cxn",
+  "objectTypes": ["applicationBase", "capability"],
+  "relationshipTypes": ["realizes"],
+  "matrix": {
+    "rows": { "from": { "type": ["applicationBase"] } },
+    "columns": { "from": { "type": ["capability"] } },
+    "relationships": { "types": ["realizes"], "dir": "rowToColumn" },
+    "create": "realizes"
+  }
+}

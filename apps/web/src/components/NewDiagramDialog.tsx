@@ -30,7 +30,13 @@ export function NewDiagramDialog({ folderId, onDone }: { folderId: Id | null; on
         .sort((a, b) => a.path.localeCompare(b.path)),
     [state],
   );
-  const [typeKey, setTypeKey] = useState(types[0]?.definition.key ?? "");
+  // The first type in the dialog's order (diagrams first), whatever order the metamodel lists them in.
+  const [typeKey, setTypeKey] = useState(
+    () =>
+      KINDS.map((k) => types.find((t) => kindOfType(t) === k.kind)).find((t) => t)?.definition.key ??
+      types[0]?.definition.key ??
+      "",
+  );
   // With nothing selected, the folder that already holds the most diagrams.
   const [folder, setFolder] = useState<Id>(
     () =>
@@ -198,6 +204,11 @@ export function NewDiagramDialog({ folderId, onDone }: { folderId: Id | null; on
             objectSelect("Start around", around, setAround, drawable, "An empty diagram, or search…")}
           {kind === "matrix" && (
             <p className="muted">Rows, columns and relationships come from the type; change them in the toolbar.</p>
+          )}
+          {kind === "cxn" && (
+            <p className="muted">
+              The two panes and the connection type come from the type; filter each pane and link in the view.
+            </p>
           )}
           <label className="field">
             <span>Folder</span>

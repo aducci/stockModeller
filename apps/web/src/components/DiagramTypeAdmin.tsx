@@ -40,6 +40,7 @@ const KIND_TAB: Record<ViewKind, { tab: Tab; label: string }> = {
   matrix: { tab: "matrix", label: "Matrix" },
   sequence: { tab: "sequence", label: "Sequence" },
   document: { tab: "template", label: "Template" },
+  cxn: { tab: "matrix", label: "Panes" },
 };
 const SHAPES: SymbolStyle["shape"][] = ["rect", "roundRect", "ellipse", "hexagon", "cylinder", "person"];
 

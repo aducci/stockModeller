@@ -16,6 +16,7 @@ describe("Essentials", () => {
       readDesignJson("05-structures/example-hld-type.json"),
       readDesignJson("05-structures/example-integration-spec-type.json"),
       readDesignJson("05-structures/example-value-chain-type.json"),
+      readDesignJson("05-structures/example-cxn-type.json"),
     ]);
   });
 
