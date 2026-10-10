@@ -8,13 +8,20 @@ import { symbolFor } from "./diagram";
 import { aboutEdits, canBeAbout } from "./subjects";
 import { decompositionPlan } from "./decompose";
 
-export const KIND_GLYPH: Record<ViewKind, string> = { canvas: "⧉", matrix: "▦", document: "▤", sequence: "⇅" };
+export const KIND_GLYPH: Record<ViewKind, string> = {
+  canvas: "⧉",
+  matrix: "▦",
+  document: "▤",
+  sequence: "⇅",
+  cxn: "⇄",
+};
 
 export const KIND_NAME: Record<ViewKind, string> = {
   canvas: "Diagram",
   matrix: "Matrix",
   document: "Document",
   sequence: "Sequence",
+  cxn: "CXN Builder",
 };
 
 /** The kinds in the order the New diagram dialog lists them, with their group names. */
@@ -23,6 +30,7 @@ export const KINDS: { kind: ViewKind; name: string; description: string }[] = [
   { kind: "matrix", name: "Matrices", description: "Rows × columns of relationships, edited by clicking cells" },
   { kind: "document", name: "Documents", description: "Design artifacts about one element, built from a template" },
   { kind: "sequence", name: "Sequences", description: "Lifelines and the messages between them, in order" },
+  { kind: "cxn", name: "CXN Builders", description: "Two filtered lists, linked in bulk with one connection type" },
 ];
 
 export const kindOfType = (type: ResolvedDiagramType | undefined): ViewKind => type?.definition.kind ?? "canvas";

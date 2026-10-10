@@ -1,9 +1,40 @@
 // Structured paths (views-and-design-artifacts.md §3): the AST the query parser will produce later (decision V11).
-import type { Id, Scope, ScopeFilter, ScopeStep } from "@connectome/model";
+import { ABSTRACTION_PROPERTY, type Id, type Scope, type ScopeFilter, type ScopeStep } from "@connectome/model";
 import type { Metamodel, ModelState, ObjectRow, RelationshipRow } from "@connectome/engine";
 
-/** Whether an object passes a filter. Types match their subtypes; an empty filter passes everything. */
-export function matchesFilter(metamodel: Metamodel, object: ObjectRow, filter: ScopeFilter | undefined): boolean {
+/** The values of an object's property a `where` compares: a list's items, or the one value as text. */
+export function propertyValues(metamodel: Metamodel, object: ObjectRow, key: string): string[] {
+  const value = key === ABSTRACTION_PROPERTY ? metamodel.objectAbstraction(object) : object.properties[key];
+  if (value === null || value === undefined) return [];
+  if (Array.isArray(value)) return value.map(String);
+  return typeof value === "object" ? [] : [String(value)];
+}
+
+/** Whether two objects are related, either way, by a relationship of the given types or kinds (any when none). */
+export function areRelated(
+  state: ModelState,
+  metamodel: Metamodel,
+  a: Id,
+  b: Id,
+  by: { type?: readonly string[]; kind?: readonly string[] } = {},
+): boolean {
+  const hit = (r: RelationshipRow, other: Id, end: Id) => end === other && matchesRelationship(metamodel, r, by);
+  return (
+    state.relationships.find("bySource", a).some((r) => hit(r, b, r.targetId)) ||
+    state.relationships.find("byTarget", a).some((r) => hit(r, b, r.sourceId))
+  );
+}
+
+/**
+ * Whether an object passes a filter. Types match their subtypes; an empty filter passes everything. `related` needs
+ * the model state; without it that part of the filter is not checked.
+ */
+export function matchesFilter(
+  metamodel: Metamodel,
+  object: ObjectRow,
+  filter: ScopeFilter | undefined,
+  state?: ModelState,
+): boolean {
   if (!filter) return true;
   if (filter.type?.length && !filter.type.some((t) => metamodel.isA(object.type, t))) return false;
   if (filter.category?.length) {
@@ -11,6 +42,13 @@ export function matchesFilter(metamodel: Metamodel, object: ObjectRow, filter: S
     if (!category || !filter.category.includes(category)) return false;
   }
   if (filter.folder && object.folderId !== filter.folder) return false;
+  for (const [key, { in: wanted }] of Object.entries(filter.where ?? {})) {
+    if (!propertyValues(metamodel, object, key).some((v) => wanted.includes(v))) return false;
+  }
+  if (filter.related && state) {
+    const { id, types, kinds } = filter.related;
+    if (object.id === id || !areRelated(state, metamodel, object.id, id, { type: types, kind: kinds })) return false;
+  }
   return true;
 }
 
@@ -36,12 +74,12 @@ function follow(state: ModelState, metamodel: Metamodel, from: readonly ObjectRo
     for (const r of out) {
       if (!matchesRelationship(metamodel, r, by)) continue;
       const target = state.objects.get(r.targetId);
-      if (target && matchesFilter(metamodel, target, step.to)) reached.set(target.id, target);
+      if (target && matchesFilter(metamodel, target, step.to, state)) reached.set(target.id, target);
     }
     for (const r of inc) {
       if (!matchesRelationship(metamodel, r, by)) continue;
       const source = state.objects.get(r.sourceId);
-      if (source && matchesFilter(metamodel, source, step.to)) reached.set(source.id, source);
+      if (source && matchesFilter(metamodel, source, step.to, state)) reached.set(source.id, source);
     }
   }
   return [...reached.values()];
@@ -61,7 +99,7 @@ export function orderObjects(objects: ObjectRow[], order: Scope["order"] = "name
 
 /** The objects a scope selects, ordered. Without steps, every live object passing `from`. */
 export function evaluateScope(state: ModelState, metamodel: Metamodel, scope: Scope): ObjectRow[] {
-  let current = [...state.objects.live()].filter((o) => matchesFilter(metamodel, o, scope.from));
+  let current = [...state.objects.live()].filter((o) => matchesFilter(metamodel, o, scope.from, state));
   for (const step of scope.steps ?? []) current = follow(state, metamodel, current, step);
   return orderObjects(current, scope.order);
 }

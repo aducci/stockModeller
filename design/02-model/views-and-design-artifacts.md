@@ -27,6 +27,7 @@ Three principles carry the design:
 | `canvas` | Members | Free | Today's diagram editor | Diagram |
 | `sequence` | Members (lifelines and messages) | Ordered | Create interactions and messages; reorder steps | Sequence diagram |
 | `matrix` | Two queries (rows, columns) | Derived | A cell creates or deletes a relationship, or sets its property | Relationship Matrix |
+| `cxn` | Two queries (left, right), as the matrix | Derived, two lists | Create and delete relationships (or links) between selections, in bulk; see §15 | None (stock modeller's link builder) |
 | `list` | Query, or a diagram's members | Derived | Properties in place, related-object chips (a catalogue) | Diagram List view |
 | `specification` | Query, or a diagram's members, as a tree | Derived | Names, descriptions and properties in place, as a document | Specification Manager / Specification view |
 | `tree` | A root and a path, e.g. containment | Derived | Re-parent by drag (one relationship reconnected) | Package Browser |
@@ -456,3 +457,64 @@ These sets are the **document scope** (`documentScope` in `packages/views`), wor
 The High-level design has the register *RAID* (`types: raidItem`, all three sources, `via: concerns`, status, owner, due, impact and likelihood, the owner check on open items) before its prose section, which keeps the key `risks` and its text and is now titled *Notes*. The example's Claims Manager design lists a risk about Legacy CRM (mentioned in the notes), an issue about Claims Manager and a dependency on Payments Hub.
 
 Not yet: a score and heat map, more checks (past due, high without mitigation), the register in regions and in the diagram-type admin, and the snapshot when a document is issued ([backlog](../feature-backlog.md)).
+
+## 15. CXN Builder: linking sets of elements at speed
+
+Status: **proposed** (2026-10-09), named and accepted for building by the product owner. It brings back the link builder of the product owner's earlier tool (stock modeller): two filtered lists side by side, one connection type, one button. The concept, the stock modeller screen it comes from and a clickable prototype are in the project's plan *Link builder view* and the [CXN Builder prototype](https://claude.ai/artifact/AfctSg4E4APzSHeJwZHshp). Open questions C1–C6 are in the [decision log](../decision-log.md#cxn-builder-decisions).
+
+**Why another view.** The matrix (§4) shows both sets at once and works while they fit on screen. The CXN Builder is for sets that do not (hundreds against hundreds, mixed types) and for linking in bulk: no canvas, no drawing, no opening each element. It is a `cxn` kind with the matrix's definition, so one can be shown as the other (§2 *Show as*).
+
+### 15.1 The screen
+
+```
+┌ Source ────────────────────────────┐  ┌ Target ────────────────────────────┐
+│ [Application ▾] [Zachman row: Row 3 ×] + Filter │ [Capability ▾] + Filter            │
+│ Search…   Tree│List  A–Z  ☐ Hide connected │ Search…   Tree│List  A–Z  ☑ Hide connected│
+│ ☑ Claims Manager   Row 3 · Active  ●3 │  │ ▾ Claims                         ✓  │
+│ ☐ Legacy CRM       Row 3 · Retiring   │  │     ☐ Detect Fraud                  │
+└────────────────────────────────────┘  └────────────────────────────────────┘
+   Claims Manager ──[ serves ▾ ]──▶ 2 selected   ⇄   [ Link 2 ]
+         7 existing “serves” links between these two sets · Select them
+```
+
+| Part | Behaviour |
+|---|---|
+| Pane | A scope (§3) built from chips: a type (or *Anything*), then **+ Filter**: a list property's value (*Zachman row: Row 1*), *Related to ‹element›* (any relationship, either direction), *Linked / Not linked to the other side*. Every choice shows its count before it is added. A search box narrows by name and aliases. Shape: **Tree** (containment) or **List**; sort A–Z or by rank |
+| Connection type | The strip's picker: the relationship types the rules allow between the two panes' types, most used first, then the link kinds of §13 (*Related to* links anything to anything). Types the rules refuse are listed, greyed, with the reason |
+| Existing links | Once a type is chosen, each row's dot counts its links of that type into the other pane's set; the strip says *N existing links between these two sets* with *Select them*. Selecting rows ticks, on the other side, what they are already linked to (✓ all, ◐ some); clicking a tick unlinks |
+| Hide connected | A checkbox per pane hides rows already linked to the other pane's set, so the list shrinks as you work; the pane header says how many are hidden |
+| Link | Select on both sides (click, Ctrl/⌘, Shift, *Select all*) and press **Link N** or `Enter`, or drag rows onto a row of the other pane. When every selected pair is already linked the button reads **Unlink N**. Above 25 pairs a preview counts new, already there (skipped) and refused (with the reason). One change of `createRelationship` (or `createLink`) edits, ≤ 10,000, one Undo in the toast |
+| Swap | ⇄ swaps the panes, so the direction of the relationship follows left to right |
+| Save view | Writes the panes and the connection type into the diagram's `definition`; until then a CXN Builder opened from a menu is a scratch tab |
+
+### 15.2 Definition
+
+The matrix definition (§4), plus how each pane is shown:
+
+```json
+{ "rows":    { "from": { "type": ["application"], "where": { "zachman.row": { "in": ["row3"] } } } },
+  "columns": { "from": { "type": ["capability"] } },
+  "relationships": { "types": ["serves"], "dir": "rowToColumn" },
+  "create": "serves",
+  "panes": { "left":  { "shape": "tree", "sort": "name", "hideConnected": false },
+             "right": { "shape": "list", "sort": "name", "hideConnected": true } } }
+```
+
+`rows` is the left pane and `columns` the right, so *Show as matrix* needs no conversion. The scope (§3) grows two filters that the matrix can use too: `where` on a filter (property values, as §3 already describes but V-1 did not build) and `related: { id, types?, kinds? }` (objects with a relationship to that element in either direction). *Linked / Not linked to the other side* and *Hide connected* are pane state evaluated against the other pane, not part of the scope.
+
+### 15.3 Where it opens from
+
+- *New diagram* › Matrices › **CXN Builder** (asks for the two types and suggests a name).
+- Right-click an element › **Connect in CXN Builder…**: a scratch CXN Builder with the element selected on the left and its type's most used targets on the right.
+- Right-click a folder or several explorer rows › **Connect these…**.
+- A matrix's View menu › *Show as CXN Builder*, and back.
+
+### 15.4 Slices
+
+| Slice | Delivers |
+|---|---|
+| **CXN-1** | The `cxn` kind and its definition; `where` and `related` in scopes; `projectCxn` in `packages/views` (members, shapes, existing-link counts, ticks, hide connected, facet counts); the two panes with type, property-value and *Related to* chips, search, tree and list; the strip with the type picker (rules, then link kinds), *Link N* / *Unlink N*, the preview above 25 pairs, ticks and the existing-links line with *Select them*; drag to link; *Save view*; *New diagram › CXN Builder*. Plan: the project's *Slice CXN-1* plan |
+| **CXN-2** | *Linked / Not linked to the other side*; folder and abstraction chips; group by a list property; *Connect in CXN Builder…* and *Connect these…*; create a missing element from a pane's search (find-or-create, D-1) |
+| **CXN-3** | A session summary (*This session: N created, M removed*, each batch undoable); *Set properties* on the new relationships after linking; paste a list of names to select; saved pane queries usable in either pane; keyboard (↑↓, Space, Tab, Enter); *Show as* matrix both ways; virtualised panes |
+
+As built in CXN-1 (B73): the view kind is `cxn`, shown as *CXN Builders* in *New diagram* and the diagram-type admin (which edits its panes on the Matrix tab). A link kind is stored as the definition's `link` (and `create` is then dropped); relationship types are `create` plus `relationships.types`. A CXN Builder opened from **Tools › CXN Builder** or an element's **Connect in CXN Builder…** is an unsaved tab whose definition lives in the tab; *Save view* creates the diagram, of the metamodel's first `cxn` type, in the selected item's folder. A pane's search, selection and the preview stay in the browser. A repository whose metamodel has no `cxn` type can still use an unsaved CXN Builder; *Save view* says why it cannot save until an admin adds one (Metamodel › Diagram types, kind *CXN Builder*). The status of this section is **built** for CXN-1; CXN-2 and CXN-3 remain proposed.

@@ -8,6 +8,7 @@ import { MetamodelAdmin } from "./MetamodelAdmin";
 import { MatrixView } from "./MatrixView";
 import { DocumentView } from "./DocumentView";
 import { SequenceView } from "./SequenceView";
+import { CxnView } from "./CxnView";
 import { DuplicatesView } from "./DuplicatesView";
 import { ObjectViewer } from "./ObjectViewer";
 import { FolderIcon, ViewIcon } from "./ExplorerIcon";
@@ -41,6 +42,8 @@ export function Centre() {
                 "◇"
               ) : t.kind === "duplicates" ? (
                 "≈"
+              ) : t.kind === "cxn" ? (
+                <ViewIcon kind="cxn" size={12} />
               ) : (
                 "▭"
               )}
@@ -78,11 +81,14 @@ export function Centre() {
             <DocumentView key={active.id} id={active.id} />
           ) : viewKind(state, metamodel, active.id) === "sequence" ? (
             <SequenceView key={active.id} id={active.id} />
+          ) : viewKind(state, metamodel, active.id) === "cxn" ? (
+            <CxnView key={active.id} id={active.id} />
           ) : (
             <DiagramEditor key={active.id} id={active.id} />
           ))}
         {active?.kind === "metamodel" && <MetamodelAdmin />}
         {active?.kind === "duplicates" && <DuplicatesView />}
+        {active?.kind === "cxn" && <CxnView key={active.id} tabId={active.id} />}
         {active?.kind === "objects" && active.folderId && <ObjectViewer key={active.id} folderId={active.folderId} />}
       </div>
     </main>
@@ -92,6 +98,7 @@ export function Centre() {
 function tabName(state: ModelState, tab: Tab): string {
   if (tab.kind === "metamodel") return "Metamodel";
   if (tab.kind === "duplicates") return "Possible duplicates";
+  if (tab.kind === "cxn") return "CXN Builder (unsaved)";
   if (tab.kind === "objects") return `${state.folders.get(tab.folderId ?? "")?.name ?? "(deleted)"} objects`;
   const item = tab.kind === "diagram" ? state.diagrams.get(tab.id) : state.objects.get(tab.id);
   return item?.name ?? "(deleted)";

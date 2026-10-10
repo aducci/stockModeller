@@ -12,6 +12,7 @@ import { byName } from "../text";
 import { newDocumentPlan, templatesFor } from "../document";
 import { interactionPartners } from "../sequence";
 import { canvasTypesFor, diagramAroundPlan, sequenceOfPlan, sequenceType } from "../views";
+import { connectInCxn, openCxnBuilder } from "../cxn";
 import type { MenuEntry } from "./Menu";
 
 const store = () => useWorkbench.getState();
@@ -160,6 +161,9 @@ export function itemMenu(state: ModelState, metamodel: Metamodel, item: Selectio
     { label: "Move up", shortcut: "Ctrl+↑", run: () => moveItem(state, metamodel, item, -1) },
     { label: "Move down", shortcut: "Ctrl+↓", run: () => moveItem(state, metamodel, item, 1) },
     ...(item.kind === "object" ? [addToGroupMenu(state, metamodel, [item.id])] : []),
+    ...(object
+      ? [{ label: "Connect in CXN Builder…", run: () => connectInCxn(state, metamodel, object) } as MenuEntry]
+      : []),
     ...(group && object
       ? [
           {
@@ -325,6 +329,11 @@ function importMetamodelFile() {
   });
   document.body.append(input);
   input.click();
+}
+
+/** The Tools menu: ways of working over many elements at once. */
+export function toolsMenu(metamodel: Metamodel): MenuEntry[] {
+  return [{ label: "CXN Builder", run: () => openCxnBuilder(metamodel) }];
 }
 
 /** The Review menu: reports over the whole repository. */

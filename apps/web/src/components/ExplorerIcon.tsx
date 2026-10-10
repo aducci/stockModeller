@@ -7,9 +7,10 @@ const VIEW_PATHS: Record<ViewKind, string> = {
   matrix: "M3.5 3.5h9v9h-9zM3.5 6.5h9M3.5 9.5h9M6.5 3.5v9M9.5 3.5v9",
   document: "M4.5 3h7v10h-7zM6.5 6h3M6.5 8h3M6.5 10h2",
   sequence: "M5 3v10M11 3v10M5 6h5.5M9 4.5l1.5 1.5L9 7.5M11 10H5.5M7 8.5L5.5 10 7 11.5",
+  cxn: "M3 4h3M3 8h3M3 12h3M10 4h3M10 8h3M10 12h3M6 4l4 4M6 8l4 4",
 };
 
-/** A view (diagram, matrix, document or sequence): its kind on a filled tile. */
+/** A view (diagram, matrix, document, sequence or CXN Builder): its kind on a filled tile. */
 export function ViewIcon({ kind, size = 14 }: { kind: ViewKind; size?: number }) {
   return (
     <svg className="view-icon" width={size} height={size} viewBox="0 0 16 16" aria-hidden="true" focusable="false">

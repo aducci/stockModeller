@@ -103,6 +103,19 @@ From [views and design artifacts](02-model/views-and-design-artifacts.md). **Pro
 | V15 | How much can authors change a template? | Three levels (component, template/pattern, artifact) with `lock` (`fixed`, `configurable`, `free`), `allow` and palette regions; pattern bindings cannot be overridden | Templates fully fixed, or fully editable per document |
 | V16 | Can packages define new component types? | No: components are product code (a registry); packages compose them with templates and patterns. Extension-supplied components wait for extension panels (ADR-007) | Declarative custom components in packages |
 
+## CXN Builder decisions
+
+From [views §15](02-model/views-and-design-artifacts.md#15-cxn-builder-linking-sets-of-elements-at-speed). **Proposed** 2026-10-09; each row is the default the build uses until the product owner decides otherwise.
+
+| # | Question | Proposed default | Alternative |
+|---|---|---|---|
+| C1 | What is it called? | **Decided by the product owner (2026-10-09): CXN Builder**, view kind `cxn` | Link builder (clashes with links, §13) |
+| C2 | Are a pane's filters saved on their own, as in stock modeller? | Per view in CXN-1 (*Save view*); reusable saved pane queries in CXN-3, as saved queries in the explorer's *Queries* tab once M1's query language lands | Shared saved queries from the start |
+| C3 | May the picker offer relationship types the rules refuse, with *Allow this and link* for admins? | No: refused types are shown greyed with the reason; *Related to* links cover anything to anything | An admin shortcut that adds the rule through the metamodel draft and publish |
+| C4 | Do framework perspectives (Zachman rows, BIDAT) need their own structure? | No: they are list properties, filtered with counts like any other | A nested value tree per framework (row › column) |
+| C5 | Which way does a relationship run? | Left to right; ⇄ swaps the panes. For a type allowed only the other way, the picker says *(right to left)* and creates it that way | Always ask |
+| C6 | How big may one *Link* be? | One change, at most 10,000 edits (the change limit); above that the preview says to narrow the panes | Split into several changes |
+
 ## Found while building (M0)
 
 Questions the build raised. Each has a provisional answer in the code; change the code if the product owner decides otherwise.
@@ -181,3 +194,4 @@ Questions the build raised. Each has a provisional answer in the code; change th
 | B70 | How are links stored? | Slice DOC-R2 (built): as their own records in a `link` table (element → document, diagram, element or web page, with a kind and a label), not as a url property, so they are indexed both ways and searchable in a large repository. Link kinds are metamodel settings (`linkKinds`); a diagram type's `subject.linkKind` replaces `subject.linkProperty`; *Documentation* values are migrated into links. Supersedes B66 |
 | B71 | How does a person pick an element or a diagram in a large repository? | By typing part of its name (`search` in the web app, the `SearchPicker` component): matches at the start of the name first, then at the start of a word, then anywhere, ignoring case and accents, neighbours in the same folder first, at most 20 shown with their type and folder; before anything is typed, up to 8 neighbours. It replaces every select that listed the whole repository. The search runs over the model already loaded in the browser; a server search takes over when repositories outgrow it, as for duplicates (B54) |
 | B72 | How does a document gather its RAID items? | Slice DOC-3: by the generic `register` component over the document scope (what its prose mentions, its subject, and the elements it shows) and a relationship filter (`concerns`), not by a component that knows about risks; RAID items are ordinary elements of an abstract *RAID item* type, so a new kind is one more subtype. New items take their property types' `default` (status open). The High-level design's prose *Risks and open points* stays, as *Notes* under the register, so no document loses text (views §14) |
+| B73 | How does the CXN Builder (views §15) fit the view framework, and where do people find it? | Slice CXN-1: a view kind `cxn` whose definition is the matrix's (`rows` = left pane, `columns` = right) plus `link` (a link kind instead of a relationship type) and `panes` (`shape`, `sort`, `hideConnected`). Scopes gained `where` (property values; abstraction counts its type's default) and `related` (related to an element either way), usable by matrices too. It opens from **Tools › CXN Builder** (unsaved, in its tab, until *Save view*), an element's **Connect in CXN Builder…** and *New diagram*. Found while building: diagram types come back from the database ordered by key, so *New diagram* now preselects the first type in its own kind order (diagrams first) rather than the first listed |
