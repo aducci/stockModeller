@@ -4,6 +4,7 @@
 // A saved one is a diagram of kind `cxn`; an unsaved one lives in its tab until *Save view*.
 import {
   useEffect,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -19,6 +20,7 @@ import {
   connectEdits,
   connectionKeys,
   connectionOptions,
+  connectionDirection,
   connectionsBetween,
   cxnDefinition,
   disconnectEdits,
@@ -35,7 +37,7 @@ import {
 import { itemSelected, useModel, useWorkbench } from "../state/workbench";
 import { notationFor } from "../notation";
 import { cxnType, saveCxnPlan } from "../cxn";
-import { layoutWires, partnersOf, wirePath, type PaneBoxes, type RowBox } from "../cxn-wires";
+import { layoutWires, partnersOf, wirePath, type PaneBoxes, type RowBox, type Wire } from "../cxn-wires";
 import { targetFolder } from "../explorer";
 import { Glyph } from "./Glyph";
 import { SearchPicker } from "./SearchPicker";
@@ -197,7 +199,13 @@ export function CxnView(props: { id?: Id; tabId?: Id }) {
               container={panes}
               pairs={model.existing}
               emphasis={emphasis}
-              label={(l, r) => `${name(l)} → ${name(r)}${connName ? `: ${connName}` : ""}`}
+              direction={(l, r) => (connection ? connectionDirection(state, connection, l, r) : null)}
+              label={(l, r) => {
+                const dir = connection ? connectionDirection(state, connection, l, r) : null;
+                const pair =
+                  dir === "back" ? `${name(r)} → ${name(l)}` : `${name(l)} ${dir === "both" ? "↔" : "→"} ${name(r)}`;
+                return `${pair}${connName ? `: ${connName}` : ""}`;
+              }}
               onHover={(wire) => setHover(wire ? { wire } : null)}
               onPick={pickWire}
             />
@@ -656,7 +664,7 @@ function measure(svg: SVGSVGElement, container: HTMLElement) {
 
 /**
  * The gutter between the panes: a wire from each connected row on the left to its partner on the right, with a node
- * in the middle that selects the connection. An end scrolled out of its list waits, dashed, at the list's edge. It
+ * in the middle that selects the connection and an arrowhead for the way it runs. An end scrolled out of its list waits, dashed, at the list's edge. It
  * repeats what the dots and ticks say, so it is hidden from screen readers; the rows and *Select them* carry it.
  */
 function CxnWires(props: {
@@ -664,6 +672,7 @@ function CxnWires(props: {
   pairs: [Id, Id][];
   emphasis: ReadonlySet<Id>;
   label(left: Id, right: Id): string;
+  direction(left: Id, right: Id): "forward" | "back" | "both" | null;
   onHover(wire: [Id, Id] | null): void;
   onPick(left: Id, right: Id): void;
 }) {
@@ -701,23 +710,56 @@ function CxnWires(props: {
 
   const wires = boxes ? layoutWires(props.pairs, boxes.left, boxes.right, props.emphasis) : [];
   const w = boxes?.width ?? 0;
+  const ids = useId();
+  // Arrowheads say which way each connection runs: into the right pane, back into the left, or both ways.
+  const line = (wire: Wire, strong: boolean) => {
+    const dir = props.direction(wire.left, wire.right);
+    const arrow = `url(#${ids}-${strong ? "strong" : "arrow"})`;
+    return (
+      <path
+        className="line"
+        d={wirePath(wire, w)}
+        markerEnd={dir === "forward" || dir === "both" ? arrow : undefined}
+        markerStart={dir === "back" || dir === "both" ? arrow : undefined}
+      />
+    );
+  };
+  const node = (wire: Wire) => <circle className="node" cx={w / 2} cy={(wire.y1 + wire.y2) / 2} r={4} />;
   return (
     <svg ref={svg} className={`cxn-wires${props.emphasis.size ? " focused" : ""}`} aria-hidden>
+      <defs>
+        {(["arrow", "strong"] as const).map((k) => (
+          <marker
+            key={k}
+            id={`${ids}-${k}`}
+            className={`arrow ${k}`}
+            viewBox="0 0 8 8"
+            refX={8}
+            refY={4}
+            markerWidth={8}
+            markerHeight={8}
+            markerUnits="userSpaceOnUse"
+            orient="auto-start-reverse"
+          >
+            <path d="M0 0 L8 4 L0 8 z" />
+          </marker>
+        ))}
+      </defs>
       {wires.map((wire) => {
         const l = props.label(wire.left, wire.right);
         return (
           <g
             key={`${wire.left}|${wire.right}`}
             className={`wire${wire.strong ? " strong" : ""}${wire.off1 || wire.off2 ? " off" : ""}`}
-
+            data-dir={props.direction(wire.left, wire.right) ?? undefined}
             onMouseEnter={() => props.onHover([wire.left, wire.right])}
             onMouseLeave={() => props.onHover(null)}
             onClick={() => props.onPick(wire.left, wire.right)}
           >
             <title>{wire.off1 || wire.off2 ? `${l} (scroll to see the other end)` : l}</title>
             <path className="hit" d={wirePath(wire, w)} />
-            <path className="line" d={wirePath(wire, w)} />
-            <circle className="node" cx={w / 2} cy={(wire.y1 + wire.y2) / 2} r={4} />
+            {line(wire, false)}
+            {node(wire)}
           </g>
         );
       })}
@@ -727,8 +769,8 @@ function CxnWires(props: {
           .filter((wire) => wire.strong)
           .map((wire) => (
             <g key={`${wire.left}|${wire.right}`} className={`wire strong${wire.off1 || wire.off2 ? " off" : ""}`}>
-              <path className="line" d={wirePath(wire, w)} />
-              <circle className="node" cx={w / 2} cy={(wire.y1 + wire.y2) / 2} r={4} />
+              {line(wire, true)}
+              {node(wire)}
             </g>
           ))}
       </g>

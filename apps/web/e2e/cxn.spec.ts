@@ -119,6 +119,13 @@ test("wires in the gutter show what is connected, light up on hover and select a
   await expect(existing(page)).toContainText("2 existing “Realizes” connections");
   const wires = page.locator(".cxn-wires > .wire");
   await expect(wires).toHaveCount(2);
+  // Arrowheads say which way each connection runs: Realizes goes from application to capability, so swapping the
+  // panes turns them round.
+  await expect(wires.first()).toHaveAttribute("data-dir", "forward");
+  await page.getByRole("button", { name: "Swap the panes" }).click();
+  await expect(wires.first()).toHaveAttribute("data-dir", "back");
+  await page.getByRole("button", { name: "Swap the panes" }).click();
+  await expect(wires.first()).toHaveAttribute("data-dir", "forward");
 
   // Hovering a row lights up its partners on the other side and its wires.
   const source = page.locator(".cxn-row", { has: page.locator(".name", { hasText: "Claims Manager" }) }).first();
@@ -126,7 +133,7 @@ test("wires in the gutter show what is connected, light up on hover and select a
   const hot = pane(page, "Target").locator(".cxn-row.hot");
   await expect(hot).not.toHaveCount(0);
   await expect(page.locator(".cxn-wires > .wire.strong")).toHaveCount(await hot.count());
-  await page.screenshot({ path: "test-results/cxn-wires.png" });
+  await page.locator(".cxn-view").screenshot({ path: "test-results/cxn-wires.png" });
 
   // A wire's node selects both its rows.
   await page.mouse.move(0, 0);

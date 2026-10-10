@@ -138,6 +138,24 @@ export function connectionsBetween(
   }));
 }
 
+/** Which way the connections between `a` (left) and `b` (right) run: `a` to `b`, back, both, or none. */
+export function connectionDirection(
+  state: ModelState,
+  connection: Connection,
+  a: Id,
+  b: Id,
+): "forward" | "back" | "both" | null {
+  const runs = (from: Id, to: Id) =>
+    connection.kind === "link"
+      ? state.links
+          .find("bySource", from)
+          .some((l) => l.kind === connection.key && "objectId" in l.target && l.target.objectId === to)
+      : state.relationships.find("bySource", from).some((r) => r.type === connection.key && r.targetId === to);
+  const forward = runs(a, b);
+  const back = a !== b && runs(b, a);
+  return forward && back ? "both" : forward ? "forward" : back ? "back" : null;
+}
+
 export interface PaneRow {
   object: ObjectRow;
   depth: number;

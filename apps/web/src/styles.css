@@ -3542,6 +3542,12 @@ button.toggle .badge {
   stroke: var(--fg-2);
   stroke-width: 1.5;
 }
+.cxn-wires .arrow path {
+  fill: var(--fg-2);
+}
+.cxn-wires .arrow.strong path {
+  fill: var(--accent);
+}
 .cxn-wires.focused .wire:not(.strong) {
   opacity: 0.25;
 }

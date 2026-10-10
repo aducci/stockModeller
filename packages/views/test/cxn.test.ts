@@ -5,6 +5,7 @@ import { applyChange, Metamodel, ModelState } from "@connectome/engine";
 import type { CxnDefinition } from "@connectome/model";
 import {
   connectEdits,
+  connectionDirection,
   connectionOf,
   connectionOptions,
   disconnectEdits,
@@ -189,6 +190,14 @@ describe("CXN Builder", () => {
     expect(planConnect(state, metamodel, realizes, ["O-CAP-1"], ["O-APP-2"]).add).toEqual([
       { sourceId: "O-APP-2", targetId: "O-CAP-1" },
     ]);
+  });
+
+  it("says which way a pair's connections run", () => {
+    const realizes = connectionOf(metamodel, appsToCapabilities)!;
+    const [app, cap] = projectCxn(state, metamodel, appsToCapabilities).existing[0]!;
+    expect(connectionDirection(state, realizes, app, cap)).toBe("forward");
+    expect(connectionDirection(state, realizes, cap, app)).toBe("back");
+    expect(connectionDirection(state, realizes, app, "O-SRV-1")).toBeNull();
   });
 
   it("links anything to anything with a link kind", () => {
